@@ -18,6 +18,7 @@ public static class SelfTests
             try { TimeRules.At("25:90", now); throw new Exception("Horário inválido aceito"); } catch (ArgumentException) { count++; }
             Assert(TimeRules.Countdown(now.AddHours(25), now) == "25:00:00");
             Assert(TimeRules.Countdown(now.AddSeconds(-1), now) == "00:00:00");
+            Assert(TimeRules.Countdown(now.AddMilliseconds(29999), now) == "00:00:30");
             var fake = new Schedule(true); fake.Set(now.AddMinutes(5)); Assert(fake.Read() == now.AddMinutes(5)); fake.Cancel(); Assert(fake.Read() is null);
             Assert(Updater.OfficialAsset(new Uri("https://github.com/BlackGen3ral/soneca/releases/download/v1.0.0/Soneca-Setup.exe")));
             Assert(!Updater.OfficialAsset(new Uri("https://github.com.evil.test/BlackGen3ral/soneca/releases/download/x")));

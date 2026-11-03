@@ -24,6 +24,7 @@ public static class TimeRules
     {
         var left = target - now;
         if (left <= TimeSpan.Zero) return "00:00:00";
+        left = TimeSpan.FromSeconds(Math.Ceiling(left.TotalSeconds));
         return $"{(int)left.TotalHours:00}:{left.Minutes:00}:{left.Seconds:00}";
     }
 }

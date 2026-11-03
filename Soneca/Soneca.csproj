@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
-    <Version>1.0.2</Version><ApplicationIcon>Assets\soneca.ico</ApplicationIcon>
+    <Version>1.0.3</Version><ApplicationIcon>Assets\soneca.ico</ApplicationIcon>
     <AssemblyName>Soneca</AssemblyName><Company>Artho</Company><Description>Desligue o Windows na hora certa.</Description>
   </PropertyGroup>
 </Project>
