@@ -9,6 +9,12 @@ public partial class App : Application
     {
         base.OnStartup(e);
         if (e.Args.Contains("--self-test")) { Environment.Exit(SelfTests.Run()); return; }
+        if (e.Args.Contains("--cancel-schedule"))
+        {
+            try { new Schedule().Cancel(); Environment.Exit(0); }
+            catch { Environment.Exit(1); }
+            return;
+        }
         bool demo = e.Args.Contains("--demo");
         instance = new Mutex(true, demo ? "Local\\SonecaDemo" : "Local\\Soneca", out bool first);
         if (!first) { MessageBox.Show("O Soneca já está aberto.", "Soneca"); Shutdown(); return; }

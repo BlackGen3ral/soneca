@@ -1,5 +1,5 @@
 #ifndef AppVersion
- #define AppVersion "1.0.0"
+ #define AppVersion "1.0.1"
 #endif
 [Setup]
 AppId={{E91D840B-33AE-467D-93ED-7D8EA88B2EB1}
@@ -40,3 +40,5 @@ function IsUpdate: Boolean;
 begin
  Result := ExpandConstant('{param:UPDATE|0}') = '1';
 end;
+[UninstallRun]
+Filename: "{app}\Soneca.exe"; Parameters: "--cancel-schedule"; Flags: runhidden waituntilterminated; RunOnceId: "CancelSonecaSchedule"

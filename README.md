@@ -14,7 +14,7 @@ Baixe **Soneca-Setup.exe** em [Releases](https://github.com/BlackGen3ral/soneca/
 - Para desistir, abra o app e clique em **Cancelar desligamento** antes do horário.
 - Fechar o app mantém o agendamento no Agendador de Tarefas do Windows.
 
-Mantenha a sessão do Windows conectada. O despertar da suspensão depende dos temporizadores de ativação e do hardware; o app não liga um computador desligado. Se o computador perder o horário, o desligamento não será executado atrasado. Salve seus arquivos: o app não força o fechamento de outros programas, que podem bloquear o desligamento. Desinstale somente após cancelar um agendamento ativo.
+Mantenha a sessão do Windows conectada. O despertar da suspensão depende dos temporizadores de ativação e do hardware; o app não liga um computador desligado. Se o computador perder o horário, o desligamento não será executado atrasado. Salve seus arquivos: o app não força o fechamento de outros programas, que podem bloquear o desligamento. Ao desinstalar, o agendamento deste usuário é cancelado.
 
 ## Atualizações automáticas
 
