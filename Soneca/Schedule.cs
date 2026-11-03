@@ -38,17 +38,17 @@ public sealed class Schedule
         dynamic service = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!)!;
         service.Connect(); return service;
     }
-    public DateTimeOffset? Read()
+    public DateTimeOffset? Read(bool harmlessTest = false)
     {
         if (demo) return simulated;
         dynamic root = Connect().GetFolder("\\");
         try
         {
-            dynamic task = root.GetTask(Name);
+            dynamic task = root.GetTask(harmlessTest ? Name + "-Test" : Name);
             string boundary = task.Definition.Triggers.Item(1).StartBoundary;
             return DateTimeOffset.Parse(boundary, CultureInfo.InvariantCulture);
         }
-        catch (COMException ex) when ((uint)ex.HResult == 0x80070002) { return null; }
+        catch (Exception ex) when ((uint)ex.HResult == 0x80070002) { return null; }
     }
     public void Set(DateTimeOffset target, bool harmlessTest = false)
     {
@@ -76,17 +76,22 @@ public sealed class Schedule
     {
         if (demo) { simulated = null; return; }
         try { Connect().GetFolder("\\").DeleteTask(harmlessTest ? Name + "-Test" : Name, 0); }
-        catch (COMException ex) when ((uint)ex.HResult == 0x80070002) { }
+        catch (Exception ex) when ((uint)ex.HResult == 0x80070002) { }
     }
     public static void IntegrationTest()
     {
         var schedule = new Schedule();
         try
         {
-            schedule.Set(DateTimeOffset.Now.AddHours(4), true);
+            schedule.Cancel(true);
+            if (schedule.Read(true) is not null) throw new Exception("Tarefa ausente deveria retornar vazio.");
+            var target = DateTimeOffset.Now.AddHours(4);
+            schedule.Set(target, true);
+            if (Math.Abs((schedule.Read(true)!.Value - target).TotalSeconds) > 1) throw new Exception("Horário não foi persistido.");
             dynamic task = Connect().GetFolder("\\").GetTask(schedule.Name + "-Test");
             if ((string)task.Definition.Actions.Item(1).Arguments != "/c exit 0") throw new Exception("Ação de teste inválida.");
         }
         finally { schedule.Cancel(true); }
+        if (schedule.Read(true) is not null) throw new Exception("Tarefa não foi cancelada.");
     }
 }
