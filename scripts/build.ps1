@@ -1,4 +1,4 @@
-param([string]$Version = '1.0.3', [string]$Dotnet = 'dotnet', [string]$InnoCompiler = '')
+param([string]$Version = '1.1.0', [string]$Dotnet = 'dotnet', [string]$InnoCompiler = '')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Push-Location $root
@@ -18,4 +18,6 @@ try {
  if ($LASTEXITCODE -ne 0) { throw 'Falha ao criar instalador.' }
  $hash = (Get-FileHash dist\Soneca-Setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
  [IO.File]::WriteAllText((Join-Path $root 'dist\SHA256SUMS.txt'), "$hash  Soneca-Setup.exe`n")
+ Copy-Item dist\Soneca-Setup.exe dist\ArthoControl-Setup.exe -Force
+ [IO.File]::AppendAllText((Join-Path $root 'dist\SHA256SUMS.txt'), "$hash  ArthoControl-Setup.exe`n")
 } finally { Pop-Location }

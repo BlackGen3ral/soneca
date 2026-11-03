@@ -1,14 +1,14 @@
 #ifndef AppVersion
- #define AppVersion "1.0.3"
+ #define AppVersion "1.1.0"
 #endif
 [Setup]
 AppId={{E91D840B-33AE-467D-93ED-7D8EA88B2EB1}
-AppName=Soneca
+AppName=Artho Control
 AppVersion={#AppVersion}
 AppPublisher=Artho
 AppPublisherURL=https://github.com/BlackGen3ral/soneca
 DefaultDirName={localappdata}\Programs\Soneca
-DefaultGroupName=Soneca
+DefaultGroupName=Artho Control
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
@@ -30,10 +30,13 @@ Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; Flags: un
 [Files]
 Source: "..\dist\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
-Name: "{group}\Soneca"; Filename: "{app}\Soneca.exe"
-Name: "{autodesktop}\Soneca"; Filename: "{app}\Soneca.exe"; Tasks: desktopicon
+Name: "{group}\Artho Control"; Filename: "{app}\Soneca.exe"
+Name: "{autodesktop}\Artho Control"; Filename: "{app}\Soneca.exe"; Tasks: desktopicon
+[InstallDelete]
+Type: files; Name: "{userprograms}\Soneca\Soneca.lnk"
+Type: files; Name: "{autodesktop}\Soneca.lnk"
 [Run]
-Filename: "{app}\Soneca.exe"; Description: "Abrir Soneca"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Soneca.exe"; Description: "Abrir Artho Control"; Flags: nowait postinstall skipifsilent
 Filename: "{app}\Soneca.exe"; Flags: nowait; Check: IsUpdate
 [Code]
 function IsUpdate: Boolean;

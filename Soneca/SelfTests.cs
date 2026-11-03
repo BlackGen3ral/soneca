@@ -26,6 +26,7 @@ public static class SelfTests
             Assert(Updater.ExpectedHash(new string('a', 64) + "  Soneca-Setup.exe\n") == new string('a', 64));
             try { Updater.ExpectedHash("bad  Soneca-Setup.exe"); throw new Exception("Hash inválido aceito"); } catch (Exception ex) when (ex.Message.StartsWith("Verificação")) { count++; }
             Schedule.IntegrationTest(); count++;
+            count += CleanerTests.Run();
             File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "self-test-result.txt"), $"PASS: {count} checks; harmless scheduled task created and removed; no shutdown executed.");
             return 0;
         }

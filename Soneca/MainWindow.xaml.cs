@@ -16,12 +16,14 @@ public partial class MainWindow : Window
     {
         this.demo = demo; schedule = new Schedule(demo);
         InitializeComponent();
+        CleanupPanel.Demo = demo;
         VersionLabel.Text = "v" + Updater.Current.ToString(3);
-        if (demo) { Title = "Soneca · demonstração"; UpdateLabel.Text = "Demonstração · nenhum desligamento real"; }
+        if (demo) { Title = "Artho Control · demonstração"; UpdateLabel.Text = "Demonstração · operações simuladas"; }
         try { target = schedule.Read(); } catch (Exception ex) { ErrorLabel.Text = "Não foi possível consultar o agendamento: " + ex.Message; ScheduleButton.IsEnabled = false; }
         timer.Tick += (_, _) => Render(); timer.Start(); Render();
         Loaded += async (_, _) => { if (!demo) { await System.Threading.Tasks.Task.Delay(1800); await CheckUpdate(false); } };
         Closed += (_, _) => timer.Stop();
+        Closing += (_, args) => { if (CleanupPanel.Busy) { args.Cancel = true; UpdateLabel.Text = "Aguarde a operação de limpeza terminar antes de fechar."; } };
     }
     private void Render()
     {
@@ -66,23 +68,28 @@ public partial class MainWindow : Window
     private void Preset_Click(object sender, RoutedEventArgs e) { TimeInput.Text = (string)((Button)sender).Tag; ErrorLabel.Text = ""; Render(); }
     private void Input_Changed(object sender, TextChangedEventArgs e) { if (IsLoaded) Render(); }
     private async void Update_Click(object sender, RoutedEventArgs e) => await CheckUpdate(true);
+    private void Energy_Click(object sender, RoutedEventArgs e) { EnergyPanel.Visibility = Visibility.Visible; CleanupPanel.Visibility = Visibility.Collapsed; EnergyNav.Background = new SolidColorBrush(Color.FromRgb(73,64,95)); CleanupNav.Background = Brushes.Transparent; }
+    private void Cleanup_Click(object sender, RoutedEventArgs e) { EnergyPanel.Visibility = Visibility.Collapsed; CleanupPanel.Visibility = Visibility.Visible; CleanupNav.Background = new SolidColorBrush(Color.FromRgb(73,64,95)); EnergyNav.Background = Brushes.Transparent; }
     private async Task CheckUpdate(bool manual)
     {
         if (demo || updating) return;
+        if (CleanupPanel.Busy) { UpdateLabel.Text = "Aguarde a limpeza terminar antes de atualizar."; return; }
         if (target > DateTimeOffset.Now) { UpdateLabel.Text = "A atualização será verificada ao reabrir sem agendamento."; return; }
         updating = true; UpdateButton.IsEnabled = false;
         try
         {
             var update = await Updater.Check();
             if (update is null) { UpdateLabel.Text = "Você está na versão mais recente."; return; }
+            if (CleanupPanel.Busy) { UpdateLabel.Text = "Atualização adiada até a limpeza terminar."; return; }
             // Lock scheduling before downloading so no new timer can be lost during installation.
             ScheduleButton.IsEnabled = false;
+            CleanupPanel.SetEnabled(false);
             UpdateLabel.Text = "Baixando atualização " + update.Version + "…";
             var installer = await Updater.Download(update);
             if (schedule.Read() > DateTimeOffset.Now) { UpdateLabel.Text = "Atualização adiada: existe um agendamento ativo."; return; }
             Updater.Install(installer); Application.Current.Shutdown();
         }
         catch (Exception ex) { UpdateLabel.Text = manual ? "Não foi possível atualizar: " + ex.Message : "Sem conexão para atualizar. Tentaremos ao reabrir."; }
-        finally { updating = false; UpdateButton.IsEnabled = true; ScheduleButton.IsEnabled = true; }
+        finally { updating = false; UpdateButton.IsEnabled = true; ScheduleButton.IsEnabled = true; CleanupPanel.SetEnabled(true); }
     }
 }

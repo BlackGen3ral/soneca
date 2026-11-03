@@ -57,7 +57,7 @@ public sealed class Schedule
         if (demo) { simulated = target; return; }
         dynamic service = Connect();
         dynamic task = service.NewTask(0);
-        task.RegistrationInfo.Description = "Desligamento programado pelo Soneca. Cancele pelo aplicativo.";
+        task.RegistrationInfo.Description = "Desligamento programado pelo Artho Control. Cancele pelo aplicativo.";
         task.Principal.LogonType = 3; task.Principal.RunLevel = 0;
         task.Settings.Enabled = true;
         task.Settings.StartWhenAvailable = false;
