@@ -1,5 +1,5 @@
 #ifndef AppVersion
- #define AppVersion "1.2.0"
+ #define AppVersion "1.2.1"
 #endif
 [Setup]
 AppId={{E91D840B-33AE-467D-93ED-7D8EA88B2EB1}
@@ -45,4 +45,3 @@ begin
 end;
 [UninstallRun]
 Filename: "{app}\Soneca.exe"; Parameters: "--cancel-schedule"; Flags: runhidden waituntilterminated; RunOnceId: "CancelSonecaSchedule"
-
