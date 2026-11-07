@@ -1,4 +1,4 @@
-param([string]$Version = '1.1.0', [string]$Dotnet = 'dotnet', [string]$InnoCompiler = '')
+param([string]$Version = '1.2.0', [string]$Dotnet = 'dotnet', [string]$InnoCompiler = '')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Push-Location $root
@@ -21,3 +21,4 @@ try {
  Copy-Item dist\Soneca-Setup.exe dist\ArthoControl-Setup.exe -Force
  [IO.File]::AppendAllText((Join-Path $root 'dist\SHA256SUMS.txt'), "$hash  ArthoControl-Setup.exe`n")
 } finally { Pop-Location }
+

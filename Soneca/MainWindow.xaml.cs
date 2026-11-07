@@ -23,7 +23,7 @@ public partial class MainWindow : Window
         timer.Tick += (_, _) => Render(); timer.Start(); Render();
         Loaded += async (_, _) => { if (!demo) { await System.Threading.Tasks.Task.Delay(1800); await CheckUpdate(false); } };
         Closed += (_, _) => timer.Stop();
-        Closing += (_, args) => { if (CleanupPanel.Busy) { args.Cancel = true; UpdateLabel.Text = "Aguarde a operação de limpeza terminar antes de fechar."; } };
+        Closing += (_, args) => { if (CleanupPanel.Busy || NamesPanel.Busy) { args.Cancel = true; UpdateLabel.Text = "Aguarde a operação terminar antes de fechar."; } };
     }
     private void Render()
     {
@@ -68,28 +68,39 @@ public partial class MainWindow : Window
     private void Preset_Click(object sender, RoutedEventArgs e) { TimeInput.Text = (string)((Button)sender).Tag; ErrorLabel.Text = ""; Render(); }
     private void Input_Changed(object sender, TextChangedEventArgs e) { if (IsLoaded) Render(); }
     private async void Update_Click(object sender, RoutedEventArgs e) => await CheckUpdate(true);
-    private void Energy_Click(object sender, RoutedEventArgs e) { EnergyPanel.Visibility = Visibility.Visible; CleanupPanel.Visibility = Visibility.Collapsed; EnergyNav.Background = new SolidColorBrush(Color.FromRgb(73,64,95)); CleanupNav.Background = Brushes.Transparent; }
-    private void Cleanup_Click(object sender, RoutedEventArgs e) { EnergyPanel.Visibility = Visibility.Collapsed; CleanupPanel.Visibility = Visibility.Visible; CleanupNav.Background = new SolidColorBrush(Color.FromRgb(73,64,95)); EnergyNav.Background = Brushes.Transparent; }
+    private void Navigate(int page)
+    {
+        EnergyPanel.Visibility = page == 0 ? Visibility.Visible : Visibility.Collapsed;
+        CleanupPanel.Visibility = page == 1 ? Visibility.Visible : Visibility.Collapsed;
+        NamesPanel.Visibility = page == 2 ? Visibility.Visible : Visibility.Collapsed;
+        EnergyNav.Background = page == 0 ? new SolidColorBrush(Color.FromRgb(73,64,95)) : Brushes.Transparent;
+        CleanupNav.Background = page == 1 ? new SolidColorBrush(Color.FromRgb(73,64,95)) : Brushes.Transparent;
+        NamesNav.Background = page == 2 ? new SolidColorBrush(Color.FromRgb(73,64,95)) : Brushes.Transparent;
+    }
+    private void Energy_Click(object sender, RoutedEventArgs e) => Navigate(0);
+    private void Cleanup_Click(object sender, RoutedEventArgs e) => Navigate(1);
+    private void Names_Click(object sender, RoutedEventArgs e) => Navigate(2);
     private async Task CheckUpdate(bool manual)
     {
         if (demo || updating) return;
-        if (CleanupPanel.Busy) { UpdateLabel.Text = "Aguarde a limpeza terminar antes de atualizar."; return; }
+        if (CleanupPanel.Busy || NamesPanel.Busy) { UpdateLabel.Text = "Aguarde a operação terminar antes de atualizar."; return; }
         if (target > DateTimeOffset.Now) { UpdateLabel.Text = "A atualização será verificada ao reabrir sem agendamento."; return; }
         updating = true; UpdateButton.IsEnabled = false;
         try
         {
             var update = await Updater.Check();
             if (update is null) { UpdateLabel.Text = "Você está na versão mais recente."; return; }
-            if (CleanupPanel.Busy) { UpdateLabel.Text = "Atualização adiada até a limpeza terminar."; return; }
+            if (CleanupPanel.Busy || NamesPanel.Busy) { UpdateLabel.Text = "Atualização adiada até a operação terminar."; return; }
             // Lock scheduling before downloading so no new timer can be lost during installation.
             ScheduleButton.IsEnabled = false;
             CleanupPanel.SetEnabled(false);
+            NamesPanel.IsEnabled = false;
             UpdateLabel.Text = "Baixando atualização " + update.Version + "…";
             var installer = await Updater.Download(update);
             if (schedule.Read() > DateTimeOffset.Now) { UpdateLabel.Text = "Atualização adiada: existe um agendamento ativo."; return; }
             Updater.Install(installer); Application.Current.Shutdown();
         }
         catch (Exception ex) { UpdateLabel.Text = manual ? "Não foi possível atualizar: " + ex.Message : "Sem conexão para atualizar. Tentaremos ao reabrir."; }
-        finally { updating = false; UpdateButton.IsEnabled = true; ScheduleButton.IsEnabled = true; CleanupPanel.SetEnabled(true); }
+        finally { updating = false; UpdateButton.IsEnabled = true; ScheduleButton.IsEnabled = true; CleanupPanel.SetEnabled(true); NamesPanel.IsEnabled = true; }
     }
 }

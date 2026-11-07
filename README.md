@@ -6,6 +6,12 @@ Sua central pessoal de ferramentas para Windows. O antigo Soneca reúne **Energi
 
 Baixe [ArthoControl-Setup.exe](https://github.com/BlackGen3ral/soneca/releases/latest/download/ArthoControl-Setup.exe). Windows 10/11 x64, .NET incluído. Quem tem o Soneca recebe a mudança pelo atualizador. Os identificadores internos anteriores permanecem para preservar a atualização e os agendamentos.
 
+## Nomes da pasta
+
+Escolha uma pasta ou cole seu caminho e clique em **Ler pasta**. A prévia mostra os nomes completos, um por linha, sem o corte visual do Explorador. Clique em **Copiar todos os nomes** para colar em uma mensagem ou documento, ou salve um `.txt`.
+
+Permite listar arquivos e pastas, somente arquivos ou somente pastas; ordenar por nome ou modificação mais recente; mostrar ou ocultar extensões; numerar; e incluir subpastas. Nas subpastas, usa caminhos relativos para distinguir nomes repetidos. Links de pastas não são percorridos. Itens inacessíveis são informados. A leitura não renomeia nem modifica arquivos e não envia a lista à internet.
+
 ## Energia
 
 Escolha atalhos de tempo, minutos personalizados até 7 dias ou um horário HH:mm. Clique em Agendar desligamento. É possível alterar ou cancelar; fechar o app mantém a tarefa no Windows.

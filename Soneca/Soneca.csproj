@@ -2,7 +2,8 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
-    <Version>1.1.0</Version><ApplicationIcon>Assets\soneca.ico</ApplicationIcon>
+    <Version>1.2.0</Version><ApplicationIcon>Assets\soneca.ico</ApplicationIcon>
     <AssemblyName>Soneca</AssemblyName><Product>Artho Control</Product><Title>Artho Control</Title><Company>Artho</Company><Description>Sua central pessoal de ferramentas para Windows.</Description>
   </PropertyGroup>
 </Project>
+
