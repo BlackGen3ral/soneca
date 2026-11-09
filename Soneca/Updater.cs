@@ -26,7 +26,8 @@ public static class Updater
         foreach (var asset in root.GetProperty("assets").EnumerateArray())
         {
             string? name = asset.GetProperty("name").GetString();
-            if (name == "Soneca-Setup.exe") installer = new Uri(asset.GetProperty("browser_download_url").GetString()!);
+            if (name == "ArthoAI-Setup.exe") installer = new Uri(asset.GetProperty("browser_download_url").GetString()!);
+            if (installer is null && name == "Soneca-Setup.exe") installer = new Uri(asset.GetProperty("browser_download_url").GetString()!);
             if (name == "SHA256SUMS.txt") checksum = new Uri(asset.GetProperty("browser_download_url").GetString()!);
         }
         if (installer is null || checksum is null || !OfficialAsset(installer) || !OfficialAsset(checksum)) throw new Exception("A versão publicada está incompleta.");
@@ -37,7 +38,7 @@ public static class Updater
         foreach (string line in text.Split('\n'))
         {
             var parts = line.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 2 && parts[1].TrimStart('*') == "Soneca-Setup.exe" && parts[0].Length == 64 && parts[0].All(Uri.IsHexDigit)) return parts[0];
+            if (parts.Length == 2 && (parts[1].TrimStart('*') == "ArthoAI-Setup.exe" || parts[1].TrimStart('*') == "Soneca-Setup.exe") && parts[0].Length == 64 && parts[0].All(Uri.IsHexDigit)) return parts[0];
         }
         throw new Exception("Verificação de integridade indisponível.");
     }
@@ -47,7 +48,8 @@ public static class Updater
         string hash = ExpectedHash(await client.GetStringAsync(update.Checksums));
         string folder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Soneca", "Updates", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
-        string path = Path.Combine(folder, "Soneca-Setup.exe");
+        string assetName = Path.GetFileName(update.Installer.LocalPath);
+        string path = Path.Combine(folder, string.IsNullOrWhiteSpace(assetName) ? "ArthoAI-Setup.exe" : assetName);
         using (var response = await client.GetAsync(update.Installer, HttpCompletionOption.ResponseHeadersRead))
         {
             response.EnsureSuccessStatusCode();

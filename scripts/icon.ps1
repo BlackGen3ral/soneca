@@ -8,8 +8,8 @@ foreach ($size in @(16,32,48,64,128,256)) {
  $g = [Drawing.Graphics]::FromImage($bmp)
  $g.SmoothingMode = 'AntiAlias'
  $g.ScaleTransform(($size/256.0),($size/256.0))
- $bg = [Drawing.SolidBrush]::new([Drawing.ColorTranslator]::FromHtml('#211C34'))
- $ink = [Drawing.SolidBrush]::new([Drawing.ColorTranslator]::FromHtml('#C7B8FF'))
+ $bg = [Drawing.SolidBrush]::new([Drawing.ColorTranslator]::FromHtml('#101820'))
+ $ink = [Drawing.SolidBrush]::new([Drawing.ColorTranslator]::FromHtml('#7BC9E8'))
  $g.FillRectangle($bg,0,0,256,256)
  $pen = [Drawing.Pen]::new($ink,18)
  $pen.StartCap = 'Round'; $pen.EndCap = 'Round'

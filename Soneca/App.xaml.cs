@@ -9,6 +9,7 @@ public partial class App : Application
     {
         base.OnStartup(e);
         if (e.Args.Length == 2 && e.Args[0] == "--clean-prefetch") { Environment.Exit(Cleaner.PrefetchHelper(e.Args[1])); return; }
+        if (e.Args.Contains("--uninstall-cleanup")) { StartupRegistration.SetEnabled(false); Shutdown(); return; }
         if (e.Args.Contains("--self-test")) { Environment.Exit(SelfTests.Run()); return; }
         if (e.Args.Contains("--cancel-schedule"))
         {
@@ -18,9 +19,9 @@ public partial class App : Application
         }
         bool demo = e.Args.Contains("--demo");
         instance = new Mutex(true, demo ? "Local\\SonecaDemo" : "Local\\Soneca", out bool first);
-        if (!first) { MessageBox.Show("O Artho Control já está aberto.", "Artho Control"); Shutdown(); return; }
-        DispatcherUnhandledException += (_, args) => { MessageBox.Show(args.Exception.Message, "Artho Control"); args.Handled = true; };
-        MainWindow = new MainWindow(demo); MainWindow.Show();
+        if (!first) { MessageBox.Show("O Artho AI já está aberto.", "Artho AI"); Shutdown(); return; }
+        DispatcherUnhandledException += (_, args) => { MessageBox.Show(args.Exception.Message, "Artho AI"); args.Handled = true; };
+        MainWindow = new MainWindow(demo, e.Args.Contains("--skip-intro")); MainWindow.Show();
     }
     protected override void OnExit(ExitEventArgs e) { instance?.Dispose(); base.OnExit(e); }
 }

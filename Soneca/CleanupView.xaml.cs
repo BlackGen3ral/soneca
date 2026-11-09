@@ -48,7 +48,7 @@ public partial class CleanupView : UserControl
         if (!analyzed || Busy) return;
         SetBusy(true);
         string categories = string.Join("\n", new[] { temp is not null ? "• Arquivos de %temp%" : null, prefetch is not null ? "• Cache .pf do Prefetch" : null, bin is not null ? "• Todo o conteúdo da sua lixeira" : null }.Where(s => s is not null));
-        if (MessageBox.Show(Window.GetWindow(this), (Demo ? "SIMULAÇÃO\n\n" : "") + "Limpar estas categorias?\n\n" + categories + "\n\nA exclusão é permanente. Arquivos em uso ou modificados serão ignorados." + (prefetch is not null && !Demo && !Cleaner.IsAdministrator ? "\nO Windows pedirá autorização para o Prefetch." : ""), "Artho Control · confirmar limpeza", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) { SetBusy(false); return; }
+        if (MessageBox.Show(Window.GetWindow(this), (Demo ? "SIMULAÇÃO\n\n" : "") + "Limpar estas categorias?\n\n" + categories + "\n\nA exclusão é permanente. Arquivos em uso ou modificados serão ignorados." + (prefetch is not null && !Demo && !Cleaner.IsAdministrator ? "\nO Windows pedirá autorização para o Prefetch." : ""), "Artho AI · confirmar limpeza", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) { SetBusy(false); return; }
         SetBusy(true); ResultLabel.Text = "Limpando…";
         try
         {

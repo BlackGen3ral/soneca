@@ -3,12 +3,12 @@
 #endif
 [Setup]
 AppId={{E91D840B-33AE-467D-93ED-7D8EA88B2EB1}
-AppName=Artho Control
+AppName=Artho AI
 AppVersion={#AppVersion}
 AppPublisher=Artho
 AppPublisherURL=https://github.com/BlackGen3ral/soneca
 DefaultDirName={localappdata}\Programs\Soneca
-DefaultGroupName=Artho Control
+DefaultGroupName=Artho AI
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
@@ -30,13 +30,13 @@ Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; Flags: un
 [Files]
 Source: "..\dist\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
-Name: "{group}\Artho Control"; Filename: "{app}\Soneca.exe"
-Name: "{autodesktop}\Artho Control"; Filename: "{app}\Soneca.exe"; Tasks: desktopicon
+Name: "{group}\Artho AI"; Filename: "{app}\Soneca.exe"
+Name: "{autodesktop}\Artho AI"; Filename: "{app}\Soneca.exe"; Tasks: desktopicon
 [InstallDelete]
 Type: files; Name: "{userprograms}\Soneca\Soneca.lnk"
 Type: files; Name: "{autodesktop}\Soneca.lnk"
 [Run]
-Filename: "{app}\Soneca.exe"; Description: "Abrir Artho Control"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Soneca.exe"; Description: "Abrir Artho AI"; Flags: nowait postinstall skipifsilent
 Filename: "{app}\Soneca.exe"; Flags: nowait; Check: IsUpdate
 [Code]
 function IsUpdate: Boolean;
@@ -45,3 +45,4 @@ begin
 end;
 [UninstallRun]
 Filename: "{app}\Soneca.exe"; Parameters: "--cancel-schedule"; Flags: runhidden waituntilterminated; RunOnceId: "CancelSonecaSchedule"
+Filename: "{app}\Soneca.exe"; Parameters: "--uninstall-cleanup"; Flags: runhidden waituntilterminated; RunOnceId: "RemoveArthoAIStartup"

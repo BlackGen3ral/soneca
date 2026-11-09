@@ -24,6 +24,10 @@ public static class SelfTests
             Assert(!Updater.OfficialAsset(new Uri("https://github.com.evil.test/BlackGen3ral/soneca/releases/download/x")));
             Assert(!Updater.OfficialAsset(new Uri("https://github.com/other/soneca/releases/download/x")));
             Assert(Updater.ExpectedHash(new string('a', 64) + "  Soneca-Setup.exe\n") == new string('a', 64));
+            Assert(Updater.ExpectedHash(new string('b', 64) + "  ArthoAI-Setup.exe\n") == new string('b', 64));
+            var remote = new RemoteComputerConfiguration(new[] { new ComputerNode("PC 1", "pc1", null, 1), new ComputerNode("PC 2", "pc2", null, 2), new ComputerNode("PC 3", "pc3", null, 3) });
+            Assert(remote.Computers.Count == RemoteComputerConfiguration.MaximumComputers);
+            try { new RemoteComputerConfiguration(remote.Computers.Append(new ComputerNode("PC 4", "pc4", null, 4))); throw new Exception("Limite de PCs ignorado"); } catch (ArgumentOutOfRangeException) { count++; }
             try { Updater.ExpectedHash("bad  Soneca-Setup.exe"); throw new Exception("Hash inválido aceito"); } catch (Exception ex) when (ex.Message.StartsWith("Verificação")) { count++; }
             Schedule.IntegrationTest(); count++;
             count += CleanerTests.Run();

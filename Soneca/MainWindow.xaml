@@ -1,26 +1,77 @@
-<Window x:Class="Soneca.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Soneca" Title="Artho Control" Width="1040" Height="860" MinWidth="920" MinHeight="700" Background="#14141C" WindowStartupLocation="CenterScreen" Foreground="White">
- <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition/></Grid.ColumnDefinitions>
-  <Border Background="#1A1923" Padding="20,28,20,24"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-   <StackPanel><TextBlock Text="ARTHO" Foreground="#C7B8FF" FontSize="12" FontWeight="SemiBold"/><TextBlock Text="Control" FontSize="29" FontWeight="SemiBold" Margin="0,2,0,0"/><TextBlock Text="Seu Windows. Do seu jeito." FontSize="11" Foreground="#9997AA" Margin="0,8,0,32"/><Button x:Name="EnergyNav" Content="Energia" Click="Energy_Click" Background="#49405F" HorizontalContentAlignment="Left"/><Button x:Name="CleanupNav" Content="Limpeza" Click="Cleanup_Click" Background="Transparent" Margin="0,8,0,0"/><Button x:Name="NamesNav" Content="Nomes da pasta" Click="Names_Click" Background="Transparent" Margin="0,8,0,0"/></StackPanel>
-   <StackPanel Grid.Row="2"><TextBlock Text="Ferramentas pessoais" Foreground="#777487" FontSize="11"/>  <StackPanel Margin="0,22,0,0" VerticalAlignment="Bottom"><Button x:Name="UpdateButton" Content="Verificar atualizações" Click="Update_Click" Background="Transparent" Foreground="#BDB0EB" Padding="5" FontSize="12"/><TextBlock x:Name="UpdateLabel" Text="Atualizações automáticas ativadas" Foreground="#777487" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" Margin="0,5,0,0"/></StackPanel></StackPanel></Grid></Border> <ScrollViewer x:Name="EnergyPanel" Grid.Column="1" VerticalScrollBarVisibility="Auto"><Grid Margin="32,26,32,24" MaxWidth="560"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <Grid><StackPanel Orientation="Horizontal"><Border Background="#C7B8FF" Width="40" Height="40" CornerRadius="13"><TextBlock Text="◔" Foreground="#211C34" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Margin="12,0,0,0"><TextBlock Text="Energia" FontSize="23" FontWeight="SemiBold"/><TextBlock Text="Desligamento programado" Foreground="#9997AA" FontSize="11"/></StackPanel></StackPanel><TextBlock x:Name="VersionLabel" HorizontalAlignment="Right" Foreground="#9997AA" VerticalAlignment="Center"/></Grid>
-  <StackPanel Grid.Row="1" Margin="0,30,0,24"><TextBlock Text="Pode deixar comigo." FontSize="30" FontWeight="SemiBold"/><TextBlock Text="Escolha quando o seu Windows vai desligar." Foreground="#AAA7BC" Margin="0,8,0,0" FontSize="14"/></StackPanel>
-  <Border Grid.Row="2" Background="#1E1E29" CornerRadius="24" Padding="24,22" BorderBrush="#30303D" BorderThickness="1"><StackPanel>
-   <TextBlock x:Name="StatusLabel" Text="NENHUM DESLIGAMENTO AGENDADO" Foreground="#BDB0EB" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-   <TextBlock x:Name="CountdownLabel" Text="00:30:00" FontFamily="Cascadia Mono, Consolas" FontSize="55" FontWeight="Light" HorizontalAlignment="Center" Margin="0,12,0,6"/>
-   <TextBlock x:Name="TargetLabel" Text="Um tempo para terminar o que você está fazendo." Foreground="#AAA7BC" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"/>
-  </StackPanel></Border>
-  <StackPanel Grid.Row="3" Margin="0,24,0,0">
-   <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><Button x:Name="DelayMode" Content="Daqui a um tempo" Click="Delay_Click" Background="#49405F" Margin="0,0,5,0"/><Button x:Name="ClockMode" Grid.Column="1" Content="Em um horário" Click="Clock_Click" Margin="5,0,0,0"/></Grid>
-   <UniformGrid x:Name="Presets" Columns="4" Margin="0,16,0,14"><Button Content="15 min" Tag="15" Click="Preset_Click" Margin="0,0,6,0" Padding="8,11"/><Button Content="30 min" Tag="30" Click="Preset_Click" Margin="2,0,4,0" Padding="8,11"/><Button Content="1 hora" Tag="60" Click="Preset_Click" Margin="4,0,2,0" Padding="8,11"/><Button Content="2 horas" Tag="120" Click="Preset_Click" Margin="6,0,0,0" Padding="8,11"/></UniformGrid>
-   <TextBlock x:Name="InputLabel" Text="Tempo personalizado (minutos)" Foreground="#AAA7BC" FontSize="12" Margin="0,0,0,8"/>
-   <TextBox x:Name="TimeInput" Text="30" TextChanged="Input_Changed" MaxLength="5" AutomationProperties.Name="Tempo ou horário"/>
-   <TextBlock x:Name="ErrorLabel" Foreground="#FFB9B9" FontSize="12" Margin="0,8,0,8" TextWrapping="Wrap"/>
-   <Button x:Name="ScheduleButton" Content="Agendar desligamento" Background="#C7B8FF" Foreground="#211C34" FontWeight="SemiBold" Padding="20,16" Click="Schedule_Click"/>
-   <Button x:Name="CancelButton" Content="Cancelar desligamento" Margin="0,10,0,0" Click="Cancel_Click" Visibility="Collapsed"/>
-   <TextBlock Text="Pode fechar o app após agendar. Mantenha sua sessão conectada. O despertar da suspensão depende das configurações do Windows. Salve seus arquivos; apps abertos podem impedir o desligamento." Foreground="#8E8B9F" FontSize="11" TextWrapping="Wrap" LineHeight="17" Margin="2,16,2,0"/>
-  </StackPanel>
-
- </Grid></ScrollViewer>
-<local:CleanupView x:Name="CleanupPanel" Grid.Column="1" Visibility="Collapsed"/><local:FolderNamesView x:Name="NamesPanel" Grid.Column="1" Visibility="Collapsed"/></Grid></Window>
-
+<Window x:Class="Soneca.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Soneca" Title="Artho AI" Width="1120" Height="820" MinWidth="920" MinHeight="700" Background="#10141B" WindowStartupLocation="CenterScreen" Foreground="White">
+ <Grid>
+  <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition/></Grid.ColumnDefinitions>
+  <Border Background="#141B24" Padding="20,28,20,24"><Grid>
+   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+   <StackPanel>
+    <TextBlock Text="ASSISTENTE PESSOAL" Foreground="#7BC9E8" FontSize="10" FontWeight="SemiBold"/>
+    <TextBlock Text="Artho AI" FontSize="28" FontWeight="SemiBold" Margin="0,2,0,0"/>
+    <TextBlock Text="Sua central, em um só lugar." FontSize="11" Foreground="#9997AA" Margin="0,8,0,32"/>
+    <Button x:Name="HomeNav" Content="Visão geral" Click="Home_Click" Background="#244155" HorizontalContentAlignment="Left"/>
+    <Button x:Name="EnergyNav" Content="Energia" Click="Energy_Click" Background="Transparent" Margin="0,8,0,0" HorizontalContentAlignment="Left"/>
+    <Button x:Name="CleanupNav" Content="Limpeza" Click="Cleanup_Click" Background="Transparent" Margin="0,8,0,0" HorizontalContentAlignment="Left"/>
+    <Button x:Name="NamesNav" Content="Nomes da pasta" Click="Names_Click" Background="Transparent" Margin="0,8,0,0" HorizontalContentAlignment="Left"/>
+   </StackPanel>
+   <StackPanel Grid.Row="2">
+    <TextBlock Text="FERRAMENTAS PESSOAIS" Foreground="#777487" FontSize="10"/>
+    <Button x:Name="UpdateButton" Content="Verificar atualizações" Click="Update_Click" Background="Transparent" Foreground="#9DDCF0" Padding="5" FontSize="12" Margin="0,14,0,0"/>
+    <TextBlock x:Name="UpdateLabel" Text="Atualizações automáticas ativadas" Foreground="#777487" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" Margin="0,5,0,0"/>
+   </StackPanel>
+  </Grid></Border>
+  <ScrollViewer x:Name="HomePanel" Grid.Column="1" VerticalScrollBarVisibility="Auto">
+   <StackPanel Margin="38,34,38,30" MaxWidth="760" HorizontalAlignment="Left">
+    <TextBlock Text="CENTRAL PESSOAL" Foreground="#7BC9E8" FontSize="11" FontWeight="SemiBold"/>
+    <TextBlock Text="Bom ter você de volta." FontSize="32" FontWeight="SemiBold" Margin="0,10,0,4"/>
+    <TextBlock x:Name="TodayLabel" Foreground="#9CA8B8" FontSize="14"/>
+    <Border Background="#18212B" CornerRadius="20" Padding="22" Margin="0,25,0,18" BorderBrush="#2A3A48" BorderThickness="1"><StackPanel>
+     <TextBlock Text="ESTE COMPUTADOR" Foreground="#7BC9E8" FontSize="10" FontWeight="SemiBold"/>
+     <TextBlock x:Name="ComputerNameLabel" FontSize="22" FontWeight="SemiBold" Margin="0,6,0,3"/>
+     <TextBlock x:Name="ComputerDetailsLabel" Foreground="#ADB8C4" FontSize="12"/>
+    </StackPanel></Border>
+    <TextBlock Text="Serviços e dispositivos" FontSize="20" FontWeight="SemiBold" Margin="0,8,0,12"/>
+    <UniformGrid Columns="2">
+     <Border Background="#18212B" CornerRadius="16" Padding="18" Margin="0,0,8,8"><StackPanel><TextBlock Text="REDE LOCAL" Foreground="#8F9BAB" FontSize="10"/><TextBlock x:Name="NetworkStatusLabel" Text="Verificando…" FontSize="16" FontWeight="SemiBold" Margin="0,7,0,3"/><TextBlock Text="Estado observado neste computador" Foreground="#8F9BAB" FontSize="11"/></StackPanel></Border>
+     <Border Background="#18212B" CornerRadius="16" Padding="18" Margin="8,0,0,8"><StackPanel><TextBlock Text="OUTROS COMPUTADORES" Foreground="#8F9BAB" FontSize="10"/><TextBlock Text="Não configurados" FontSize="16" FontWeight="SemiBold" Margin="0,7,0,3"/><TextBlock Text="Nenhum PC remoto foi cadastrado ainda." Foreground="#8F9BAB" FontSize="11"/></StackPanel></Border>
+     <Border Background="#18212B" CornerRadius="16" Padding="18" Margin="0,8,8,0"><StackPanel><TextBlock Text="CÂMERAS INTELBRAS" Foreground="#8F9BAB" FontSize="10"/><TextBlock Text="Não conectadas" FontSize="16" FontWeight="SemiBold" Margin="0,7,0,3"/><TextBlock Text="Configure o acesso para verificar o estado." Foreground="#8F9BAB" FontSize="11"/></StackPanel></Border>
+     <Border Background="#18212B" CornerRadius="16" Padding="18" Margin="8,8,0,0"><StackPanel><TextBlock Text="SUPER PRINT" Foreground="#8F9BAB" FontSize="10"/><TextBlock Text="Não conectado" FontSize="16" FontWeight="SemiBold" Margin="0,7,0,3"/><TextBlock Text="Integração comercial ainda não configurada." Foreground="#8F9BAB" FontSize="11"/></StackPanel></Border>
+    </UniformGrid>
+    <TextBlock Text="Preferências de inicialização" FontSize="20" FontWeight="SemiBold" Margin="0,26,0,10"/>
+    <Border Background="#18212B" CornerRadius="16" Padding="18"><StackPanel>
+     <CheckBox x:Name="StartupCheckBox" Content="Iniciar o Artho AI com o Windows" Foreground="#F4F2FB" FontSize="14" Checked="Startup_Changed" Unchecked="Startup_Changed"/>
+     <TextBlock Text="A apresentação pode ser pulada a qualquer momento. Sons e fala usam os recursos disponíveis no Windows." Foreground="#8F9BAB" FontSize="11" TextWrapping="Wrap" Margin="0,9,0,0"/>
+    </StackPanel></Border>
+   </StackPanel>
+  </ScrollViewer>
+  <ScrollViewer x:Name="EnergyPanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+   <Grid Margin="32,26,32,24" MaxWidth="560" HorizontalAlignment="Left">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <Grid><StackPanel Orientation="Horizontal"><Border Background="#7BC9E8" Width="40" Height="40" CornerRadius="13"><TextBlock Text="◔" Foreground="#14212A" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Margin="12,0,0,0"><TextBlock Text="Energia" FontSize="23" FontWeight="SemiBold"/><TextBlock Text="Desligamento programado" Foreground="#9997AA" FontSize="11"/></StackPanel></StackPanel><TextBlock x:Name="VersionLabel" HorizontalAlignment="Right" Foreground="#9997AA" VerticalAlignment="Center"/></Grid>
+    <StackPanel Grid.Row="1" Margin="0,30,0,24"><TextBlock Text="Pode deixar comigo." FontSize="30" FontWeight="SemiBold"/><TextBlock Text="Escolha quando o seu Windows vai desligar." Foreground="#AAA7BC" Margin="0,8,0,0" FontSize="14"/></StackPanel>
+    <Border Grid.Row="2" Background="#1E252E" CornerRadius="24" Padding="24,22" BorderBrush="#303A43" BorderThickness="1"><StackPanel><TextBlock x:Name="StatusLabel" Text="NENHUM DESLIGAMENTO AGENDADO" Foreground="#7BC9E8" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center"/><TextBlock x:Name="CountdownLabel" Text="00:30:00" FontFamily="Cascadia Mono, Consolas" FontSize="55" FontWeight="Light" HorizontalAlignment="Center" Margin="0,12,0,6"/><TextBlock x:Name="TargetLabel" Text="Um tempo para terminar o que você está fazendo." Foreground="#AAA7BC" FontSize="12" TextWrapping="Wrap" TextAlignment="Center"/></StackPanel></Border>
+    <StackPanel Grid.Row="3" Margin="0,24,0,0">
+     <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><Button x:Name="DelayMode" Content="Daqui a um tempo" Click="Delay_Click" Background="#244155" Margin="0,0,5,0"/><Button x:Name="ClockMode" Grid.Column="1" Content="Em um horário" Click="Clock_Click" Margin="5,0,0,0"/></Grid>
+     <UniformGrid x:Name="Presets" Columns="4" Margin="0,16,0,14"><Button Content="15 min" Tag="15" Click="Preset_Click" Margin="0,0,6,0" Padding="8,11"/><Button Content="30 min" Tag="30" Click="Preset_Click" Margin="2,0,4,0" Padding="8,11"/><Button Content="1 hora" Tag="60" Click="Preset_Click" Margin="4,0,2,0" Padding="8,11"/><Button Content="2 horas" Tag="120" Click="Preset_Click" Margin="6,0,0,0" Padding="8,11"/></UniformGrid>
+     <TextBlock x:Name="InputLabel" Text="Tempo personalizado (minutos)" Foreground="#AAA7BC" FontSize="12" Margin="0,0,0,8"/><TextBox x:Name="TimeInput" Text="30" TextChanged="Input_Changed" MaxLength="5" AutomationProperties.Name="Tempo ou horário"/><TextBlock x:Name="ErrorLabel" Foreground="#FFB9B9" FontSize="12" Margin="0,8,0,8" TextWrapping="Wrap"/><Button x:Name="ScheduleButton" Content="Agendar desligamento" Background="#7BC9E8" Foreground="#12212A" FontWeight="SemiBold" Padding="20,16" Click="Schedule_Click"/><Button x:Name="CancelButton" Content="Cancelar desligamento" Margin="0,10,0,0" Click="Cancel_Click" Visibility="Collapsed"/><TextBlock Text="Pode fechar o app após agendar. Mantenha sua sessão conectada. O despertar da suspensão depende das configurações do Windows. Salve seus arquivos; apps abertos podem impedir o desligamento." Foreground="#8E9AA7" FontSize="11" TextWrapping="Wrap" LineHeight="17" Margin="2,16,2,0"/>
+    </StackPanel>
+   </Grid>
+  </ScrollViewer>
+  <local:CleanupView x:Name="CleanupPanel" Grid.Column="1" Visibility="Collapsed"/><local:FolderNamesView x:Name="NamesPanel" Grid.Column="1" Visibility="Collapsed"/>
+  <Grid x:Name="IntroOverlay" Grid.ColumnSpan="2" Panel.ZIndex="10" Background="#080C12">
+   <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/><RowDefinition/></Grid.RowDefinitions>
+   <Canvas x:Name="OrbCanvas" Width="280" Height="280" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Ellipse Width="236" Height="236" Canvas.Left="22" Canvas.Top="22" Stroke="#244C62" StrokeThickness="1"/>
+    <Ellipse Width="180" Height="180" Canvas.Left="50" Canvas.Top="50" Stroke="#2D89A8" StrokeThickness="2" RenderTransformOrigin="0.5,0.5"><Ellipse.RenderTransform><RotateTransform x:Name="RingRotation"/></Ellipse.RenderTransform></Ellipse>
+    <Ellipse Width="128" Height="128" Canvas.Left="76" Canvas.Top="76" Stroke="#6CCDEB" StrokeThickness="1" Opacity="0.8"/>
+    <Ellipse x:Name="CoreGlow" Width="68" Height="68" Canvas.Left="106" Canvas.Top="106" Fill="#6CCDEB" Opacity="0.12"><Ellipse.Effect><BlurEffect Radius="28"/></Ellipse.Effect></Ellipse>
+    <Ellipse Width="12" Height="12" Canvas.Left="134" Canvas.Top="134" Fill="#A7ECFF"/><Ellipse Width="8" Height="8" Canvas.Left="70" Canvas.Top="73" Fill="#70D9F8"/><Ellipse Width="7" Height="7" Canvas.Left="202" Canvas.Top="194" Fill="#70D9F8"/>
+   </Canvas>
+   <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
+    <TextBlock Text="ARTHO AI" Foreground="#EAF9FF" FontSize="30" FontWeight="Light" HorizontalAlignment="Center"/>
+    <TextBlock Text="ASSISTENTE PESSOAL" Foreground="#72CBEA" FontSize="10" HorizontalAlignment="Center" Margin="0,8,0,0"/>
+    <TextBlock x:Name="IntroStatus" Text="Iniciando serviços locais…" Foreground="#9DB2C2" FontSize="12" HorizontalAlignment="Center" Margin="0,22,0,0"/>
+    <Button x:Name="SkipIntroButton" Content="Pular apresentação" Background="#1B2934" Foreground="#D6EAF2" Padding="16,10" Margin="0,22,0,0" Click="SkipIntro_Click"/>
+   </StackPanel>
+   <TextBlock Grid.Row="2" Text="SOM E VOZ CONFORME DISPONIBILIDADE DO WINDOWS" Foreground="#526572" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,24"/>
+  </Grid>
+ </Grid>
+</Window>
