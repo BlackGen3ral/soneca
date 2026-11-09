@@ -28,8 +28,9 @@ public partial class MainWindow : Window
         CleanupPanel.Demo = demo;
         VersionLabel.Text = "v" + Updater.Current.ToString(3);
         if (demo) { Title = "Artho AI · demonstração"; UpdateLabel.Text = "Demonstração · operações simuladas"; }
-        StartupCheckBox.IsChecked = !demo && StartupRegistration.IsEnabled();
-        if (!demo && !StartupRegistration.HasSetting) { StartupRegistration.SetEnabled(true); StartupCheckBox.IsChecked = true; }
+        bool startWithWindows = !demo && StartupRegistration.ResolvePreference(StartupRegistration.Preference);
+        StartupCheckBox.IsChecked = startWithWindows;
+        if (!demo) StartupRegistration.SetEnabled(startWithWindows);
         LoadDashboard();
         try { target = schedule.Read(); } catch (Exception ex) { ErrorLabel.Text = "Não foi possível consultar o agendamento: " + ex.Message; ScheduleButton.IsEnabled = false; }
         timer.Tick += (_, _) => Render(); timer.Start(); Render();
@@ -160,14 +161,23 @@ public partial class MainWindow : Window
 internal static class StartupRegistration
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    private const string PreferenceKey = @"Software\Artho\Soneca";
     private const string ValueName = "ArthoAI";
-    public static bool HasSetting { get { using var key = Registry.CurrentUser.OpenSubKey(RunKey); return key?.GetValue(ValueName) is not null; } }
+    internal static bool ResolvePreference(bool? preference) => preference ?? true;
+    public static bool? Preference { get { using var key = Registry.CurrentUser.OpenSubKey(PreferenceKey); return key?.GetValue("StartupEnabled") is int value ? value != 0 : null; } }
     public static bool IsEnabled() { using var key = Registry.CurrentUser.OpenSubKey(RunKey); return key?.GetValue(ValueName) is string; }
     public static void SetEnabled(bool enabled)
     {
         using var key = Registry.CurrentUser.CreateSubKey(RunKey, true);
         if (enabled) key.SetValue(ValueName, "\"" + Environment.ProcessPath + "\"");
         else key.DeleteValue(ValueName, false);
+        using var preference = Registry.CurrentUser.CreateSubKey(PreferenceKey, true);
+        preference.SetValue("StartupEnabled", enabled ? 1 : 0, RegistryValueKind.DWord);
+    }
+    public static void RemoveAll()
+    {
+        using (var key = Registry.CurrentUser.OpenSubKey(RunKey, true)) key?.DeleteValue(ValueName, false);
+        using (var preference = Registry.CurrentUser.OpenSubKey(PreferenceKey, true)) preference?.DeleteValue("StartupEnabled", false);
     }
 }
 

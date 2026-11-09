@@ -28,6 +28,8 @@ public static class SelfTests
             var remote = new RemoteComputerConfiguration(new[] { new ComputerNode("PC 1", "pc1", null, 1), new ComputerNode("PC 2", "pc2", null, 2), new ComputerNode("PC 3", "pc3", null, 3) });
             Assert(remote.Computers.Count == RemoteComputerConfiguration.MaximumComputers);
             try { new RemoteComputerConfiguration(remote.Computers.Append(new ComputerNode("PC 4", "pc4", null, 4))); throw new Exception("Limite de PCs ignorado"); } catch (ArgumentOutOfRangeException) { count++; }
+            Assert(StartupRegistration.ResolvePreference(null));
+            Assert(!StartupRegistration.ResolvePreference(false));
             try { Updater.ExpectedHash("bad  Soneca-Setup.exe"); throw new Exception("Hash inválido aceito"); } catch (Exception ex) when (ex.Message.StartsWith("Verificação")) { count++; }
             Schedule.IntegrationTest(); count++;
             count += CleanerTests.Run();
