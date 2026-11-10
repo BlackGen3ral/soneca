@@ -2,9 +2,9 @@
 
 Assistente pessoal para Windows, evoluído do projeto Artho Control (antigo Soneca). A primeira versão combina uma apresentação cinematográfica curta, um painel com dados reais deste computador e as ferramentas existentes de **Energia**, **Limpeza** e **Nomes da pasta**.
 
-## Primeira versão
+## Abertura
 
-- Apresentação de cinco segundos, com animação própria, efeitos sonoros sintetizados pelo app e fala pelo serviço de voz do Windows quando disponível. O app procura uma voz masculina em português do Brasil; se não encontrar, usa uma voz masculina instalada. A apresentação pode ser pulada pelo botão.
+- Abertura em HTML de 5,4 segundos com partículas, anéis de HUD e efeitos sonoros. O HTML e o áudio ficam no executável. O WebView2 Runtime renderiza a abertura dentro do app. Se estiver indisponível, o painel abre diretamente.
 - Início com o Windows ativado por padrão no primeiro uso. A preferência pode ser alterada em **Visão geral** e fica no perfil atual do Windows.
 - Painel local lê nome do computador, versão do Windows, processadores lógicos, memória física em uso, tempo ligado e presença de uma interface de rede ativa.
 - Computadores remotos, câmeras Intelbras e serviços da Super Print aparecem como **não configurados** até haver uma integração real. Esta versão ainda não os conecta, não envia Wake-on-LAN e não gera briefing comercial.
@@ -18,7 +18,7 @@ Baixe [ArthoAI-Setup.exe](https://github.com/BlackGen3ral/soneca/releases/latest
 
 ## Como testar
 
-- Abra o aplicativo instalado para ver a apresentação completa; clique em **Pular apresentação** para dispensá-la imediatamente.
+- Abra o aplicativo instalado para ver a abertura. Use **Pular abertura** ou **Esc** para ir ao painel. Em **Visão geral**, use **Rever abertura** para repeti-la.
 - Em **Visão geral**, confira os dados deste computador, o estado de rede observado e os serviços marcados como não configurados. Ative ou desative **Iniciar o Artho AI com o Windows** para conferir a preferência do usuário atual.
 - Para abrir sem animação pelo terminal: `Soneca.exe --skip-intro`.
 - `Soneca.exe --demo` simula as ferramentas destrutivas; não executa atualização, desligamento nem exclusão real.
@@ -54,6 +54,6 @@ Ao abrir sem agendamento nem limpeza ativa, o app consulta a última versão est
 
 ## Desenvolvimento
 
-Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.3.1 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
+Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.4.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
 
 O repositório e os identificadores técnicos ainda se chamam `soneca` para preservar atualizações existentes. A marca visível no produto é Artho AI.

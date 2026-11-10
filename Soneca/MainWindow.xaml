@@ -1,5 +1,6 @@
 <Window x:Class="Soneca.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Soneca" Title="Artho AI" Width="1120" Height="820" MinWidth="920" MinHeight="700" Background="#10141B" WindowStartupLocation="CenterScreen" Foreground="White">
  <Grid>
+ <Grid x:Name="DashboardContent">
   <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition/></Grid.ColumnDefinitions>
   <Border Background="#141B24" Padding="20,28,20,24"><Grid>
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -38,7 +39,8 @@
     <TextBlock Text="Preferências de inicialização" FontSize="20" FontWeight="SemiBold" Margin="0,26,0,10"/>
     <Border Background="#18212B" CornerRadius="16" Padding="18"><StackPanel>
      <CheckBox x:Name="StartupCheckBox" Content="Iniciar o Artho AI com o Windows" Foreground="#F4F2FB" FontSize="14" Checked="Startup_Changed" Unchecked="Startup_Changed"/>
-     <TextBlock Text="A apresentação pode ser pulada a qualquer momento. Sons e fala usam os recursos disponíveis no Windows." Foreground="#8F9BAB" FontSize="11" TextWrapping="Wrap" Margin="0,9,0,0"/>
+     <TextBlock Text="A abertura toca efeitos sonoros e pode ser pulada com Esc." Foreground="#8F9BAB" FontSize="12" TextWrapping="Wrap" Margin="0,9,0,0"/>
+     <Button x:Name="ReplayIntroButton" Content="Rever abertura" Click="ReplayIntro_Click" HorizontalAlignment="Left" Margin="0,12,0,0" Padding="14,8"/>
     </StackPanel></Border>
    </StackPanel>
   </ScrollViewer>
@@ -56,22 +58,16 @@
    </Grid>
   </ScrollViewer>
   <local:CleanupView x:Name="CleanupPanel" Grid.Column="1" Visibility="Collapsed"/><local:FolderNamesView x:Name="NamesPanel" Grid.Column="1" Visibility="Collapsed"/>
-  <Grid x:Name="IntroOverlay" Grid.ColumnSpan="2" Panel.ZIndex="10" Background="#080C12">
-   <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/><RowDefinition/></Grid.RowDefinitions>
-   <Canvas x:Name="OrbCanvas" Width="280" Height="280" HorizontalAlignment="Center" VerticalAlignment="Center">
-    <Ellipse Width="236" Height="236" Canvas.Left="22" Canvas.Top="22" Stroke="#244C62" StrokeThickness="1"/>
-    <Ellipse Width="180" Height="180" Canvas.Left="50" Canvas.Top="50" Stroke="#2D89A8" StrokeThickness="2" RenderTransformOrigin="0.5,0.5"><Ellipse.RenderTransform><RotateTransform x:Name="RingRotation"/></Ellipse.RenderTransform></Ellipse>
-    <Ellipse Width="128" Height="128" Canvas.Left="76" Canvas.Top="76" Stroke="#6CCDEB" StrokeThickness="1" Opacity="0.8"/>
-    <Ellipse x:Name="CoreGlow" Width="68" Height="68" Canvas.Left="106" Canvas.Top="106" Fill="#6CCDEB" Opacity="0.12"><Ellipse.Effect><BlurEffect Radius="28"/></Ellipse.Effect></Ellipse>
-    <Ellipse Width="12" Height="12" Canvas.Left="134" Canvas.Top="134" Fill="#A7ECFF"/><Ellipse Width="8" Height="8" Canvas.Left="70" Canvas.Top="73" Fill="#70D9F8"/><Ellipse Width="7" Height="7" Canvas.Left="202" Canvas.Top="194" Fill="#70D9F8"/>
-   </Canvas>
-   <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
-    <TextBlock Text="ARTHO AI" Foreground="#EAF9FF" FontSize="30" FontWeight="Light" HorizontalAlignment="Center"/>
-    <TextBlock Text="ASSISTENTE PESSOAL" Foreground="#72CBEA" FontSize="10" HorizontalAlignment="Center" Margin="0,8,0,0"/>
-    <TextBlock x:Name="IntroStatus" Text="Iniciando serviços locais…" Foreground="#9DB2C2" FontSize="12" HorizontalAlignment="Center" Margin="0,22,0,0"/>
-    <Button x:Name="SkipIntroButton" Content="Pular apresentação" Background="#1B2934" Foreground="#D6EAF2" Padding="16,10" Margin="0,22,0,0" Click="SkipIntro_Click"/>
-   </StackPanel>
-   <TextBlock Grid.Row="2" Text="SOM E VOZ CONFORME DISPONIBILIDADE DO WINDOWS" Foreground="#526572" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,24"/>
+ </Grid>
+ <Grid x:Name="IntroOverlay" Background="#02050D" Visibility="Collapsed">
+  <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <Grid x:Name="IntroSurface">
+   <TextBlock x:Name="IntroPlaceholder" Text="ARTHO AI" Foreground="#A8CCF2" FontSize="29" FontWeight="Light"
+              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+   <ContentControl x:Name="IntroBrowser" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
   </Grid>
+  <Button x:Name="SkipIntroButton" Grid.Row="1" Content="Pular abertura  ·  Esc" Click="SkipIntro_Click"
+          Background="#101C31" Foreground="#CAE7FF" HorizontalAlignment="Right" Margin="20,0,26,18" Padding="14,8"/>
+ </Grid>
  </Grid>
 </Window>

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+  <title>Abertura do Artho AI</title>
+  <style>
+    :root { color-scheme: dark; --night: #02050d; --ice: #c8ebff; --blue: #71bcff; --dim: #8baccd; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body { background: var(--night); color: var(--ice); font-family: "Segoe UI", sans-serif; }
+    canvas, .vignette { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .vignette { background: radial-gradient(ellipse at center, transparent 43%, #000a 100%); }
+    .scene { position: absolute; inset: 0; }
+    .scene.leaving { opacity: 0; transition: opacity .52s ease; }
+    .tag { position: absolute; top: 7%; left: 4%; display: flex; gap: 10px; align-items: center; }
+    .tag i { width: 6px; height: 6px; background: var(--blue); box-shadow: 0 0 14px #4c9fff; }
+    .tag, .readings, .stage { font: 500 10px/1.5 Consolas, monospace; letter-spacing: .15em; }
+    .tag, .readings dt { color: var(--dim); }
+    .readings {
+      position: absolute; right: 4%; top: 7%; width: clamp(145px, 19vw, 225px);
+      margin: 0; padding-left: 15px; border-left: 1px solid #4d9ee94a;
+      opacity: 0; transform: translateX(7px); transition: opacity .55s, transform .55s;
+    }
+    .readings.visible { opacity: 1; transform: none; }
+    .readings div + div { margin-top: 11px; }
+    .readings dd { margin: 1px 0 0; color: var(--ice); letter-spacing: .02em; font-size: 12px; }
+    .identity {
+      position: absolute; top: 61%; width: 100%; text-align: center;
+      opacity: 0; transform: translateY(9px);
+      transition: opacity .9s, transform 1.1s cubic-bezier(.18,.65,.25,1);
+    }
+    .identity.visible { opacity: 1; transform: none; }
+    h1 {
+      margin: 0; padding-left: .31em; color: #e3f4ff;
+      font: 500 clamp(27px, 6vw, 78px)/1.1 "Segoe UI", sans-serif;
+      letter-spacing: .31em; text-shadow: 0 0 22px #64a8ff70, 0 0 55px #418dff65;
+    }
+    .identity p { margin: 13px 0 0; color: var(--blue); font-size: clamp(11px, 1.4vw, 15px); letter-spacing: .23em; }
+    .stage { position: absolute; left: 0; right: 0; bottom: 8%; text-align: center; color: var(--dim); }
+    .track { width: clamp(105px, 16vw, 175px); height: 2px; margin: 0 auto 10px; background: #78bbff30; }
+    #progress { width: 100%; height: 100%; background: var(--blue); transform: scaleX(0); transform-origin: left; box-shadow: 0 0 10px #438fff; }
+    @media (max-width: 650px) {
+      .readings { top: 12%; right: 5%; width: auto; max-width: 58vw; }
+      .readings div + div { margin-top: 4px; }
+      .identity { top: 64%; }
+      .tag { left: 5%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .identity, .readings, .scene.leaving { transform: none; transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="scene" id="scene" aria-label="Abertura do Artho AI">
+    <canvas id="field" aria-hidden="true"></canvas>
+    <div class="vignette"></div>
+    <div class="tag"><i aria-hidden="true"></i> ARTHO / INICIALIZAÇÃO</div>
+    <dl class="readings" id="readings" hidden>
+      <div><dt>PROCESSADOR</dt><dd id="cpu"></dd></div>
+      <div><dt>MEMÓRIA EM USO</dt><dd id="memory"></dd></div>
+      <div><dt>REDE LOCAL</dt><dd id="network"></dd></div>
+    </dl>
+    <div class="identity" id="identity">
+      <h1>ARTHO AI</h1>
+      <p>ASSISTENTE PESSOAL</p>
+    </div>
+    <div class="stage">
+      <div class="track" aria-hidden="true"><div id="progress"></div></div>
+      <span id="stage">INICIANDO ARTHO AI</span>
+    </div>
+  </main>
+  <script>
+    "use strict";
+
+    const element = id => document.getElementById(id);
+    const canvas = element("field");
+    const context = canvas.getContext("2d");
+    const host = window.chrome?.webview;
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const duration = 5400;
+    const points = [];
+    const links = [];
+    const pointCount = 440;
+    const projected = new Float32Array(pointCount * 3);
+    const tau = Math.PI * 2;
+    let width, height, scale, start, frame;
+
+    function smooth(from, to, value) {
+      const t = Math.max(0, Math.min(1, (value - from) / (to - from)));
+      return t * t * (3 - 2 * t);
+    }
+
+    // Fibonacci sphere, adapted from the reference boot animation.
+    for (let i = 0; i < pointCount; i++) {
+      const y = 1 - 2 * (i + .5) / pointCount;
+      const angle = Math.PI * (1 + Math.sqrt(5)) * i;
+      const radius = Math.sqrt(1 - y * y);
+      points.push({
+        x: radius * Math.cos(angle), y, z: radius * Math.sin(angle),
+        scatterX: (Math.random() - .5) * 5.2,
+        scatterY: (Math.random() - .5) * 3.9,
+        scatterZ: (Math.random() - .5) * 2.1,
+        size: .45 + Math.random() * .83
+      });
+    }
+    for (let i = 0; i < pointCount; i++) {
+      for (let j = i + 1; j < pointCount; j++) {
+        const a = points[i], b = points[j];
+        if ((a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2 < .053) {
+          links.push([i * 3, j * 3]);
+        }
+      }
+    }
+
+    function resize() {
+      scale = Math.min(devicePixelRatio || 1, 1.5);
+      width = canvas.width = Math.round(innerWidth * scale);
+      height = canvas.height = Math.round(innerHeight * scale);
+      draw(start === undefined ? 0 : reducedMotion ? 3.15 : (performance.now() - start) / 1000);
+    }
+
+    function ring(cx, cy, radius, from, to) {
+      context.beginPath();
+      context.arc(cx, cy, radius, from, to);
+      context.stroke();
+    }
+
+    function drawHud(cx, cy, radius, time, opacity) {
+      context.strokeStyle = `rgba(103,175,255,${opacity * .24})`;
+      context.lineWidth = scale;
+      ring(cx, cy, radius * 1.73, 0, tau);
+      ring(cx, cy, radius * 1.19, 0, tau);
+      context.strokeStyle = `rgba(116,195,255,${opacity * .62})`;
+      for (let i = 0; i < 6; i++) {
+        const angle = time * .48 + i * tau / 6;
+        ring(cx, cy, radius * 1.32, angle, angle + .54);
+      }
+      const r = radius * 1.52;
+      for (let i = 0; i < 96; i++) {
+        const angle = i * tau / 96 - time * .27;
+        const long = i % 8 === 0;
+        const length = (long ? 7 : 3) * scale;
+        const cos = Math.cos(angle), sin = Math.sin(angle);
+        context.strokeStyle = `rgba(105,180,255,${opacity * (long ? .72 : .27)})`;
+        context.beginPath();
+        context.moveTo(cx + cos * r, cy + sin * r);
+        context.lineTo(cx + cos * (r + length), cy + sin * (r + length));
+        context.stroke();
+      }
+    }
+
+    function draw(time) {
+      context.fillStyle = "#02050d";
+      context.fillRect(0, 0, width, height);
+      const reveal = smooth(1.75, 3.4, time);
+      const formed = smooth(.3, 2.5, time);
+      const energy = smooth(0, .9, time);
+      const cx = width / 2, cy = height * (.48 - .095 * reveal);
+      const radius = Math.min(width, height) * (.215 - .06 * reveal);
+      const glow = context.createRadialGradient(cx, cy, 0, cx, cy, radius * 2.65);
+      glow.addColorStop(0, `rgba(31,104,255,${(.1 + formed * .17) * energy})`);
+      glow.addColorStop(1, "transparent");
+      context.fillStyle = glow;
+      context.fillRect(0, 0, width, height);
+
+      const spacing = 42 * scale;
+      context.fillStyle = `rgba(90,160,255,${.16 * energy})`;
+      for (let x = cx % spacing; x < width; x += spacing) {
+        for (let y = cy % spacing; y < height; y += spacing) {
+          if ((x - cx) ** 2 + (y - cy) ** 2 < (radius * 3.7) ** 2) {
+            context.fillRect(x, y, scale, scale);
+          }
+        }
+      }
+
+      drawHud(cx, cy, radius, time, smooth(.75, 2.4, time));
+      const cos = Math.cos(time * .56), sin = Math.sin(time * .56);
+      const scatter = 1 - formed;
+      for (let i = 0; i < pointCount; i++) {
+        const p = points[i], offset = i * 3;
+        const x = p.x * formed + p.scatterX * scatter;
+        const y = p.y * formed + p.scatterY * scatter;
+        const z = p.z * formed + p.scatterZ * scatter;
+        const depth = 2.85 / Math.max(.55, 2.85 + z * cos - x * sin);
+        projected[offset] = cx + (x * cos + z * sin) * radius * depth;
+        projected[offset + 1] = cy + y * radius * depth;
+        projected[offset + 2] = depth;
+      }
+      context.strokeStyle = `rgba(63,133,255,${formed * .28})`;
+      context.lineWidth = scale * .7;
+      context.beginPath();
+      for (const [a, b] of links) {
+        context.moveTo(projected[a], projected[a + 1]);
+        context.lineTo(projected[b], projected[b + 1]);
+      }
+      context.stroke();
+      context.fillStyle = "#b7e2ff";
+      for (let i = 0; i < pointCount; i++) {
+        const offset = i * 3, depth = projected[offset + 2];
+        context.globalAlpha = Math.min(.86, (.16 + depth * .37) * energy);
+        context.beginPath();
+        context.arc(projected[offset], projected[offset + 1], points[i].size * depth * scale, 0, tau);
+        context.fill();
+      }
+      context.globalAlpha = 1;
+
+      if (!reducedMotion) {
+        const pulse = smooth(1.05, 2.55, time);
+        const accent = smooth(2.85, 4.3, time);
+        context.lineWidth = 1.4 * scale;
+        context.strokeStyle = `rgba(102,174,255,${pulse * (1 - pulse) * .92})`;
+        ring(cx, cy, radius * (.42 + 2.5 * pulse), 0, tau);
+        context.strokeStyle = `rgba(152,208,255,${accent * (1 - accent) * .7})`;
+        ring(cx, cy, radius * (1.25 + 2.1 * accent), 0, tau);
+      }
+    }
+
+    function animate(now) {
+      const elapsed = now - start;
+      if (!reducedMotion) draw(elapsed / 1000);
+      element("progress").style.transform = `scaleX(${Math.min(1, elapsed / 4880)})`;
+      if (elapsed >= 4880) element("scene").classList.add("leaving");
+      if (elapsed < duration) frame = requestAnimationFrame(animate);
+    }
+
+    function play(snapshot) {
+      if (start !== undefined) return;
+      if (snapshot) {
+        element("cpu").textContent = snapshot.processor;
+        element("memory").textContent = snapshot.memory;
+        element("network").textContent = snapshot.network;
+        element("readings").hidden = false;
+      }
+      start = performance.now();
+      if (reducedMotion) draw(3.15);
+      frame = requestAnimationFrame(animate);
+      setTimeout(() => element("readings").classList.add("visible"), reducedMotion ? 0 : 1500);
+      setTimeout(() => element("identity").classList.add("visible"), reducedMotion ? 0 : 2500);
+      setTimeout(() => {
+        element("stage").textContent = "BEM-VINDO DE VOLTA";
+      }, 3650);
+      setTimeout(() => {
+        cancelAnimationFrame(frame);
+        host?.postMessage("complete");
+      }, duration);
+      host?.postMessage("started");
+    }
+
+    addEventListener("resize", resize);
+    addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        host?.postMessage("skip");
+      }
+    });
+    resize();
+    if (host) {
+      host.addEventListener("message", event => play(event.data));
+      host.postMessage("ready");
+    } else {
+      play(null);
+    }
+  </script>
+</body>
+</html>
