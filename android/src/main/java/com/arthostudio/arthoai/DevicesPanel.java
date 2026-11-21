@@ -1,6 +1,5 @@
 package com.arthostudio.arthoai;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.text.InputType;
 import android.view.ViewGroup;
@@ -19,37 +18,34 @@ import java.util.concurrent.Executor;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-final class PcDevicesDialog {
+final class DevicesPanel {
     private static final String[] DAYS = {"Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"};
-    private final Activity owner;
+    private final MainActivity owner;
     private final StatusClient.Pairing pairing;
     private final Executor worker;
-    private AlertDialog window;
+    private final LinearLayout panel;
     private LinearLayout cards;
     private TextView notice;
     private boolean busy;
 
-    PcDevicesDialog(Activity owner, StatusClient.Pairing pairing, Executor worker) {
+    DevicesPanel(MainActivity owner, StatusClient.Pairing pairing, Executor worker) {
         this.owner = owner;
         this.pairing = pairing;
         this.worker = worker;
-    }
-
-    void show() {
-        LinearLayout content = column();
+        panel = column();
+        Button refresh = owner.button("Atualizar status", false);
+        refresh.setOnClickListener(view -> load());
+        panel.addView(refresh);
         notice = text("");
         notice.setAccessibilityLiveRegion(TextView.ACCESSIBILITY_LIVE_REGION_POLITE);
-        content.addView(notice);
+        panel.addView(notice, owner.spaced(10));
         cards = column();
-        content.addView(cards);
-        window = new AlertDialog.Builder(owner).setTitle("Dispositivos").setView(scroll(content))
-                .setNeutralButton("Atualizar", null).setNegativeButton("Fechar", null).create();
-        window.show();
-        window.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(view -> load());
-        load();
+        panel.addView(cards);
     }
 
-    private void load() {
+    ViewGroup view() { return panel; }
+
+    void load() {
         request("GET", "/v1/devices", "Consultando os PCs na rede…", result -> {
             JSONArray list = result.getJSONArray("devices");
             cards.removeAllViews();
@@ -61,29 +57,33 @@ final class PcDevicesDialog {
     private void addCard(JSONObject pc) {
         String id = UUID.fromString(pc.optString("id")).toString();
         String name = pc.optString("name");
+        LinearLayout card = column();
+        card.setBackground(owner.surface(MainActivity.SURFACE, 16, MainActivity.BORDER));
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        cards.addView(card, owner.spaced(10));
         TextView title = text(name);
         title.setTextSize(20);
         title.setAccessibilityHeading(true);
-        title.setPadding(0, dp(12), 0, dp(4));
-        cards.addView(title);
+        title.setPadding(0, 0, 0, dp(4));
+        card.addView(title);
         String last = "ainda não respondeu";
         if (!pc.isNull("lastContact")) {
             last = OffsetDateTime.parse(pc.optString("lastContact")).atZoneSameInstant(ZoneId.systemDefault())
                     .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
         }
-        cards.addView(text((pc.optBoolean("online") ? "Online" : "Sem resposta") + " · Último contato: " + last));
-        cards.addView(text("Ligar " + describe(pc.optJSONObject("wake"))
-                + "\nDesligar " + describe(pc.optJSONObject("shutdown"))));
-        if (!pc.isNull("lastRoutine")) cards.addView(text(pc.optString("lastRoutine")));
-        Button wake = new Button(owner);
-        wake.setText("Ligar agora");
+        TextView connection = text((pc.optBoolean("online") ? "Online" : "Sem resposta") + " · Último contato: " + last);
+        connection.setTextColor(pc.optBoolean("online") ? MainActivity.ACCENT : MainActivity.MUTED);
+        card.addView(connection);
+        card.addView(text("Ligar " + describe(pc.optJSONObject("wake"))
+                + "\nDesligar " + describe(pc.optJSONObject("shutdown"))), owner.spaced(8));
+        if (!pc.isNull("lastRoutine")) card.addView(text(pc.optString("lastRoutine")), owner.spaced(5));
+        Button wake = owner.button("Ligar agora", true);
         wake.setOnClickListener(view -> request("POST", "/v1/devices/" + id + "/wake",
                 "Enviando o sinal…", result -> notice.setText("Sinal enviado para " + name + ".")));
-        cards.addView(wake);
-        Button edit = new Button(owner);
-        edit.setText("Editar horários");
+        card.addView(wake, owner.spaced(10));
+        Button edit = owner.button("Editar horários", false);
         edit.setOnClickListener(view -> { if (!busy) edit(id, name, pc); });
-        cards.addView(edit);
+        card.addView(edit, owner.spaced(6));
     }
 
     private static String describe(JSONObject rule) {
@@ -202,7 +202,7 @@ final class PcDevicesDialog {
         });
     }
 
-    private boolean isOpen() { return !owner.isFinishing() && !owner.isDestroyed() && window.isShowing(); }
+    private boolean isOpen() { return !owner.isFinishing() && !owner.isDestroyed() && panel.isAttachedToWindow(); }
     private interface Result { void show(JSONObject data) throws Exception; }
 
     private LinearLayout column() {

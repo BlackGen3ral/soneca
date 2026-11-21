@@ -8,7 +8,7 @@ No Windows 1.6.0 ou mais recente, pareie os PCs na aba **Dispositivos**. Na aba 
 
 ## Atualizar o app
 
-Instale a versão 0.3.0 uma vez para habilitar o atualizador. Ao abrir o app, ele verifica as versões do Android publicadas no GitHub. Se encontrar uma atualização, mostra **Baixar e instalar** em **Atualizações**. Na primeira vez, o Android pode pedir que você permita instalações a partir do Artho AI. Depois, volte ao app, toque no botão novamente e confirme a instalação.
+O Artho AI consulta o GitHub ao abrir. Toque em **Atualizações** no menu inferior para conferir a versão instalada e a disponível. Use **Baixar atualização** para acompanhar o progresso. Depois de verificado o APK, toque em **Instalar atualização**. Se o Android solicitar permissão para instalar a partir do Artho AI, habilite a permissão, volte ao app e confirme a instalação.
 
 ## Publicar uma versão
 

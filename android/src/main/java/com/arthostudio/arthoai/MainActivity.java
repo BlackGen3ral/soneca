@@ -5,7 +5,6 @@ import android.app.Dialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Insets;
@@ -13,10 +12,8 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -40,23 +37,28 @@ import javax.net.ssl.SSLHandshakeException;
 import org.json.JSONObject;
 
 public final class MainActivity extends Activity {
-    private static final int BACKGROUND = 0xff080d15;
-    private static final int HERO = 0xff030810;
-    private static final int SURFACE = 0xff101a27;
-    private static final int BORDER = 0xff253448;
-    private static final int INK = 0xffedf6fd;
-    private static final int MUTED = 0xffa0b3c7;
-    private static final int ACCENT = 0xff99ddff;
-    private static final int GREEN = 0xff94e4c3;
+    private static final int BACKGROUND = 0xff141715;
+    private static final int HERO = 0xff29392f;
+    static final int SURFACE = 0xff202622;
+    static final int BORDER = 0xff36423a;
+    static final int INK = 0xfff1f4ee;
+    static final int MUTED = 0xffb4bfb6;
+    static final int ACCENT = 0xffb6dfc2;
+    private static final int GREEN = ACCENT;
     private static final int ALERT = 0xffffbcad;
     private static final Locale BRAZIL = new Locale("pt", "BR");
     private static final int SCAN_PAIRING = 17;
 
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
-    private final ExecutorService updateWorker = Executors.newSingleThreadExecutor();
-    private AndroidUpdater.Release availableUpdate;
-    private TextView updateStatus;
-    private Button updateButton;
+    private ScrollView scroll;
+    private final View[] pages = new View[3];
+    private final Button[] tabs = new Button[3];
+    private int selectedTab;
+    private UpdatesPanel updates;
+    private LinearLayout deviceContent;
+    private StatusClient.Pairing shownPairing;
+    private boolean deviceInitialized;
+    private LinearLayout metrics;
     private StatusClient.Pairing pairing;
     private boolean connecting;
     private TextView status;
@@ -69,7 +71,6 @@ public final class MainActivity extends Activity {
     private ProgressBar memoryBar;
     private Button primary;
     private Button connectionOptions;
-    private Button devicesButton;
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -77,57 +78,72 @@ public final class MainActivity extends Activity {
         getWindow().setNavigationBarColor(BACKGROUND);
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
 
-        ScrollView scroll = new ScrollView(this);
-        scroll.setBackgroundColor(BACKGROUND);
-        scroll.setFillViewport(true);
-        scroll.setClipToPadding(false);
+        LinearLayout shell = column();
+        shell.setBackgroundColor(BACKGROUND);
         if (Build.VERSION.SDK_INT >= 30) {
-            scroll.setOnApplyWindowInsetsListener((view, insets) -> {
+            shell.setOnApplyWindowInsetsListener((view, insets) -> {
                 Insets safe = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
                 view.setPadding(safe.left, safe.top, safe.right, safe.bottom);
                 return insets;
             });
         }
+        shell.addView(header());
+        scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        shell.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         FrameLayout frame = new FrameLayout(this);
         scroll.addView(frame, new ScrollView.LayoutParams(-1, -2));
-        LinearLayout page = column();
-        frame.addView(page, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
+        LinearLayout content = column();
+        content.setPadding(dp(20), dp(14), dp(20), dp(24));
+        frame.addView(content, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
         frame.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
             int width = Math.min(dp(620), right - left);
-            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) page.getLayoutParams();
+            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) content.getLayoutParams();
             if (width > 0 && params.width != width) {
                 params.width = width;
-                page.setLayoutParams(params);
+                content.setLayoutParams(params);
             }
         });
-        page.setPadding(dp(20), dp(16), dp(20), dp(28));
-        setContentView(scroll);
-        scroll.requestApplyInsets();
 
-        page.addView(header());
-        page.addView(hero(), spaced(20));
+        pages[0] = dashboard();
+        pages[1] = devicePage();
+        updates = new UpdatesPanel(this);
+        pages[2] = updates.view();
+        for (View page : pages) content.addView(page);
+        shell.addView(navigation());
+        setContentView(shell);
+        shell.requestApplyInsets();
 
-        Button update = button("Conectar ao PC", true);
-        primary = update;
-        update.setOnClickListener(view -> {
-            if (pairing == null) showPairing();
-            else requestStatus();
-        });
-        page.addView(update, spaced(14));
-        connectionOptions = button("Gerenciar conexão", false);
-        connectionOptions.setOnClickListener(view -> showPairing());
-        connectionOptions.setVisibility(View.GONE);
-        page.addView(connectionOptions, spaced(6));
-        devicesButton = button("Dispositivos", false);
-        devicesButton.setVisibility(View.GONE);
-        devicesButton.setOnClickListener(view -> {
-            if (pairing != null) new PcDevicesDialog(this, pairing, worker).show();
-        });
-        page.addView(devicesButton, spaced(6));
+        if (saved != null && getLastNonConfigurationInstance() instanceof StatusClient.Pairing) {
+            pairing = (StatusClient.Pairing) getLastNonConfigurationInstance();
+            requestStatus();
+        }
+        showTab(saved == null ? 0 : saved.getInt("tab", 0));
+        updates.check();
+    }
 
-        TextView section = label("Visão geral", 23, INK, "sans-serif-medium");
+    @Override protected void onResume() {
+        super.onResume();
+        if (updates != null) updates.resumed();
+    }
+
+    @Override protected void onSaveInstanceState(Bundle state) {
+        super.onSaveInstanceState(state);
+        state.putInt("tab", selectedTab);
+    }
+
+    private View dashboard() {
+        LinearLayout page = column();
+        TextView title = label("Painel do PC", 32, INK, "sans-serif-medium");
+        title.setAccessibilityHeading(true);
+        page.addView(title);
+        page.addView(hero(), spaced(16));
+
+        metrics = column();
+        metrics.setVisibility(View.GONE);
+        TextView section = label("Estado do PC", 21, INK, "sans-serif-medium");
         section.setAccessibilityHeading(true);
-        page.addView(section, spaced(24));
+        metrics.addView(section);
         LinearLayout performance = row();
         LinearLayout memoryCard = metric("Memória em uso");
         memory = value(memoryCard);
@@ -137,13 +153,13 @@ public final class MainActivity extends Activity {
         memoryBar.setProgressBackgroundTintList(ColorStateList.valueOf(BORDER));
         memoryBar.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         memoryBar.setVisibility(View.GONE);
-        LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(-1, dp(5));
-        barParams.topMargin = dp(10);
-        memoryCard.addView(memoryBar, barParams);
+        LinearLayout.LayoutParams bar = new LinearLayout.LayoutParams(-1, dp(5));
+        bar.topMargin = dp(8);
+        memoryCard.addView(memoryBar, bar);
         LinearLayout cpuCard = metric("Processador");
         cpu = value(cpuCard);
         addMetricPair(performance, memoryCard, cpuCard);
-        page.addView(performance, spaced(12));
+        metrics.addView(performance, spaced(10));
 
         LinearLayout activity = row();
         LinearLayout uptimeCard = metric("Tempo ligado");
@@ -151,100 +167,79 @@ public final class MainActivity extends Activity {
         LinearLayout networkCard = metric("Rede do PC");
         network = value(networkCard);
         addMetricPair(activity, uptimeCard, networkCard);
-        page.addView(activity, spaced(10));
-
-        TextView updates = label("Atualizações", 20, INK, "sans-serif-medium");
-        updates.setAccessibilityHeading(true);
-        page.addView(updates, spaced(24));
-        updateStatus = label("", 13, MUTED, "sans-serif");
-        updateStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        page.addView(updateStatus, spaced(6));
-        updateButton = button("Verificar atualizações", false);
-        updateButton.setOnClickListener(view -> {
-            if (availableUpdate == null) checkUpdates();
-            else downloadUpdate(availableUpdate);
-        });
-        page.addView(updateButton, spaced(8));
-        checkUpdates();
-
-        if (saved != null) {
-            Object previous = getLastNonConfigurationInstance();
-            if (previous instanceof StatusClient.Pairing) {
-                pairing = (StatusClient.Pairing) previous;
-                requestStatus();
-            }
-        }
+        metrics.addView(activity, spaced(10));
+        page.addView(metrics, spaced(22));
+        return page;
     }
 
-    private void checkUpdates() {
-        updateButton.setEnabled(false);
-        updateStatus.setText("Verificando novas versões no GitHub…");
-        updateWorker.execute(() -> {
-            try {
-                String version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-                AndroidUpdater.Release found = AndroidUpdater.check(version);
-                runOnUiThread(() -> {
-                    if (isFinishing() || isDestroyed()) return;
-                    availableUpdate = found;
-                    updateStatus.setText(found == null ? "Versão " + version + " em dia"
-                            : "Versão " + found.version + " disponível");
-                    updateButton.setText(found == null ? "Verificar atualizações" : "Baixar e instalar");
-                    updateButton.setEnabled(true);
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> updateMessage("Não foi possível consultar o GitHub. Tente novamente."));
-            }
-        });
+    private View devicePage() {
+        LinearLayout page = column();
+        TextView title = label("Dispositivos", 32, INK, "sans-serif-medium");
+        title.setAccessibilityHeading(true);
+        page.addView(title);
+        page.addView(label("PCs pareados e horários semanais.", 15, MUTED, "sans-serif"), spaced(6));
+        deviceContent = column();
+        page.addView(deviceContent, spaced(17));
+        return page;
     }
 
-    private void downloadUpdate(AndroidUpdater.Release release) {
-        PackageManager manager = getPackageManager();
-        if (!manager.canRequestPackageInstalls()) {
-            Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                    Uri.fromParts("package", getPackageName(), null));
-            try {
-                startActivity(settings);
-                updateMessage("Permita a instalação para o Artho AI, volte e toque em Baixar e instalar.");
-            } catch (android.content.ActivityNotFoundException e) {
-                updateMessage("A opção de instalação pelo Artho AI não está disponível neste aparelho.");
-            }
+    private void updateDevices() {
+        if (deviceInitialized && shownPairing == pairing) return;
+        deviceInitialized = true;
+        shownPairing = pairing;
+        deviceContent.removeAllViews();
+        if (pairing == null) {
+            deviceContent.addView(label("Conecte o celular ao PC de controle para ver os dispositivos.", 15, MUTED, "sans-serif"));
+            Button connect = button("Conectar ao PC", true);
+            connect.setOnClickListener(view -> showPairing());
+            deviceContent.addView(connect, spaced(12));
             return;
         }
-        updateButton.setEnabled(false);
-        updateStatus.setText("Baixando e verificando a versão " + release.version + "…");
-        updateWorker.execute(() -> {
-            try {
-                AndroidUpdater.download(getApplicationContext(), release);
-                runOnUiThread(this::openUpdateInstaller);
-            } catch (Exception e) {
-                runOnUiThread(() -> updateMessage("Não foi possível baixar ou validar a atualização. Tente novamente."));
-            }
-        });
+        DevicesPanel panel = new DevicesPanel(this, pairing, worker);
+        deviceContent.addView(panel.view());
+        panel.load();
     }
 
-    private void openUpdateInstaller() {
-        if (isFinishing() || isDestroyed()) return;
-        Uri uri = new Uri.Builder().scheme("content").authority(getPackageName() + ".updates")
-                .appendPath(UpdateApkProvider.APK_NAME).build();
-        Intent install = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, UpdateApkProvider.MIME_TYPE)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        try {
-            startActivity(install);
-            updateMessage("Confirme a atualização na tela do Android.");
-        } catch (android.content.ActivityNotFoundException | SecurityException e) {
-            updateMessage("O Android não abriu o instalador. Confira a permissão do Artho AI e tente de novo.");
+    private View navigation() {
+        LinearLayout nav = row();
+        nav.setBackgroundColor(SURFACE);
+        nav.setPadding(dp(10), dp(8), dp(10), dp(8));
+        String[] labels = {"Início", "Dispositivos", "Atualizações"};
+        for (int index = 0; index < tabs.length; index++) {
+            final int tab = index;
+            Button button = button(labels[index], false);
+            button.setTextSize(13);
+            button.setPadding(dp(4), dp(8), dp(4), dp(8));
+            button.setOnClickListener(view -> showTab(tab));
+            tabs[index] = button;
+            LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -2, 1f);
+            size.setMargins(dp(3), 0, dp(3), 0);
+            nav.addView(button, size);
         }
+        return nav;
     }
 
-    private void updateMessage(String message) {
-        if (isFinishing() || isDestroyed()) return;
-        updateStatus.setText(message);
-        updateButton.setEnabled(true);
+    private void showTab(int requested) {
+        selectedTab = requested >= 0 && requested < tabs.length ? requested : 0;
+        for (int index = 0; index < tabs.length; index++) {
+            boolean selected = index == selectedTab;
+            pages[index].setVisibility(selected ? View.VISIBLE : View.GONE);
+            tabs[index].setSelected(selected);
+            decorateButton(tabs[index], selected);
+        }
+        if (selectedTab == 1) updateDevices();
+        scroll.scrollTo(0, 0);
+    }
+
+    void indicateUpdate(boolean available) {
+        tabs[2].setText(available ? "Atualizações •" : "Atualizações");
+        tabs[2].setContentDescription(available ? "Atualizações, nova versão disponível" : "Atualizações");
     }
 
     private View header() {
         LinearLayout header = row();
         header.setGravity(Gravity.CENTER_VERTICAL);
+        header.setPadding(dp(20), dp(10), dp(20), dp(10));
         ImageView mark = new ImageView(this);
         mark.setImageResource(R.drawable.artho_mark);
         mark.setScaleType(ImageView.ScaleType.FIT_CENTER);
@@ -254,42 +249,31 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams brandSize = new LinearLayout.LayoutParams(0, -2, 1f);
         brandSize.leftMargin = dp(10);
         header.addView(brand, brandSize);
-        TextView local = label("Rede local", 12, MUTED, "sans-serif-medium");
-        local.setPadding(dp(11), dp(6), dp(11), dp(6));
-        local.setBackground(surface(SURFACE, 14, BORDER));
-        header.addView(local);
         return header;
     }
 
     private View hero() {
         LinearLayout panel = column();
-        panel.setBackground(surface(HERO, 26, BORDER));
-        panel.setClipToOutline(true);
-        panel.setPadding(dp(1), dp(1), dp(1), dp(1));
-
-        FrameLayout artwork = new FrameLayout(this);
-        ImageView nucleus = new ImageView(this);
-        nucleus.setImageResource(R.drawable.nucleus);
-        nucleus.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        nucleus.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        artwork.addView(nucleus, new FrameLayout.LayoutParams(-1, -1));
-        View fade = new View(this);
-        fade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[] { Color.TRANSPARENT, Color.TRANSPARENT, HERO }));
-        artwork.addView(fade, new FrameLayout.LayoutParams(-1, -1));
-        panel.addView(artwork, new LinearLayout.LayoutParams(-1, dp(180)));
-
-        LinearLayout text = column();
-        text.setPadding(dp(18), dp(4), dp(18), dp(18));
-        status = label("●  Sem conexão", 13, MUTED, "sans-serif-medium");
+        panel.setBackground(surface(HERO, 18, BORDER));
+        panel.setPadding(dp(19), dp(18), dp(19), dp(18));
+        status = label("Sem conexão", 13, ACCENT, "sans-serif-medium");
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        text.addView(status);
-        computer = label("Nenhum PC conectado", 26, INK, "sans-serif-medium");
+        panel.addView(status);
+        computer = label("Conecte seu PC", 27, INK, "sans-serif-medium");
         computer.setAccessibilityHeading(true);
-        text.addView(computer, spaced(7));
-        detail = label("Pareie seu celular para consultar o computador.", 14, MUTED, "sans-serif");
-        text.addView(detail, spaced(5));
-        panel.addView(text);
+        panel.addView(computer, spaced(7));
+        detail = label("Abra a aba Celular no Artho AI para Windows e gere um QR Code.", 15, MUTED, "sans-serif");
+        panel.addView(detail, spaced(5));
+        primary = button("Conectar ao PC", true);
+        primary.setOnClickListener(view -> {
+            if (pairing == null) showPairing();
+            else requestStatus();
+        });
+        panel.addView(primary, spaced(14));
+        connectionOptions = button("Gerenciar conexão", false);
+        connectionOptions.setOnClickListener(view -> showPairing());
+        connectionOptions.setVisibility(View.GONE);
+        panel.addView(connectionOptions, spaced(6));
         return panel;
     }
 
@@ -429,6 +413,7 @@ public final class MainActivity extends Activity {
     }
 
     private void render(JSONObject result) {
+        metrics.setVisibility(View.VISIBLE);
         double total = result.optDouble("totalMemoryGb", 0);
         double used = result.optDouble("memoryInUseGb", -1);
         memoryBar.setVisibility(total > 0 && used >= 0 ? View.VISIBLE : View.GONE);
@@ -462,6 +447,7 @@ public final class MainActivity extends Activity {
         detail.setText(message);
         for (TextView metric : new TextView[] { memory, cpu, uptime, network }) metric.setText("—");
         memoryBar.setVisibility(View.GONE);
+        metrics.setVisibility(View.GONE);
         restoreActions();
     }
 
@@ -476,10 +462,10 @@ public final class MainActivity extends Activity {
         primary.setEnabled(true);
         connectionOptions.setEnabled(true);
         connectionOptions.setVisibility(pairing == null ? View.GONE : View.VISIBLE);
-        devicesButton.setVisibility(pairing == null ? View.GONE : View.VISIBLE);
+        if (selectedTab == 1) updateDevices();
     }
 
-    private void show(Runnable action) {
+    void show(Runnable action) {
         runOnUiThread(() -> {
             if (!isFinishing() && !isDestroyed()) action.run();
         });
@@ -507,24 +493,30 @@ public final class MainActivity extends Activity {
         row.addView(right, new LinearLayout.LayoutParams(0, -1, 1));
     }
 
-    private Button button(String title, boolean prominent) {
+    Button button(String title, boolean prominent) {
         Button button = new Button(this);
         button.setAllCaps(false);
         button.setText(title);
         button.setTextSize(15);
         button.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        button.setTextColor(ColorStateList.valueOf(prominent ? BACKGROUND : INK));
         button.setMinHeight(dp(50));
         button.setPadding(dp(14), dp(9), dp(14), dp(9));
         button.setStateListAnimator(null);
         button.setBackgroundTintList(null);
-        int fill = prominent ? ACCENT : SURFACE;
-        button.setBackground(new RippleDrawable(ColorStateList.valueOf(prominent ? 0x33081016 : 0x3379ceff),
-                surface(fill, 14, prominent ? 0 : BORDER), null));
+        decorateButton(button, prominent);
         return button;
     }
 
-    private GradientDrawable surface(int color, int radius, int stroke) {
+    private void decorateButton(Button button, boolean prominent) {
+        int color = prominent ? BACKGROUND : INK;
+        button.setTextColor(new ColorStateList(
+                new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{prominent ? 0xff4e6957 : MUTED, color}));
+        int fill = prominent ? ACCENT : SURFACE;
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(prominent ? 0x30141715 : 0x33b6dfc2),
+                surface(fill, 12, prominent ? 0 : BORDER), null));
+    }
+
+    GradientDrawable surface(int color, int radius, int stroke) {
         GradientDrawable result = new GradientDrawable();
         result.setColor(color);
         result.setCornerRadius(dp(radius));
@@ -532,7 +524,7 @@ public final class MainActivity extends Activity {
         return result;
     }
 
-    private LinearLayout column() {
+    LinearLayout column() {
         LinearLayout result = new LinearLayout(this);
         result.setOrientation(LinearLayout.VERTICAL);
         return result;
@@ -540,7 +532,7 @@ public final class MainActivity extends Activity {
 
     private LinearLayout row() { return new LinearLayout(this); }
 
-    private TextView label(String text, int size, int color, String font) {
+    TextView label(String text, int size, int color, String font) {
         TextView view = new TextView(this);
         view.setText(text);
         view.setTextSize(size);
@@ -549,20 +541,20 @@ public final class MainActivity extends Activity {
         return view;
     }
 
-    private LinearLayout.LayoutParams spaced(int top) {
+    LinearLayout.LayoutParams spaced(int top) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
         params.topMargin = dp(top);
         return params;
     }
 
-    private int dp(int value) {
+    int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     @Override public Object onRetainNonConfigurationInstance() { return pairing; }
 
     @Override protected void onDestroy() {
-        updateWorker.shutdownNow();
+        if (updates != null) updates.close();
         worker.shutdownNow();
         super.onDestroy();
     }

@@ -8,11 +8,15 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.FileInputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.concurrent.CancellationException;
+import java.util.function.BooleanSupplier;
+import java.util.function.IntConsumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.net.ssl.HttpsURLConnection;
@@ -37,7 +41,7 @@ final class AndroidUpdater {
                 connection.setRequestProperty("Accept", "application/vnd.github+json");
                 try (InputStream input = connection.getInputStream();
                      ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-                    transfer(input, output, null, 5L * 1024 * 1024);
+                    transfer(input, output, null, 5L * 1024 * 1024, null, () -> false);
                     releases = new JSONArray(output.toString(StandardCharsets.UTF_8.name()));
                 }
             } finally {
@@ -75,25 +79,46 @@ final class AndroidUpdater {
         return null;
     }
 
-    static void download(Context context, Release release) throws Exception {
+    static void download(Context context, Release release, IntConsumer progress, BooleanSupplier cancelled) throws Exception {
         File temporary = File.createTempFile("artho-update-", ".apk", context.getCacheDir());
         try {
             MessageDigest hash = MessageDigest.getInstance("SHA-256");
             HttpsURLConnection connection = connectAsset(release.url);
             try (InputStream input = connection.getInputStream(); FileOutputStream output = new FileOutputStream(temporary)) {
-                if (transfer(input, output, hash, release.size) != release.size) throw new IOException("APK incompleto");
+                if (transfer(input, output, hash, release.size, progress, cancelled) != release.size)
+                    throw new IOException("Download incompleto. Tente baixar novamente.");
             } finally {
                 connection.disconnect();
             }
-            StringBuilder actual = new StringBuilder();
-            for (byte octet : hash.digest()) actual.append(String.format(Locale.ROOT, "%02x", octet & 255));
-            if (!release.sha256.equalsIgnoreCase(actual.toString())) throw new IOException("APK com SHA-256 incorreto");
+            if (!matchesDigest(hash, release)) throw new IOException("O arquivo não passou na verificação.");
+            if (cancelled.getAsBoolean()) throw new CancellationException();
             verifyPackage(context, temporary, release.version);
+            if (cancelled.getAsBoolean()) throw new CancellationException();
             File destination = new File(context.getCacheDir(), UpdateApkProvider.APK_NAME);
             android.system.Os.rename(temporary.getPath(), destination.getPath());
         } finally {
             temporary.delete();
         }
+    }
+
+    static boolean isDownloaded(Context context, Release release) {
+        File stored = new File(context.getCacheDir(), UpdateApkProvider.APK_NAME);
+        if (!stored.isFile() || stored.length() != release.size) return false;
+        try (FileInputStream input = new FileInputStream(stored)) {
+            MessageDigest hash = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[32768];
+            int count;
+            while ((count = input.read(buffer)) != -1) hash.update(buffer, 0, count);
+            if (!matchesDigest(hash, release)) return false;
+            verifyPackage(context, stored, release.version);
+            return true;
+        } catch (Exception error) { return false; }
+    }
+
+    private static boolean matchesDigest(MessageDigest hash, Release release) {
+        StringBuilder actual = new StringBuilder();
+        for (byte octet : hash.digest()) actual.append(String.format(Locale.ROOT, "%02x", octet & 255));
+        return release.sha256.equalsIgnoreCase(actual.toString());
     }
 
     @SuppressWarnings("deprecation")
@@ -147,16 +172,23 @@ final class AndroidUpdater {
         return connection;
     }
 
-    private static long transfer(InputStream input, java.io.OutputStream output, MessageDigest hash, long limit)
-            throws IOException {
+    private static long transfer(InputStream input, java.io.OutputStream output, MessageDigest hash, long limit,
+            IntConsumer progress, BooleanSupplier cancelled) throws IOException {
         byte[] buffer = new byte[32768];
         long total = 0;
+        int percent = 0;
         int count;
         while ((count = input.read(buffer)) != -1) {
+            if (cancelled.getAsBoolean() || Thread.currentThread().isInterrupted()) throw new CancellationException();
             total += count;
             if (total > limit) throw new IOException("Arquivo maior que o esperado");
             output.write(buffer, 0, count);
             if (hash != null) hash.update(buffer, 0, count);
+            int next = (int) (100 * total / limit);
+            if (progress != null && next != percent) {
+                percent = next;
+                progress.accept(percent);
+            }
         }
         return total;
     }
