@@ -1,8 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using System.Windows.Threading;
 using Microsoft.Win32;
+using System.Globalization;
 
 namespace Soneca;
 public partial class MainWindow : Window
@@ -14,6 +14,8 @@ public partial class MainWindow : Window
     private bool clockMode;
     private bool updating;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer dashboardTimer = new() { Interval = TimeSpan.FromSeconds(5) };
+    private static readonly CultureInfo BrazilianPortuguese = CultureInfo.GetCultureInfo("pt-BR");
     public MainWindow(bool demo, bool skipIntro = false)
     {
         this.demo = demo; this.skipIntro = skipIntro; schedule = new Schedule(demo);
@@ -27,6 +29,12 @@ public partial class MainWindow : Window
         LoadDashboard();
         try { target = schedule.Read(); } catch (Exception ex) { ErrorLabel.Text = "Não foi possível consultar o agendamento: " + ex.Message; ScheduleButton.IsEnabled = false; }
         timer.Tick += (_, _) => Render(); timer.Start(); Render();
+        dashboardTimer.Tick += (_, _) =>
+        {
+            if (HomePanel.IsVisible && DashboardContent.IsEnabled && WindowState != WindowState.Minimized)
+                LoadDashboard();
+        };
+        dashboardTimer.Start();
         Loaded += async (_, _) =>
         {
             if (demo) return;
@@ -34,16 +42,24 @@ public partial class MainWindow : Window
             await Task.Delay(1800);
             if (IsVisible) await CheckUpdate(false);
         };
-        Closed += (_, _) => { timer.Stop(); FinishIntro(); };
+        Closed += (_, _) => { timer.Stop(); dashboardTimer.Stop(); FinishIntro(); };
         Closing += (_, args) => { if (CleanupPanel.Busy || NamesPanel.Busy) { args.Cancel = true; UpdateLabel.Text = "Aguarde a operação terminar antes de fechar."; } };
     }
     private void LoadDashboard()
     {
-        TodayLabel.Text = DateTime.Now.ToString("dddd, d 'de' MMMM", new System.Globalization.CultureInfo("pt-BR"));
+        TodayLabel.Text = DateTime.Now.ToString("dddd, d 'de' MMMM", BrazilianPortuguese);
         var local = LocalComputerAgent.Read();
         ComputerNameLabel.Text = local.Name;
-        string memory = local.TotalMemoryGb > 0 ? $"{local.MemoryInUseGb:0.0} de {local.TotalMemoryGb:0.0} GB de memória em uso" : "Memória indisponível";
-        ComputerDetailsLabel.Text = $"{local.WindowsVersion}  ·  {local.ProcessorCount} processadores lógicos  ·  {memory}  ·  Ativo há {local.Uptime.Days}d {local.Uptime.Hours}h";
+        ComputerDetailsLabel.Text = "Windows · build " + Environment.OSVersion.Version.Build;
+        bool hasMemory = local.TotalMemoryGb > 0;
+        MemoryValue.Text = hasMemory ? local.MemoryInUseGb.ToString("0.0", BrazilianPortuguese) + " GB" : "Indisponível";
+        MemoryTotal.Text = hasMemory ? "de " + local.TotalMemoryGb.ToString("0.0", BrazilianPortuguese) + " GB" : "";
+        MemoryGauge.Visibility = hasMemory ? Visibility.Visible : Visibility.Collapsed;
+        MemoryGauge.Value = hasMemory ? 100 * local.MemoryInUseGb / local.TotalMemoryGb : 0;
+        ProcessorValue.Text = local.ProcessorCount.ToString(BrazilianPortuguese);
+        UptimeValue.Text = local.Uptime.Days > 0
+            ? $"{local.Uptime.Days} d {local.Uptime.Hours} h"
+            : $"{local.Uptime.Hours} h {local.Uptime.Minutes} min";
         NetworkStatusLabel.Text = local.NetworkAvailable ? "Interface ativa" : "Sem interface ativa";
     }
     private void Startup_Changed(object sender, RoutedEventArgs e)
@@ -86,8 +102,6 @@ public partial class MainWindow : Window
         clockMode = clock; Presets.Visibility = clock ? Visibility.Collapsed : Visibility.Visible;
         InputLabel.Text = clock ? "Horário de hoje ou amanhã (HH:mm)" : "Tempo personalizado (minutos)";
         TimeInput.Text = clock ? DateTime.Now.AddHours(1).ToString("HH:mm") : "30";
-        DelayMode.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(clock ? "#252530" : "#49405F"));
-        ClockMode.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(clock ? "#49405F" : "#252530"));
         ErrorLabel.Text = ""; Render();
     }
     private void Delay_Click(object sender, RoutedEventArgs e) => SetMode(false);
@@ -101,15 +115,24 @@ public partial class MainWindow : Window
         EnergyPanel.Visibility = page == 0 ? Visibility.Visible : Visibility.Collapsed;
         CleanupPanel.Visibility = page == 1 ? Visibility.Visible : Visibility.Collapsed;
         NamesPanel.Visibility = page == 2 ? Visibility.Visible : Visibility.Collapsed;
-        HomeNav.Background = page == -1 ? new SolidColorBrush(Color.FromRgb(36,65,85)) : Brushes.Transparent;
-        EnergyNav.Background = page == 0 ? new SolidColorBrush(Color.FromRgb(73,64,95)) : Brushes.Transparent;
-        CleanupNav.Background = page == 1 ? new SolidColorBrush(Color.FromRgb(73,64,95)) : Brushes.Transparent;
-        NamesNav.Background = page == 2 ? new SolidColorBrush(Color.FromRgb(73,64,95)) : Brushes.Transparent;
+        SettingsPanel.Visibility = page == 3 ? Visibility.Visible : Visibility.Collapsed;
+        var nav = page switch
+        {
+            0 => EnergyNav,
+            1 => CleanupNav,
+            2 => NamesNav,
+            3 => SettingsNav,
+            _ => HomeNav
+        };
+        nav.IsChecked = true;
+        nav.Focus();
+        if (page == -1) LoadDashboard();
     }
     private void Home_Click(object sender, RoutedEventArgs e) => Navigate(-1);
     private void Energy_Click(object sender, RoutedEventArgs e) => Navigate(0);
     private void Cleanup_Click(object sender, RoutedEventArgs e) => Navigate(1);
     private void Names_Click(object sender, RoutedEventArgs e) => Navigate(2);
+    private void Settings_Click(object sender, RoutedEventArgs e) => Navigate(3);
     private async Task CheckUpdate(bool manual)
     {
         if (demo || updating) return;

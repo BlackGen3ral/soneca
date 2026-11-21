@@ -198,7 +198,11 @@ public partial class MainWindow
         {
             Debug.WriteLine("Encerramento da abertura: " + ex.Message);
         }
-        if (IsVisible) (returnToReplay ? ReplayIntroButton : HomeNav).Focus();
+        if (IsVisible)
+        {
+            if (returnToReplay) ReplayIntroButton.Focus();
+            else HomeNav.Focus();
+        }
         completion.TrySetResult();
     }
 

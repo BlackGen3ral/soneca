@@ -19,7 +19,7 @@ Baixe [ArthoAI-Setup.exe](https://github.com/BlackGen3ral/soneca/releases/latest
 ## Como testar
 
 - Abra o aplicativo instalado para ver a abertura. Use **Pular abertura** ou **Esc** para ir ao painel. Em **Visão geral**, use **Rever abertura** para repeti-la.
-- Em **Visão geral**, confira os dados deste computador, o estado de rede observado e os serviços marcados como não configurados. Ative ou desative **Iniciar o Artho AI com o Windows** para conferir a preferência do usuário atual.
+- Em **Visão geral**, confira os dados do computador e da rede, atualizados enquanto o painel estiver visível. Em **Preferências**, ajuste o início com o Windows ou verifique atualizações.
 - Para abrir sem animação pelo terminal: `Soneca.exe --skip-intro`.
 - `Soneca.exe --demo` simula as ferramentas destrutivas; não executa atualização, desligamento nem exclusão real.
 - `Soneca.exe --self-test` valida agendamento, atualizador e limpeza com dados isolados. Não aponta para as pastas reais Temp, Prefetch ou Lixeira.
@@ -54,6 +54,6 @@ Ao abrir sem agendamento nem limpeza ativa, o app consulta a última versão est
 
 ## Desenvolvimento
 
-Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.4.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
+Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.5.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
 
 O repositório e os identificadores técnicos ainda se chamam `soneca` para preservar atualizações existentes. A marca visível no produto é Artho AI.
