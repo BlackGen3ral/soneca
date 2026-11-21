@@ -12,7 +12,6 @@ public partial class MainWindow : Window
     private readonly bool skipIntro;
     private DateTimeOffset? target;
     private bool clockMode;
-    private bool updating;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly DispatcherTimer dashboardTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     private static readonly CultureInfo BrazilianPortuguese = CultureInfo.GetCultureInfo("pt-BR");
@@ -22,6 +21,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         CleanupPanel.Demo = demo;
         VersionLabel.Text = "v" + Updater.Current.ToString(3);
+        InstalledVersionLabel.Text = "INSTALADO  ·  " + Updater.Current.ToString(3);
         if (demo) { Title = "Artho AI · demonstração"; UpdateLabel.Text = "Demonstração · operações simuladas"; }
         bool startWithWindows = !demo && StartupRegistration.ResolvePreference(StartupRegistration.Preference);
         StartupCheckBox.IsChecked = startWithWindows;
@@ -41,22 +41,28 @@ public partial class MainWindow : Window
             _ = RestorePcAgentAsync();
             if (!skipIntro) await RunIntro();
             await Task.Delay(1800);
-            if (IsVisible) await CheckUpdate(false);
+            if (IsVisible && !updateBusy && availableUpdate is null) await CheckUpdateAsync();
         };
         Closed += async (_, _) =>
         {
             timer.Stop(); dashboardTimer.Stop(); devicesTimer.Stop(); FinishIntro();
+            CloseUpdates();
             await StopPcAgentAsync();
             await StopMobileAsync();
         };
-        Closing += (_, args) => { if (CleanupPanel.Busy || NamesPanel.Busy) { args.Cancel = true; UpdateLabel.Text = "Aguarde a operação terminar antes de fechar."; } };
+        Closing += (_, args) =>
+        {
+            if (!CleanupPanel.Busy && !NamesPanel.Busy && downloadCancellation is null) return;
+            args.Cancel = true;
+            MessageBox.Show("Aguarde a operação terminar ou cancele o download antes de fechar.", "Artho AI");
+        };
     }
     private void LoadDashboard()
     {
         TodayLabel.Text = DateTime.Now.ToString("dddd, d 'de' MMMM", BrazilianPortuguese);
         var local = LocalComputerAgent.Read();
         ComputerNameLabel.Text = local.Name;
-        ComputerDetailsLabel.Text = "Windows · build " + Environment.OSVersion.Version.Build;
+        ComputerDetailsLabel.Text = "Este computador · Windows · build " + Environment.OSVersion.Version.Build;
         bool hasMemory = local.TotalMemoryGb > 0;
         MemoryValue.Text = hasMemory ? local.MemoryInUseGb.ToString("0.0", BrazilianPortuguese) + " GB" : "Indisponível";
         MemoryTotal.Text = hasMemory ? "de " + local.TotalMemoryGb.ToString("0.0", BrazilianPortuguese) + " GB" : "";
@@ -71,8 +77,8 @@ public partial class MainWindow : Window
     private void Startup_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || demo) return;
-        try { StartupRegistration.SetEnabled(StartupCheckBox.IsChecked == true); UpdateLabel.Text = StartupCheckBox.IsChecked == true ? "Inicialização com Windows ativada." : "Inicialização com Windows desativada."; }
-        catch (Exception ex) { UpdateLabel.Text = "Não foi possível alterar a inicialização: " + ex.Message; StartupCheckBox.IsChecked = StartupRegistration.IsEnabled(); }
+        try { StartupRegistration.SetEnabled(StartupCheckBox.IsChecked == true); StartupFeedback.Text = StartupCheckBox.IsChecked == true ? "Inicialização com Windows ativada." : "Inicialização com Windows desativada."; }
+        catch (Exception ex) { StartupFeedback.Text = "Não foi possível alterar a inicialização: " + ex.Message; StartupCheckBox.IsChecked = StartupRegistration.IsEnabled(); }
     }
     private void Render()
     {
@@ -114,7 +120,6 @@ public partial class MainWindow : Window
     private void Clock_Click(object sender, RoutedEventArgs e) => SetMode(true);
     private void Preset_Click(object sender, RoutedEventArgs e) { TimeInput.Text = (string)((Button)sender).Tag; ErrorLabel.Text = ""; Render(); }
     private void Input_Changed(object sender, TextChangedEventArgs e) { if (IsLoaded) Render(); }
-    private async void Update_Click(object sender, RoutedEventArgs e) => await CheckUpdate(true);
     private void Navigate(int page)
     {
         HomePanel.Visibility = page == -1 ? Visibility.Visible : Visibility.Collapsed;
@@ -124,6 +129,7 @@ public partial class MainWindow : Window
         SettingsPanel.Visibility = page == 3 ? Visibility.Visible : Visibility.Collapsed;
         MobilePanel.Visibility = page == 4 ? Visibility.Visible : Visibility.Collapsed;
         DevicesPanel.Visibility = page == 5 ? Visibility.Visible : Visibility.Collapsed;
+        UpdatesPanel.Visibility = page == 6 ? Visibility.Visible : Visibility.Collapsed;
         var nav = page switch
         {
             0 => EnergyNav,
@@ -132,6 +138,7 @@ public partial class MainWindow : Window
             3 => SettingsNav,
             4 => MobileNav,
             5 => DevicesNav,
+            6 => UpdatesNav,
             _ => HomeNav
         };
         nav.IsChecked = true;
@@ -143,29 +150,6 @@ public partial class MainWindow : Window
     private void Cleanup_Click(object sender, RoutedEventArgs e) => Navigate(1);
     private void Names_Click(object sender, RoutedEventArgs e) => Navigate(2);
     private void Settings_Click(object sender, RoutedEventArgs e) => Navigate(3);
-    private async Task CheckUpdate(bool manual)
-    {
-        if (demo || updating) return;
-        if (CleanupPanel.Busy || NamesPanel.Busy) { UpdateLabel.Text = "Aguarde a operação terminar antes de atualizar."; return; }
-        if (target > DateTimeOffset.Now) { UpdateLabel.Text = "A atualização será verificada ao reabrir sem agendamento."; return; }
-        updating = true; UpdateButton.IsEnabled = false;
-        try
-        {
-            var update = await Updater.Check();
-            if (update is null) { UpdateLabel.Text = "Você está na versão mais recente."; return; }
-            if (CleanupPanel.Busy || NamesPanel.Busy) { UpdateLabel.Text = "Atualização adiada até a operação terminar."; return; }
-            // Lock scheduling before downloading so no new timer can be lost during installation.
-            ScheduleButton.IsEnabled = false;
-            CleanupPanel.SetEnabled(false);
-            NamesPanel.IsEnabled = false;
-            UpdateLabel.Text = "Baixando atualização " + update.Version + "…";
-            var installer = await Updater.Download(update);
-            if (schedule.Read() > DateTimeOffset.Now) { UpdateLabel.Text = "Atualização adiada: existe um agendamento ativo."; return; }
-            Updater.Install(installer); Application.Current.Shutdown();
-        }
-        catch (Exception ex) { UpdateLabel.Text = manual ? "Não foi possível atualizar: " + ex.Message : "Sem conexão para atualizar. Tentaremos ao reabrir."; }
-        finally { updating = false; UpdateButton.IsEnabled = true; ScheduleButton.IsEnabled = true; CleanupPanel.SetEnabled(true); NamesPanel.IsEnabled = true; }
-    }
 }
 internal static class StartupRegistration
 {

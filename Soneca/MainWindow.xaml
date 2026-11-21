@@ -3,58 +3,63 @@
         Title="Artho AI" Width="1140" Height="820" MinWidth="810" MinHeight="630"
         Background="{StaticResource Canvas}" Foreground="{StaticResource Ink}"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True">
-    <Grid>
+    <Grid Background="{StaticResource Canvas}">
         <Grid x:Name="DashboardContent">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="202"/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="218"/><ColumnDefinition/></Grid.ColumnDefinitions>
             <Border Background="{StaticResource Sidebar}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0" Padding="16,22,16,17">
                 <Grid>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="5,0,0,29">
+                        <StackPanel Orientation="Horizontal" Margin="5,0,0,27">
                             <Image Source="Assets/ArthoMark.png" Width="37" Height="37"/>
                             <TextBlock Text="Artho AI" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0"/>
                         </StackPanel>
-                        <RadioButton x:Name="HomeNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Visão geral" Tag="&#xE80F;" Click="Home_Click" IsChecked="True"/>
+                        <RadioButton x:Name="HomeNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Início" Tag="&#xE80F;" Click="Home_Click" IsChecked="True"/>
+                        <RadioButton x:Name="DevicesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Dispositivos" Tag="&#xE7F4;" Click="Devices_Click"/>
+                        <RadioButton x:Name="MobileNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Celular" Tag="&#xE8EA;" Click="Mobile_Click"/>
+                        <TextBlock Text="FERRAMENTAS" Foreground="{StaticResource Muted}" FontSize="11" Margin="11,16,0,7"/>
                         <RadioButton x:Name="EnergyNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Energia" Tag="&#xE7E8;" Click="Energy_Click"/>
                         <RadioButton x:Name="CleanupNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Limpeza" Tag="&#xE74D;" Click="Cleanup_Click"/>
                         <RadioButton x:Name="NamesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Nomes da pasta" Tag="&#xE8B7;" Click="Names_Click"/>
-                        <RadioButton x:Name="MobileNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Celular" Tag="&#xE8EA;" Click="Mobile_Click"/>
-                        <RadioButton x:Name="DevicesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Dispositivos" Tag="&#xE7F4;" Click="Devices_Click"/>
-                        <RadioButton x:Name="SettingsNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Preferências" Tag="&#xE713;" Click="Settings_Click" Margin="0,12,0,0"/>
                     </StackPanel>
                     <StackPanel Grid.Row="2">
                         <Border Height="1" Background="{StaticResource Line}" Margin="0,0,0,14"/>
-                        <TextBlock x:Name="VersionLabel" Foreground="{StaticResource Muted}" FontSize="12" Margin="4,0,4,9"/>
-                        <TextBlock x:Name="UpdateLabel" Text="Atualizações automáticas" Foreground="{StaticResource Muted}" FontSize="12"
-                                   Margin="4,0,4,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+                        <RadioButton x:Name="UpdatesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Atualizações" Tag="&#xE895;" Click="UpdatesNav_Click"/>
+                        <RadioButton x:Name="SettingsNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Preferências" Tag="&#xE713;" Click="Settings_Click"/>
+                        <TextBlock x:Name="VersionLabel" Foreground="{StaticResource Muted}" FontSize="12" Margin="11,9,4,0"/>
                     </StackPanel>
                 </Grid>
             </Border>
 
             <ScrollViewer x:Name="HomePanel" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel MaxWidth="1080" Margin="30,25,30,25">
-                    <DockPanel Margin="0,0,0,17">
-                        <TextBlock x:Name="TodayLabel" Style="{StaticResource BodyCopy}" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0" TextAlignment="Right"/>
-                        <TextBlock Text="Visão geral" Style="{StaticResource PageTitle}"/>
-                    </DockPanel>
-                    <Border CornerRadius="18" BorderBrush="#2A4159" BorderThickness="1" Background="#0A1624" ClipToBounds="True">
-                        <Grid MinHeight="207" ClipToBounds="True">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="5*"/><ColumnDefinition Width="4*"/></Grid.ColumnDefinitions>
-                            <Image Grid.Column="1" Source="Assets/Nucleus.png" Height="260" VerticalAlignment="Center" Margin="-22,-26,0,-26"
-                                   Stretch="Uniform" HorizontalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" IsHitTestVisible="False">
-                                <Image.OpacityMask>
-                                    <RadialGradientBrush><GradientStop Color="White" Offset="0.65"/><GradientStop Color="Transparent" Offset="1"/></RadialGradientBrush>
-                                </Image.OpacityMask>
-                            </Image>
-                            <StackPanel Margin="23,21,0,21" VerticalAlignment="Center" Panel.ZIndex="1">
-                                <TextBlock Text="ESTE COMPUTADOR" Style="{StaticResource Overline}"/>
-                                <TextBlock x:Name="ComputerNameLabel" FontSize="35" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,6,0,3"/>
-                                <TextBlock x:Name="ComputerDetailsLabel" Style="{StaticResource BodyCopy}"/>
-                                <Button x:Name="ReplayIntroButton" Content="Rever abertura" Click="ReplayIntro_Click" HorizontalAlignment="Left" Margin="0,16,0,0"/>
-                            </StackPanel>
-                        </Grid>
+                <StackPanel MaxWidth="1080" Margin="34,32,34,26">
+                    <TextBlock x:Name="TodayLabel" Style="{StaticResource BodyCopy}"/>
+                    <TextBlock x:Name="ComputerNameLabel" FontSize="42" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,3,0,4"/>
+                    <TextBlock x:Name="ComputerDetailsLabel" Style="{StaticResource BodyCopy}"/>
+                    <Border x:Name="HomeUpdateBanner" Style="{StaticResource Panel}" Background="#2A3D30" Visibility="Collapsed" Margin="0,20,0,0" Padding="14">
+                        <DockPanel>
+                            <Button Content="Ver atualização" DockPanel.Dock="Right" Click="UpdatesNav_Click" Margin="12,0,0,0"/>
+                            <TextBlock x:Name="HomeUpdateText" Foreground="{StaticResource Accent}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        </DockPanel>
                     </Border>
-                    <TextBlock Text="Estado do PC" Style="{StaticResource SectionTitle}" Margin="0,21,0,10"/>
+                    <TextBlock Text="Gerenciar dispositivos" Style="{StaticResource SectionTitle}" Margin="0,26,0,10"/>
+                    <UniformGrid Columns="2">
+                        <Border Style="{StaticResource Panel}" Background="#29392F" Margin="0,0,5,0">
+                            <StackPanel>
+                                <TextBlock Text="Computadores" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="Veja os PCs online, ligue e ajuste os horários." Style="{StaticResource BodyCopy}" Margin="0,6,0,12"/>
+                                <Button Content="Abrir dispositivos" Style="{StaticResource Primary}" Click="Devices_Click" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource Panel}" Margin="5,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Celular" Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="Conecte o Android a este PC com um QR Code." Style="{StaticResource BodyCopy}" Margin="0,6,0,12"/>
+                                <Button Content="Abrir pareamento" Click="Mobile_Click" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+                    <TextBlock Text="Estado deste PC" Style="{StaticResource SectionTitle}" Margin="0,26,0,10"/>
                     <UniformGrid Columns="4">
                         <Border Style="{StaticResource Metric}" Margin="0,0,8,0"><StackPanel>
                             <TextBlock Text="Memória em uso" Style="{StaticResource BodyCopy}"/>
@@ -83,13 +88,6 @@
                         <Button Content="Limpeza" Click="Cleanup_Click" Margin="0,0,8,0"/>
                         <Button Content="Nomes da pasta" Click="Names_Click"/>
                     </UniformGrid>
-                    <Expander Header="Integrações" Foreground="{StaticResource Muted}" FontSize="13" Margin="0,16,0,0">
-                        <StackPanel Margin="15,9,0,0">
-                            <TextBlock Style="{StaticResource BodyCopy}" Text="Outros computadores · Não configurados"/>
-                            <TextBlock Style="{StaticResource BodyCopy}" Text="Câmeras Intelbras · Não configuradas" Margin="0,4"/>
-                            <TextBlock Style="{StaticResource BodyCopy}" Text="Super Print · Não configurada"/>
-                        </StackPanel>
-                    </Expander>
                 </StackPanel>
             </ScrollViewer>
 
@@ -163,7 +161,7 @@
                 <StackPanel Margin="30,25,30,25" MaxWidth="1080">
                     <TextBlock Text="Energia" Style="{StaticResource PageTitle}"/>
                     <TextBlock Text="Agende quando este PC deve desligar." Style="{StaticResource BodyCopy}" Margin="0,5,0,18"/>
-                    <Border Style="{StaticResource Panel}" Background="#0D2134" Padding="20,17">
+                    <Border Style="{StaticResource Panel}" Background="#29392F" Padding="20,17">
                         <StackPanel>
                             <TextBlock x:Name="StatusLabel" Style="{StaticResource Overline}"/>
                             <TextBlock x:Name="CountdownLabel" FontFamily="Cascadia Mono, Consolas" FontSize="54" FontWeight="Light" Margin="0,5,0,3"/>
@@ -203,16 +201,31 @@
                             <TextBlock Text="Inicialização" Style="{StaticResource SectionTitle}"/>
                             <CheckBox x:Name="StartupCheckBox" Content="Iniciar o Artho AI com o Windows" Checked="Startup_Changed" Unchecked="Startup_Changed" Margin="0,11,0,0"/>
                             <TextBlock Text="Use Esc para pular a abertura a qualquer momento." Style="{StaticResource BodyCopy}" Margin="0,6,0,0"/>
+                            <Button x:Name="ReplayIntroButton" Content="Rever abertura" Click="ReplayIntro_Click" HorizontalAlignment="Left" Margin="0,12,0,0"/>
+                            <TextBlock x:Name="StartupFeedback" Style="{StaticResource BodyCopy}" Margin="0,7,0,0" AutomationProperties.LiveSetting="Polite"/>
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource Panel}" Margin="0,12,0,0">
+                </StackPanel>
+            </ScrollViewer>
+            <ScrollViewer x:Name="UpdatesPanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="34,32,34,26" MaxWidth="1080">
+                    <TextBlock Text="Atualizações" Style="{StaticResource PageTitle}"/>
+                    <TextBlock Text="O Artho AI consulta o GitHub ao abrir. Você escolhe quando baixar e instalar." Style="{StaticResource BodyCopy}" Margin="0,6,0,19"/>
+                    <Border Style="{StaticResource Panel}" Padding="22">
                         <StackPanel>
-                            <TextBlock Text="Atualizações" Style="{StaticResource SectionTitle}"/>
-                            <TextBlock Text="O app verifica novas versões ao abrir." Style="{StaticResource BodyCopy}" Margin="0,7,0,9"/>
-                            <Button x:Name="UpdateButton" Content="Verificar atualizações" Click="Update_Click" HorizontalAlignment="Left"/>
-                            <TextBlock Text="{Binding Text, ElementName=UpdateLabel}" Style="{StaticResource BodyCopy}" Margin="0,9,0,0"/>
+                            <TextBlock x:Name="InstalledVersionLabel" Style="{StaticResource Overline}"/>
+                            <TextBlock x:Name="UpdateHeading" Text="Verificar nova versão" FontSize="26" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,7,0,4"/>
+                            <TextBlock x:Name="UpdateLabel" Style="{StaticResource BodyCopy}" AutomationProperties.LiveSetting="Polite"/>
+                            <ProgressBar x:Name="UpdateProgress" Height="8" Maximum="100" Margin="0,16,0,0" Visibility="Collapsed"
+                                         Foreground="{StaticResource Accent}" Background="{StaticResource Line}" AutomationProperties.Name="Progresso da atualização"/>
+                            <WrapPanel Margin="0,17,0,0">
+                                <Button x:Name="UpdateButton" Content="Verificar atualizações" Style="{StaticResource Primary}" Click="Update_Click" Margin="0,0,8,4"/>
+                                <Button x:Name="UpdateCancel" Content="Cancelar download" Click="UpdateCancel_Click" Visibility="Collapsed" Margin="0,0,8,4"/>
+                                <Button x:Name="UpdateNotes" Content="Ver versão no GitHub" Click="UpdateNotes_Click" Visibility="Collapsed" Margin="0,0,8,4"/>
+                            </WrapPanel>
                         </StackPanel>
                     </Border>
+                    <TextBlock x:Name="UpdateCheckedAt" Style="{StaticResource BodyCopy}" Margin="0,12,0,0"/>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

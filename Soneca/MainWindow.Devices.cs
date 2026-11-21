@@ -57,11 +57,21 @@ public partial class MainWindow
     {
         var body = new StackPanel();
         var panel = new Border { Style = (Style)FindResource("Panel"), Margin = new Thickness(0, 0, 0, 8), Child = body };
-        AddText(pc.Name, "SectionTitle");
-        var state = pc.Online ? "Online" : "Sem resposta";
+        var heading = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
+        var state = new TextBlock
+        {
+            Text = pc.Online ? "Online" : "Sem resposta",
+            Style = (Style)FindResource(pc.Online ? "Overline" : "BodyCopy"),
+            Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center
+        };
+        DockPanel.SetDock(state, Dock.Right);
+        heading.Children.Add(state);
+        heading.Children.Add(new TextBlock { Text = pc.Name, Style = (Style)FindResource("SectionTitle") });
+        body.Children.Add(heading);
         string last = pc.LastContact?.ToLocalTime().ToString("dd/MM/yyyy 'às' HH:mm:ss") ?? "ainda não respondeu";
-        AddText($"{state} · {pc.Address} · Último contato {last}");
-        AddText($"Ligar {DescribeRule(pc.Wake)}  ·  Desligar {DescribeRule(pc.Shutdown)}");
+        AddText($"{pc.Address}  ·  Último contato {last}");
+        AddText($"Ligar {DescribeRule(pc.Wake)}");
+        AddText($"Desligar {DescribeRule(pc.Shutdown)}");
         if (!string.IsNullOrEmpty(pc.LastRoutine)) AddText(pc.LastRoutine);
 
         var actions = new WrapPanel { Margin = new Thickness(0, 9, 0, 0) };

@@ -67,10 +67,12 @@ Escolha uma pasta ou cole seu caminho e clique em **Ler pasta**. A prévia mostr
 
 ## Atualizações e compatibilidade
 
-Ao abrir sem agendamento nem limpeza ativa, o app consulta a última versão estável no GitHub, valida origem e SHA-256, instala e reabre. O novo ativo é `ArthoAI-Setup.exe`; `ArthoControl-Setup.exe` e `Soneca-Setup.exe` permanecem publicados para compatibilidade com instaladores e atualizadores anteriores.
+O app verifica a última versão estável no GitHub ao abrir. Em **Atualizações**, confira a versão instalada, o tamanho da versão disponível e a página do GitHub. Clique em **Baixar atualização** e, depois da verificação de integridade, em **Instalar e reabrir**. A instalação espera se houver um desligamento agendado ou uma ferramenta em uso.
+
+O ativo principal é `ArthoAI-Setup.exe`. `ArthoControl-Setup.exe` e `Soneca-Setup.exe` permanecem publicados para compatibilidade com instaladores e atualizadores anteriores.
 
 ## Desenvolvimento
 
-Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.5.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
+Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.7.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
 
 O repositório e os identificadores técnicos ainda se chamam `soneca` para preservar atualizações existentes. A marca visível no produto é Artho AI.
