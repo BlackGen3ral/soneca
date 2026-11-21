@@ -18,6 +18,7 @@
                         <RadioButton x:Name="EnergyNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Energia" Tag="&#xE7E8;" Click="Energy_Click"/>
                         <RadioButton x:Name="CleanupNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Limpeza" Tag="&#xE74D;" Click="Cleanup_Click"/>
                         <RadioButton x:Name="NamesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Nomes da pasta" Tag="&#xE8B7;" Click="Names_Click"/>
+                        <RadioButton x:Name="MobileNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Celular" Tag="&#xE8EA;" Click="Mobile_Click"/>
                         <RadioButton x:Name="SettingsNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Preferências" Tag="&#xE713;" Click="Settings_Click" Margin="0,12,0,0"/>
                     </StackPanel>
                     <StackPanel Grid.Row="2">
@@ -88,6 +89,31 @@
                             <TextBlock Style="{StaticResource BodyCopy}" Text="Super Print · Não configurada"/>
                         </StackPanel>
                     </Expander>
+                </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer x:Name="MobilePanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="30,25,30,25" MaxWidth="1080">
+                    <TextBlock Text="Celular" Style="{StaticResource PageTitle}"/>
+                    <TextBlock Text="Conecte o Android para consultar este PC pela rede local." Style="{StaticResource BodyCopy}" Margin="0,5,0,18"/>
+                    <Border Style="{StaticResource Panel}">
+                        <StackPanel>
+                            <TextBlock Text="Parear com QR Code" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock x:Name="MobileNetworkLabel" Text="Endereço do PC na rede do celular" Style="{StaticResource BodyCopy}" Margin="0,13,0,5"/>
+                            <ComboBox x:Name="MobileNetwork" HorizontalAlignment="Left" MinWidth="190" MinHeight="32"
+                                      AutomationProperties.LabeledBy="{Binding ElementName=MobileNetworkLabel}"
+                                      AutomationProperties.Name="Endereço do PC na rede do celular" Foreground="#102030" Background="#EDF7FF"/>
+                            <Button x:Name="MobileStart" Content="Gerar QR Code" Style="{StaticResource Primary}"
+                                    HorizontalAlignment="Left" Margin="0,13,0,0" Click="MobileStart_Click"/>
+                            <TextBlock x:Name="MobileStatus" Style="{StaticResource BodyCopy}" Margin="0,12,0,0"
+                                       Text="Nenhuma sessão de pareamento aberta." AutomationProperties.LiveSetting="Polite"/>
+                            <Image x:Name="MobileQr" Visibility="Collapsed" HorizontalAlignment="Left" Width="246" Height="246"
+                                   Margin="0,13,0,0" RenderOptions.BitmapScalingMode="NearestNeighbor"
+                                   AutomationProperties.Name="QR Code de pareamento com o celular"/>
+                            <Button x:Name="MobileStop" Content="Encerrar conexão" Visibility="Collapsed"
+                                    HorizontalAlignment="Left" Margin="0,13,0,0" Click="MobileStop_Click"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
 

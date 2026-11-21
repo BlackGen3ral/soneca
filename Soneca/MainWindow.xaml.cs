@@ -42,7 +42,7 @@ public partial class MainWindow : Window
             await Task.Delay(1800);
             if (IsVisible) await CheckUpdate(false);
         };
-        Closed += (_, _) => { timer.Stop(); dashboardTimer.Stop(); FinishIntro(); };
+        Closed += async (_, _) => { timer.Stop(); dashboardTimer.Stop(); FinishIntro(); await StopMobileAsync(); };
         Closing += (_, args) => { if (CleanupPanel.Busy || NamesPanel.Busy) { args.Cancel = true; UpdateLabel.Text = "Aguarde a operação terminar antes de fechar."; } };
     }
     private void LoadDashboard()
@@ -116,12 +116,14 @@ public partial class MainWindow : Window
         CleanupPanel.Visibility = page == 1 ? Visibility.Visible : Visibility.Collapsed;
         NamesPanel.Visibility = page == 2 ? Visibility.Visible : Visibility.Collapsed;
         SettingsPanel.Visibility = page == 3 ? Visibility.Visible : Visibility.Collapsed;
+        MobilePanel.Visibility = page == 4 ? Visibility.Visible : Visibility.Collapsed;
         var nav = page switch
         {
             0 => EnergyNav,
             1 => CleanupNav,
             2 => NamesNav,
             3 => SettingsNav,
+            4 => MobileNav,
             _ => HomeNav
         };
         nav.IsChecked = true;

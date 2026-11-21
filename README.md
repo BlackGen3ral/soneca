@@ -26,6 +26,12 @@ Baixe [ArthoAI-Setup.exe](https://github.com/BlackGen3ral/soneca/releases/latest
 
 ## Ferramentas existentes
 
+### Celular
+
+Conecte o PC e o celular à mesma rede local. No Windows, abra **Celular**, selecione o endereço do PC nessa rede e clique em **Gerar QR Code**. No Artho AI para Android, abra **Conectar ao PC → Escanear QR Code** e aponte para o código.
+
+Se o Windows solicitar acesso pelo firewall, permita somente na sua rede privada. O QR Code expira em três minutos se o celular ainda não tiver concluído o pareamento. O Android pode consultar os dados do PC até que você encerre a conexão ou feche o Artho AI para Windows.
+
 ### Energia
 
 Escolha atalhos de tempo, minutos personalizados até 7 dias ou um horário HH:mm. Clique em **Agendar desligamento**. É possível alterar ou cancelar; fechar o app mantém a tarefa no Windows.
