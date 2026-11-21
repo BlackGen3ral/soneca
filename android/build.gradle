@@ -1,0 +1,15 @@
+plugins {
+    id 'com.android.application' version '8.13.0'
+}
+
+android {
+    namespace 'com.arthostudio.arthoai'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'com.arthostudio.arthoai'
+        minSdk 26
+        targetSdk 36
+        versionCode 3
+        versionName '0.3.0'
+    }
+}
