@@ -50,6 +50,7 @@ public final class MainActivity extends Activity {
     private static final int GREEN = 0xff94e4c3;
     private static final int ALERT = 0xffffbcad;
     private static final Locale BRAZIL = new Locale("pt", "BR");
+    private static final int SCAN_PAIRING = 17;
 
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final ExecutorService updateWorker = Executors.newSingleThreadExecutor();
@@ -299,7 +300,22 @@ public final class MainActivity extends Activity {
         TextView title = label(pairing == null ? "Conectar ao PC" : "Gerenciar conexão", 24, INK, "sans-serif-medium");
         title.setAccessibilityHeading(true);
         form.addView(title);
-        form.addView(label("Abra a ponte do Artho AI no Windows e cole o código exibido. Os dois dispositivos devem estar na mesma rede.", 15, MUTED, "sans-serif"), spaced(8));
+        form.addView(label("Na mesma rede Wi-Fi, abra Artho AI → Celular → Gerar QR Code no PC.", 15, MUTED, "sans-serif"), spaced(8));
+        Button scan = button("Escanear QR Code", true);
+        scan.setOnClickListener(view -> {
+            dialog.dismiss();
+            startActivityForResult(new Intent(this, PairingScannerActivity.class), SCAN_PAIRING);
+        });
+        form.addView(scan, spaced(14));
+        Button manual = button("Usar código da ponte antiga", false);
+        form.addView(manual, spaced(6));
+        LinearLayout legacy = column();
+        legacy.setVisibility(View.GONE);
+        form.addView(legacy);
+        manual.setOnClickListener(view -> {
+            legacy.setVisibility(View.VISIBLE);
+            manual.setVisibility(View.GONE);
+        });
         EditText code = new EditText(this);
         code.setTextColor(INK);
         code.setHintTextColor(MUTED);
@@ -314,7 +330,7 @@ public final class MainActivity extends Activity {
         code.setMinHeight(dp(54));
         code.setPadding(dp(14), dp(8), dp(14), dp(8));
         code.setBackground(surface(BACKGROUND, 12, BORDER));
-        form.addView(code, spaced(16));
+        legacy.addView(code, spaced(16));
 
         Button paste = button("Colar código", false);
         paste.setOnClickListener(view -> {
@@ -327,7 +343,7 @@ public final class MainActivity extends Activity {
                 code.setError(null);
             } else code.setError("Copie o código do Windows primeiro.");
         });
-        form.addView(paste, spaced(8));
+        legacy.addView(paste, spaced(8));
         Runnable submit = () -> {
             try {
                 pairing = StatusClient.Pairing.parse(code.getText().toString().trim());
@@ -347,7 +363,7 @@ public final class MainActivity extends Activity {
         });
         Button connect = button(pairing == null ? "Conectar" : "Conectar com outro código", true);
         connect.setOnClickListener(view -> submit.run());
-        form.addView(connect, spaced(12));
+        legacy.addView(connect, spaced(12));
         if (pairing != null) {
             Button disconnect = button("Desconectar", false);
             disconnect.setOnClickListener(view -> {
@@ -368,6 +384,19 @@ public final class MainActivity extends Activity {
         dialog.getWindow().setLayout(Math.min(dp(480), getResources().getDisplayMetrics().widthPixels - dp(32)), -2);
     }
 
+    @Override protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        if (request != SCAN_PAIRING || result != RESULT_OK || data == null) return;
+        String text = data.getStringExtra(PairingScannerActivity.EXTRA_CODE);
+        if (text == null) return;
+        try {
+            pairing = StatusClient.Pairing.parse(text);
+            requestStatus();
+        } catch (IllegalArgumentException error) {
+            detail.setText("QR Code inválido. Gere outro na aba Celular do Artho AI no PC.");
+        }
+    }
+
     private void requestStatus() {
         if (pairing == null || connecting) return;
         StatusClient.Pairing target = pairing;
@@ -382,12 +411,12 @@ public final class MainActivity extends Activity {
                 JSONObject result = StatusClient.readStatus(target);
                 show(() -> render(result));
             } catch (SSLHandshakeException error) {
-                show(() -> invalidPairing("Gere um novo código na ponte do Windows."));
+                show(() -> invalidPairing("Gere um novo QR Code no Artho AI para Windows."));
             } catch (SecurityException error) {
-                show(() -> invalidPairing("O código foi recusado. Use o código da sessão atual."));
+                show(() -> invalidPairing("A sessão terminou ou o QR Code expirou. Gere outro no PC."));
             } catch (Exception error) {
                 show(() -> showEmpty("●  PC indisponível", ALERT,
-                        "Confira se a ponte está aberta e se o celular está na mesma rede."));
+                        "Confira se a sessão está aberta no PC e se o celular está na mesma rede."));
             }
         });
     }

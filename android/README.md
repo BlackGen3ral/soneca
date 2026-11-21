@@ -1,5 +1,11 @@
 # Artho AI para Android
 
+## Parear com o Windows
+
+No Artho AI para Windows 1.5.1 ou mais recente, abra **Celular → Gerar QR Code**. Com os dois aparelhos na mesma rede local, abra **Conectar ao PC → Escanear QR Code** no Android. Permita o uso da câmera e aponte para o QR da janela do Windows. O Android consulta o estado do PC enquanto a sessão estiver aberta. Instalações antigas da ponte ainda podem ser usadas pelo botão **Usar código da ponte antiga**.
+
+## Atualizar o app
+
 Instale a versão 0.3.0 uma vez para habilitar o atualizador. Ao abrir o app, ele verifica as versões do Android publicadas no GitHub. Se encontrar uma atualização, mostra **Baixar e instalar** em **Atualizações**. Na primeira vez, o Android pode pedir que você permita instalações a partir do Artho AI. Depois, volte ao app, toque no botão novamente e confirme a instalação.
 
 ## Publicar uma versão
