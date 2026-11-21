@@ -6,9 +6,15 @@ No Artho AI para Windows 1.5.1 ou mais recente, abra **Celular → Gerar QR Code
 
 No Windows 1.6.0 ou mais recente, pareie os PCs na aba **Dispositivos**. Na aba **Celular**, marque **Permitir que o celular ligue os PCs e edite os horários** e gere um novo QR Code. Após parear, abra **Dispositivos** no Android para consultar o último contato, enviar Wake-on-LAN ou escolher os horários e dias de ligar e desligar. As rotinas são salvas e executadas no PC de controle.
 
+## Energia deste PC
+
+No Windows 1.8.0 ou mais recente, marque **Permitir que o celular desligue, reinicie e programe este PC** antes de gerar o QR Code. Escaneie e abra **Energia** no Android. O desligamento e a reinicialização imediatos pedem confirmação. O desligamento pode ser único ou semanal. O agendamento fica no Windows.
+
+Para ligar, o Android envia Wake-on-LAN pelo Wi-Fi local usando o endereço salvo do PC. **Programar para ligar** oferece um horário único ou dias da semana e depende da autorização de alarmes exatos. Mantenha o celular ligado no mesmo Wi-Fi no horário desejado. Use **Esquecer este PC** para remover o endereço e cancelar o alarme de ligar no celular.
+
 ## Atualizar o app
 
-O Artho AI consulta o GitHub ao abrir. Toque em **Atualizações** no menu inferior para conferir a versão instalada e a disponível. Use **Baixar atualização** para acompanhar o progresso. Depois de verificado o APK, toque em **Instalar atualização**. Se o Android solicitar permissão para instalar a partir do Artho AI, habilite a permissão, volte ao app e confirme a instalação.
+O Artho AI consulta o GitHub ao abrir. Toque em **Atualizar** no menu inferior para conferir a versão instalada e a disponível. Use **Baixar atualização** para acompanhar o progresso. Depois de verificado o APK, toque em **Instalar atualização**. Se o Android solicitar permissão para instalar a partir do Artho AI, habilite a permissão, volte ao app e confirme a instalação.
 
 ## Publicar uma versão
 

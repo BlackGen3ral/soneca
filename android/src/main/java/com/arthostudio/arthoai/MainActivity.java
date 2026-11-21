@@ -51,10 +51,11 @@ public final class MainActivity extends Activity {
 
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private ScrollView scroll;
-    private final View[] pages = new View[3];
-    private final Button[] tabs = new Button[3];
+    private final View[] pages = new View[4];
+    private final Button[] tabs = new Button[4];
     private int selectedTab;
     private UpdatesPanel updates;
+    private PowerPanel power;
     private LinearLayout deviceContent;
     private StatusClient.Pairing shownPairing;
     private boolean deviceInitialized;
@@ -107,8 +108,10 @@ public final class MainActivity extends Activity {
 
         pages[0] = dashboard();
         pages[1] = devicePage();
+        power = new PowerPanel(this, worker);
+        pages[2] = power.view();
         updates = new UpdatesPanel(this);
-        pages[2] = updates.view();
+        pages[3] = updates.view();
         for (View page : pages) content.addView(page);
         shell.addView(navigation());
         setContentView(shell);
@@ -119,12 +122,14 @@ public final class MainActivity extends Activity {
             requestStatus();
         }
         showTab(saved == null ? 0 : saved.getInt("tab", 0));
+        WakeSchedules.restore(this);
         updates.check();
     }
 
     @Override protected void onResume() {
         super.onResume();
         if (updates != null) updates.resumed();
+        if (power != null) power.refreshLocal();
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
@@ -204,11 +209,11 @@ public final class MainActivity extends Activity {
         LinearLayout nav = row();
         nav.setBackgroundColor(SURFACE);
         nav.setPadding(dp(10), dp(8), dp(10), dp(8));
-        String[] labels = {"Início", "Dispositivos", "Atualizações"};
+        String[] labels = {"Início", "Dispositivos", "Energia", "Atualizar"};
         for (int index = 0; index < tabs.length; index++) {
             final int tab = index;
             Button button = button(labels[index], false);
-            button.setTextSize(13);
+            button.setTextSize(12);
             button.setPadding(dp(4), dp(8), dp(4), dp(8));
             button.setOnClickListener(view -> showTab(tab));
             tabs[index] = button;
@@ -228,12 +233,13 @@ public final class MainActivity extends Activity {
             decorateButton(tabs[index], selected);
         }
         if (selectedTab == 1) updateDevices();
+        if (selectedTab == 2) power.refreshLocal();
         scroll.scrollTo(0, 0);
     }
 
     void indicateUpdate(boolean available) {
-        tabs[2].setText(available ? "Atualizações •" : "Atualizações");
-        tabs[2].setContentDescription(available ? "Atualizações, nova versão disponível" : "Atualizações");
+        tabs[3].setText(available ? "Atualizar •" : "Atualizar");
+        tabs[3].setContentDescription(available ? "Atualizações, nova versão disponível" : "Atualizações");
     }
 
     private View header() {
@@ -358,9 +364,8 @@ public final class MainActivity extends Activity {
         if (pairing != null) {
             Button disconnect = button("Desconectar", false);
             disconnect.setOnClickListener(view -> {
-                pairing = null;
                 dialog.dismiss();
-                showEmpty("●  Sem conexão", MUTED, "Pareie seu celular para consultar o computador.");
+                disconnect();
             });
             form.addView(disconnect, spaced(6));
         }
@@ -400,14 +405,17 @@ public final class MainActivity extends Activity {
         worker.execute(() -> {
             try {
                 JSONObject result = StatusClient.readStatus(target);
-                show(() -> render(result));
+                show(() -> { if (pairing == target) render(result); });
             } catch (SSLHandshakeException error) {
-                show(() -> invalidPairing("Gere um novo QR Code no Artho AI para Windows."));
+                show(() -> { if (pairing == target) invalidPairing("Gere um novo QR Code no Artho AI para Windows."); });
             } catch (SecurityException error) {
-                show(() -> invalidPairing("A sessão terminou ou o QR Code expirou. Gere outro no PC."));
+                show(() -> { if (pairing == target) invalidPairing("A sessão terminou ou o QR Code expirou. Gere outro no PC."); });
             } catch (Exception error) {
-                show(() -> showEmpty("●  PC indisponível", ALERT,
-                        "Confira se a sessão está aberta no PC e se o celular está na mesma rede."));
+                show(() -> {
+                    if (pairing != target) return;
+                    power.pairingChanged(null);
+                    showEmpty("●  PC indisponível", ALERT, "Confira se a sessão está aberta no PC e se o celular está na mesma rede.");
+                });
             }
         });
     }
@@ -433,12 +441,20 @@ public final class MainActivity extends Activity {
         detail.setText("Windows " + version + "\nÚltima leitura às "
                 + DateFormat.getTimeInstance(DateFormat.SHORT, BRAZIL).format(new Date()));
         setStatus("●  Dados recebidos", GREEN);
+        power.pairingChanged(pairing);
         restoreActions();
     }
 
     private void invalidPairing(String message) {
         pairing = null;
+        power.pairingChanged(null);
         showEmpty("●  Código inválido", ALERT, message);
+    }
+
+    void disconnect() {
+        pairing = null;
+        power.forget();
+        showEmpty("●  Sem conexão", MUTED, "Pareie seu celular para consultar o computador.");
     }
 
     private void showEmpty(String title, int color, String message) {
