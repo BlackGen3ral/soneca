@@ -69,6 +69,7 @@ public final class MainActivity extends Activity {
     private ProgressBar memoryBar;
     private Button primary;
     private Button connectionOptions;
+    private Button devicesButton;
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -117,6 +118,12 @@ public final class MainActivity extends Activity {
         connectionOptions.setOnClickListener(view -> showPairing());
         connectionOptions.setVisibility(View.GONE);
         page.addView(connectionOptions, spaced(6));
+        devicesButton = button("Dispositivos", false);
+        devicesButton.setVisibility(View.GONE);
+        devicesButton.setOnClickListener(view -> {
+            if (pairing != null) new PcDevicesDialog(this, pairing, worker).show();
+        });
+        page.addView(devicesButton, spaced(6));
 
         TextView section = label("Visão geral", 23, INK, "sans-serif-medium");
         section.setAccessibilityHeading(true);
@@ -469,6 +476,7 @@ public final class MainActivity extends Activity {
         primary.setEnabled(true);
         connectionOptions.setEnabled(true);
         connectionOptions.setVisibility(pairing == null ? View.GONE : View.VISIBLE);
+        devicesButton.setVisibility(pairing == null ? View.GONE : View.VISIBLE);
     }
 
     private void show(Runnable action) {

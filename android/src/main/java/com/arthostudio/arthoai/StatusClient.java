@@ -16,6 +16,10 @@ import org.json.JSONObject;
 
 final class StatusClient {
     static JSONObject readStatus(Pairing pairing) throws Exception {
+        return request(pairing, "GET", "/v1/status");
+    }
+
+    static JSONObject request(Pairing pairing, String method, String path) throws Exception {
         SSLContext tls = SSLContext.getInstance("TLS");
         tls.init(null, new TrustManager[] {new X509TrustManager() {
             @Override public void checkServerTrusted(X509Certificate[] chain, String auth)
@@ -35,25 +39,37 @@ final class StatusClient {
                     throws CertificateException { throw new CertificateException("Cliente não suportado"); }
             @Override public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
         }}, null);
-        URL url = new URL("https://" + pairing.host + ":47834/v1/status");
+        URL url = new URL("https://" + pairing.host + ":47834" + path);
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection(java.net.Proxy.NO_PROXY);
         connection.setSSLSocketFactory(tls.getSocketFactory());
         connection.setInstanceFollowRedirects(false);
         connection.setConnectTimeout(4500);
-        connection.setReadTimeout(4500);
+        connection.setReadTimeout(12000);
+        connection.setRequestMethod(method);
         connection.setRequestProperty("Authorization", "Bearer " + pairing.token);
         try {
+            if ("POST".equals(method)) {
+                connection.setDoOutput(true);
+                connection.setFixedLengthStreamingMode(0);
+                connection.getOutputStream().close();
+            }
             int status = connection.getResponseCode();
             if (status == 401) throw new SecurityException();
-            if (status != 200) throw new java.io.IOException("Resposta inválida");
-            try (InputStream input = connection.getInputStream(); ByteArrayOutputStream bytes = new ByteArrayOutputStream()) {
+            if (status == 404) throw new java.io.IOException(
+                    "No Windows, ative o controle na aba Celular e gere outro QR Code.");
+            if (status != 200 && status != 400) throw new java.io.IOException("Resposta inválida");
+            try (InputStream input = status == 200 ? connection.getInputStream() : connection.getErrorStream();
+                    ByteArrayOutputStream bytes = new ByteArrayOutputStream()) {
+                if (input == null) throw new java.io.IOException("Resposta inválida");
                 byte[] buffer = new byte[1024];
                 int count;
                 while ((count = input.read(buffer)) != -1) {
                     if (bytes.size() + count > 8192) throw new java.io.IOException("Resposta muito grande");
                     bytes.write(buffer, 0, count);
                 }
-                return new JSONObject(new String(bytes.toByteArray(), StandardCharsets.UTF_8));
+                JSONObject result = new JSONObject(new String(bytes.toByteArray(), StandardCharsets.UTF_8));
+                if (status != 200) throw new java.io.IOException(result.optString("error", "O Windows recusou a solicitação."));
+                return result;
             }
         } finally {
             connection.disconnect();
