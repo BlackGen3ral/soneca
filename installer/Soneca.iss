@@ -15,8 +15,8 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=..\dist
 OutputBaseFilename=Soneca-Setup
-SetupIconFile=..\Soneca\Assets\soneca.ico
-UninstallDisplayIcon={app}\Soneca.exe
+SetupIconFile=..\Soneca\Assets\ArthoAI.ico
+UninstallDisplayIcon={app}\ArthoAI.ico
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -29,9 +29,10 @@ Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortugue
 Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; Flags: unchecked
 [Files]
 Source: "..\dist\app\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\Soneca\Assets\ArthoAI.ico"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
-Name: "{group}\Artho AI"; Filename: "{app}\Soneca.exe"
-Name: "{autodesktop}\Artho AI"; Filename: "{app}\Soneca.exe"; Tasks: desktopicon
+Name: "{group}\Artho AI"; Filename: "{app}\Soneca.exe"; IconFilename: "{app}\ArthoAI.ico"
+Name: "{autodesktop}\Artho AI"; Filename: "{app}\Soneca.exe"; IconFilename: "{app}\ArthoAI.ico"; Tasks: desktopicon
 [InstallDelete]
 Type: files; Name: "{userprograms}\Soneca\Soneca.lnk"
 Type: files; Name: "{autodesktop}\Soneca.lnk"

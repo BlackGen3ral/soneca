@@ -23,7 +23,8 @@ internal sealed class MobilePairingServer(WebApplication app, X509Certificate2 c
         .SelectMany(adapter => adapter.GetIPProperties().UnicastAddresses)
         .Select(entry => entry.Address).Where(IsPrivateIpv4).Distinct().ToArray();
 
-    public static async Task<MobilePairingServer> StartAsync(IPAddress address, Action connected, bool allowDevices = false)
+    public static async Task<MobilePairingServer> StartAsync(IPAddress address, Action connected, bool allowDevices = false,
+        bool allowLocalPower = false, Action? scheduleChanged = null, Func<PowerCommand, bool>? performPower = null)
     {
         if (!Addresses().Contains(address)) throw new InvalidOperationException("O endereço de rede mudou.");
 
@@ -94,6 +95,12 @@ internal sealed class MobilePairingServer(WebApplication app, X509Certificate2 c
                 });
             });
             if (allowDevices) MobileDeviceApi.Map(app, Authorized, address);
+            if (allowLocalPower)
+            {
+                var adapter = PcLan.Adapters().First(entry => entry.Address.Equals(address));
+                LocalPower.Map(app, context => context.Connection.RemoteIpAddress is { } source &&
+                    PcLan.SameSubnet(adapter, source) && Authorized(context), adapter, scheduleChanged, performPower);
+            }
             await app.StartAsync().ConfigureAwait(false);
             return new MobilePairingServer(app, certificate, payload, expires);
         }

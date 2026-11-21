@@ -22,6 +22,8 @@ internal static class PcDeviceTests
         Check(!wake.IsDue(sunday.AddDays(1).AddMinutes(1)));
         Check(PcRoutineSchedule.NextOccurrence(wake, sunday) == sunday.AddDays(1));
         Check(!stop.Includes(DayOfWeek.Saturday) && wake.Includes(DayOfWeek.Saturday));
+        Check(LocalPower.Arguments(PowerCommand.Shutdown) == "/s /t 0");
+        Check(LocalPower.Arguments(PowerCommand.Restart) == "/r /t 0");
         Check(WeeklyRule.Create("", 0) is null);
         try { WeeklyRule.Create("24:00", 127); Check(false); } catch (ArgumentException) { checks++; }
         try { WeeklyRule.Create("08:00", 0); Check(false); } catch (ArgumentException) { checks++; }

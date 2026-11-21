@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -62,7 +61,7 @@ internal sealed class PcAgent : IAsyncDisposable
             ?? throw new InvalidOperationException("O endereço de rede deste PC mudou. Selecione o endereço atual e pareie novamente.");
         PcLan.MagicPacket(network.Mac);
         var certificate = X509CertificateLoader.LoadPkcs12(settings.Certificate, null);
-        var agent = new PcAgent(settings, network, certificate, persist ?? SaveSettings, powerOff ?? RequestShutdown);
+        var agent = new PcAgent(settings, network, certificate, persist ?? SaveSettings, powerOff ?? (() => LocalPower.Run(PowerCommand.Shutdown)));
         try
         {
             var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { Args = [] });
@@ -146,13 +145,6 @@ internal sealed class PcAgent : IAsyncDisposable
     }
 
     private static void SaveSettings(PcAgentSettings settings) => PcStore.Update(state => state.Agent = settings);
-
-    private static bool RequestShutdown()
-    {
-        using var process = Process.Start(new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "shutdown.exe"), "/s /t 0")
-            { UseShellExecute = false, CreateNoWindow = true });
-        return process is not null && process.WaitForExit(2500) && process.ExitCode == 0;
-    }
 
     private bool Authorized(HttpContext context, string? token)
     {

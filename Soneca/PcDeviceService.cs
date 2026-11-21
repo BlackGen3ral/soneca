@@ -124,10 +124,13 @@ internal static class PcDeviceService
                 }
                 state.Computers[i] = pc;
             }
-            return commands;
+            WeeklyRule? localRule = state.LocalShutdown;
+            bool localDue = localRule?.IsDue(local) == true && state.LastLocalShutdownSlot != slot;
+            if (localDue) state.LastLocalShutdownSlot = slot;
+            return (commands, localDue ? localRule : null);
         });
 
-        await Task.WhenAll(due.Select(async command =>
+        await Task.WhenAll(due.commands.Select(async command =>
         {
             var (pc, wake) = command;
             var current = PcStore.Read().Computers.FirstOrDefault(entry => entry.Id == pc.Id);
@@ -149,6 +152,9 @@ internal static class PcDeviceService
                 return true;
             });
         })).ConfigureAwait(false);
+        if (due.Item2 is { } localShutdown && PcStore.Read().LocalShutdown == localShutdown &&
+            DateTime.Now - local < TimeSpan.FromMinutes(1))
+            LocalPower.Run(PowerCommand.Shutdown);
     }
 
     internal sealed record PairStatus(Guid Id, string Name);

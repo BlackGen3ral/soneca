@@ -8,9 +8,9 @@ internal static class PcRoutineSchedule
 {
     private static string Name => "ArthoAI-PcRoutines-" + WindowsIdentity.GetCurrent().User!.Value;
 
-    public static void Register(IEnumerable<PairedPc> computers, bool harmless = false)
+    public static void Register(IEnumerable<PairedPc> computers, bool harmless = false, WeeklyRule? localShutdown = null)
     {
-        var rules = computers.SelectMany(pc => new[] { pc.Wake, pc.Shutdown }).OfType<WeeklyRule>()
+        var rules = computers.SelectMany(pc => new[] { pc.Wake, pc.Shutdown }).Append(localShutdown).OfType<WeeklyRule>()
             .GroupBy(rule => rule.Time).Select(group => new WeeklyRule(group.Key, group.Aggregate(0, (days, rule) => days | rule.Days)))
             .ToArray();
         string name = harmless ? Name + "-Test" : Name;
@@ -65,9 +65,10 @@ internal static class PcRoutineSchedule
     {
         try
         {
-            Register(new[] { sample }, harmless: true);
+            Register(new[] { sample }, harmless: true, localShutdown: new WeeklyRule("18:30", 62));
             dynamic definition = Connect().GetFolder("\\").GetTask(Name + "-Test").Definition;
             if ((short)definition.Triggers.Item(1).DaysOfWeek != sample.Wake!.Days ||
+                (short)definition.Triggers.Item(2).DaysOfWeek != 62 ||
                 (string)definition.Actions.Item(1).Arguments != "/c exit 0")
                 throw new InvalidOperationException("A tarefa de teste não preservou os dias e a ação inofensiva.");
         }

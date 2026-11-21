@@ -37,6 +37,8 @@ internal sealed class PcDeviceState
 {
     public List<PairedPc> Computers { get; init; } = [];
     public PcAgentSettings? Agent { get; set; }
+    public WeeklyRule? LocalShutdown { get; set; }
+    public string? LastLocalShutdownSlot { get; set; }
 }
 
 internal static class PcStore
@@ -50,12 +52,13 @@ internal static class PcStore
     {
         var state = Load();
         var previous = state.Computers.ToArray();
+        var previousLocal = state.LocalShutdown;
         T result = edit(state);
-        if (syncSchedules) PcRoutineSchedule.Register(state.Computers);
+        if (syncSchedules) PcRoutineSchedule.Register(state.Computers, localShutdown: state.LocalShutdown);
         try { Save(state); }
         catch
         {
-            if (syncSchedules) PcRoutineSchedule.Register(previous);
+            if (syncSchedules) PcRoutineSchedule.Register(previous, localShutdown: previousLocal);
             throw;
         }
         return result;

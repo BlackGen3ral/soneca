@@ -30,7 +30,9 @@ public partial class MainWindow
         MobileStart.IsEnabled = false;
         MobileNetwork.IsEnabled = false;
         bool allowDevices = MobileAllowDevices.IsChecked == true;
+        bool allowPower = MobileAllowPower.IsChecked == true;
         MobileAllowDevices.IsEnabled = false;
+        MobileAllowPower.IsEnabled = false;
         if (demo)
         {
             using var sample = QRCodeGenerator.GenerateQrCode("Artho AI · Demonstração", QRCodeGenerator.ECCLevel.M);
@@ -49,7 +51,11 @@ public partial class MainWindow
                     mobileTimer.Stop();
                     HideQr();
                     MobileStatus.Text = "Celular pareado. A conexão local está disponível enquanto o Artho AI estiver aberto.";
-                }), allowDevices));
+                }), allowDevices, allowPower, () => Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    try { target = schedule.Read(); Render(); }
+                    catch (Exception ex) { ErrorLabel.Text = ex.Message; }
+                }))));
             if (!IsLoaded)
             {
                 await session.DisposeAsync();
@@ -117,6 +123,7 @@ public partial class MainWindow
         {
             MobileNetwork.IsEnabled = true;
             MobileAllowDevices.IsEnabled = true;
+            MobileAllowPower.IsEnabled = true;
             MobileStart.IsEnabled = MobileNetwork.SelectedItem is not null;
         }
     }
