@@ -38,11 +38,17 @@ public partial class MainWindow : Window
         Loaded += async (_, _) =>
         {
             if (demo) return;
+            _ = RestorePcAgentAsync();
             if (!skipIntro) await RunIntro();
             await Task.Delay(1800);
             if (IsVisible) await CheckUpdate(false);
         };
-        Closed += async (_, _) => { timer.Stop(); dashboardTimer.Stop(); FinishIntro(); await StopMobileAsync(); };
+        Closed += async (_, _) =>
+        {
+            timer.Stop(); dashboardTimer.Stop(); devicesTimer.Stop(); FinishIntro();
+            await StopPcAgentAsync();
+            await StopMobileAsync();
+        };
         Closing += (_, args) => { if (CleanupPanel.Busy || NamesPanel.Busy) { args.Cancel = true; UpdateLabel.Text = "Aguarde a operação terminar antes de fechar."; } };
     }
     private void LoadDashboard()
@@ -117,6 +123,7 @@ public partial class MainWindow : Window
         NamesPanel.Visibility = page == 2 ? Visibility.Visible : Visibility.Collapsed;
         SettingsPanel.Visibility = page == 3 ? Visibility.Visible : Visibility.Collapsed;
         MobilePanel.Visibility = page == 4 ? Visibility.Visible : Visibility.Collapsed;
+        DevicesPanel.Visibility = page == 5 ? Visibility.Visible : Visibility.Collapsed;
         var nav = page switch
         {
             0 => EnergyNav,
@@ -124,6 +131,7 @@ public partial class MainWindow : Window
             2 => NamesNav,
             3 => SettingsNav,
             4 => MobileNav,
+            5 => DevicesNav,
             _ => HomeNav
         };
         nav.IsChecked = true;

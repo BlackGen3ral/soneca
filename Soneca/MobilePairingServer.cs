@@ -23,7 +23,7 @@ internal sealed class MobilePairingServer(WebApplication app, X509Certificate2 c
         .SelectMany(adapter => adapter.GetIPProperties().UnicastAddresses)
         .Select(entry => entry.Address).Where(IsPrivateIpv4).Distinct().ToArray();
 
-    public static async Task<MobilePairingServer> StartAsync(IPAddress address, Action connected)
+    public static async Task<MobilePairingServer> StartAsync(IPAddress address, Action connected, bool allowDevices = false)
     {
         if (!Addresses().Contains(address)) throw new InvalidOperationException("O endereço de rede mudou.");
 
@@ -66,20 +66,25 @@ internal sealed class MobilePairingServer(WebApplication app, X509Certificate2 c
             var expires = DateTimeOffset.UtcNow.AddMinutes(3);
             var sync = new object();
             bool paired = false;
-            app.MapGet("/v1/status", (HttpContext context) =>
+            bool Authorized(HttpContext context)
             {
                 var actual = Encoding.ASCII.GetBytes(context.Request.Headers.Authorization.ToString());
-                if (!CryptographicOperations.FixedTimeEquals(expected, actual)) return Results.Unauthorized();
+                if (!CryptographicOperations.FixedTimeEquals(expected, actual)) return false;
                 lock (sync)
                 {
                     if (!paired)
                     {
-                        if (DateTimeOffset.UtcNow >= expires) return Results.Unauthorized();
+                        if (DateTimeOffset.UtcNow >= expires) return false;
                         paired = true;
                         connected();
                     }
                 }
+                return true;
+            }
 
+            app.MapGet("/v1/status", (HttpContext context) =>
+            {
+                if (!Authorized(context)) return Results.Unauthorized();
                 context.Response.Headers.CacheControl = "no-store";
                 var pc = LocalComputerAgent.Read();
                 return Results.Json(new
@@ -88,6 +93,7 @@ internal sealed class MobilePairingServer(WebApplication app, X509Certificate2 c
                     UptimeHours = Math.Floor(pc.Uptime.TotalHours), pc.NetworkAvailable
                 });
             });
+            if (allowDevices) MobileDeviceApi.Map(app, Authorized, address);
             await app.StartAsync().ConfigureAwait(false);
             return new MobilePairingServer(app, certificate, payload, expires);
         }

@@ -9,8 +9,25 @@ public partial class App : Application
     {
         base.OnStartup(e);
         if (e.Args.Length == 2 && e.Args[0] == "--clean-prefetch") { Environment.Exit(Cleaner.PrefetchHelper(e.Args[1])); return; }
-        if (e.Args.Contains("--uninstall-cleanup")) { StartupRegistration.RemoveAll(); Shutdown(); return; }
+        if (e.Args.Contains("--uninstall-cleanup"))
+        {
+            StartupRegistration.RemoveAll();
+            try { PcRoutineSchedule.Remove(); }
+            finally { Shutdown(); }
+            return;
+        }
         if (e.Args.Contains("--self-test")) { Environment.Exit(SelfTests.Run()); return; }
+        if (e.Args.Length == 1 && e.Args[0] == "--run-pc-routines")
+        {
+            try
+            {
+                DateTime local = DateTime.Now;
+                Task.Run(() => PcDeviceService.RunAsync(local)).GetAwaiter().GetResult();
+                Environment.Exit(0);
+            }
+            catch { Environment.Exit(1); }
+            return;
+        }
         if (e.Args.Contains("--cancel-schedule"))
         {
             try { new Schedule().Cancel(); Environment.Exit(0); }

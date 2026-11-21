@@ -7,7 +7,7 @@ Assistente pessoal para Windows, evoluído do projeto Artho Control (antigo Sone
 - Abertura em HTML de 5,4 segundos com partículas, anéis de HUD e efeitos sonoros. O HTML e o áudio ficam no executável. O WebView2 Runtime renderiza a abertura dentro do app. Se estiver indisponível, o painel abre diretamente.
 - Início com o Windows ativado por padrão no primeiro uso. A preferência pode ser alterada em **Visão geral** e fica no perfil atual do Windows.
 - Painel local lê nome do computador, versão do Windows, processadores lógicos, memória física em uso, tempo ligado e presença de uma interface de rede ativa.
-- Computadores remotos, câmeras Intelbras e serviços da Super Print aparecem como **não configurados** até haver uma integração real. Esta versão ainda não os conecta, não envia Wake-on-LAN e não gera briefing comercial.
+- **Dispositivos** monitora até três PCs da rede local e oferece Wake-on-LAN e rotinas semanais. Câmeras Intelbras e Super Print continuam sem integração configurada.
 - As ferramentas que já existiam continuam disponíveis. O instalador mantém o identificador, executável e tarefa interna anteriores para migrar as instalações sem perder agendamentos.
 
 Os limites entre os módulos estão em `LocalComputerAgent.cs` e `IntegrationContracts.cs`: agente Windows local, serviço remoto com configuração limitada a três PCs, interface Wake-on-LAN, provedor de briefing e integração de câmeras. Eles formam os pontos de extensão para um painel desktop/mobile compartilhado. As interfaces de rede, briefing e câmeras ainda não têm serviços configurados nesta versão.
@@ -31,6 +31,17 @@ Baixe [ArthoAI-Setup.exe](https://github.com/BlackGen3ral/soneca/releases/latest
 Conecte o PC e o celular à mesma rede local. No Windows, abra **Celular**, selecione o endereço do PC nessa rede e clique em **Gerar QR Code**. No Artho AI para Android, abra **Conectar ao PC → Escanear QR Code** e aponte para o código.
 
 Se o Windows solicitar acesso pelo firewall, permita somente na sua rede privada. O QR Code expira em três minutos se o celular ainda não tiver concluído o pareamento. O Android pode consultar os dados do PC até que você encerre a conexão ou feche o Artho AI para Windows.
+
+Para gerenciar outros PCs do Android, marque **Permitir que o celular ligue os PCs e edite os horários** antes de gerar o QR Code. Depois do pareamento, abra **Dispositivos** no Android. Essa permissão vale apenas para a sessão atual.
+
+### Dispositivos
+
+1. Instale o Artho AI 1.6.0 em cada PC e escolha qual ficará como PC de controle.
+2. No PC que será controlado, abra **Dispositivos → Permitir controle deste PC**. Selecione o endereço da rede local e clique em **Gerar e copiar código**. Transfira o código ao PC de controle por um meio de confiança. O código vale por três minutos e só pode ser usado uma vez.
+3. No PC de controle, cole o código em **Dispositivos → Adicionar outro PC** e clique em **Parear PC**. Se o Windows solicitar acesso pelo firewall no PC controlado, permita na rede privada. **Sem resposta** significa que o serviço daquele PC não respondeu. A tela preserva a hora da última resposta bem-sucedida.
+4. Use **Ligar agora** para enviar o sinal Wake-on-LAN ou **Editar horários** para marcar os dias e as horas de ligar e desligar. Cada ação tem seus próprios dias. Para cancelar, desmarque a ação e salve.
+
+As rotinas rodam pelo Agendador do Windows no **PC de controle**, no horário local dele. Ele precisa estar ligado, acordado, com o usuário conectado e na mesma rede. O painel pode estar fechado. O desligamento depende de o Artho AI estar aberto no PC controlado. O Wake-on-LAN precisa estar habilitado e funcionar na placa de rede do PC controlado. Horários perdidos são ignorados. Para revogar o controle, use **Desativar controle** no PC controlado. Se o IP do PC mudar, selecione o endereço atual e pareie novamente.
 
 ### Energia
 

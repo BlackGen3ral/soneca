@@ -19,6 +19,7 @@
                         <RadioButton x:Name="CleanupNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Limpeza" Tag="&#xE74D;" Click="Cleanup_Click"/>
                         <RadioButton x:Name="NamesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Nomes da pasta" Tag="&#xE8B7;" Click="Names_Click"/>
                         <RadioButton x:Name="MobileNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Celular" Tag="&#xE8EA;" Click="Mobile_Click"/>
+                        <RadioButton x:Name="DevicesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Dispositivos" Tag="&#xE7F4;" Click="Devices_Click"/>
                         <RadioButton x:Name="SettingsNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Preferências" Tag="&#xE713;" Click="Settings_Click" Margin="0,12,0,0"/>
                     </StackPanel>
                     <StackPanel Grid.Row="2">
@@ -92,6 +93,45 @@
                 </StackPanel>
             </ScrollViewer>
 
+            <ScrollViewer x:Name="DevicesPanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="30,25,30,25" MaxWidth="1080">
+                    <DockPanel Margin="0,0,0,12">
+                        <Button Content="Atualizar status" DockPanel.Dock="Right" Click="DevicesRefresh_Click" Margin="12,0,0,0"/>
+                        <TextBlock Text="Dispositivos" Style="{StaticResource PageTitle}"/>
+                    </DockPanel>
+                    <TextBlock Text="Controle até três PCs na mesma rede. Os horários seguem o relógio deste computador de controle."
+                               Style="{StaticResource BodyCopy}" Margin="0,0,0,12"/>
+                    <TextBlock x:Name="DeviceNotice" Style="{StaticResource BodyCopy}" AutomationProperties.LiveSetting="Polite"
+                               Margin="0,0,0,10" Visibility="Collapsed"/>
+                    <StackPanel x:Name="DeviceCards"/>
+                    <Border Style="{StaticResource Panel}" Margin="0,10,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Adicionar outro PC" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="No outro PC, permita o controle e gere um código nesta mesma aba. Cole o código aqui."
+                                       Style="{StaticResource BodyCopy}" Margin="0,7,0,10"/>
+                            <TextBox x:Name="DeviceInviteInput" MaxLength="600" AutomationProperties.Name="Código do outro PC"/>
+                            <Button x:Name="DevicePair" Content="Parear PC" Style="{StaticResource Primary}" Click="DevicesPair_Click"
+                                    HorizontalAlignment="Left" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Panel}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Permitir controle deste PC" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="Um PC autorizado poderá consultar o estado e solicitar desligamento. Mantenha o Artho AI aberto neste PC para receber comandos."
+                                       Style="{StaticResource BodyCopy}" Margin="0,7,0,10"/>
+                            <ComboBox x:Name="PcAgentNetwork" DisplayMemberPath="Address" AutomationProperties.Name="Endereço deste PC na rede local"
+                                      MinWidth="185" MinHeight="32" HorizontalAlignment="Left" Foreground="#102030" Background="#EDF7FF"/>
+                            <WrapPanel Margin="0,10,0,0">
+                                <Button x:Name="PcAgentCode" Content="Gerar e copiar código" Click="PcAgentCode_Click" Margin="0,0,8,0"/>
+                                <Button x:Name="PcAgentOff" Content="Desativar controle" Click="PcAgentOff_Click"/>
+                            </WrapPanel>
+                            <TextBlock x:Name="PcAgentNotice" Style="{StaticResource BodyCopy}" Text="Controle desativado." Margin="0,10,0,0"
+                                       AutomationProperties.LiveSetting="Polite"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
             <ScrollViewer x:Name="MobilePanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="30,25,30,25" MaxWidth="1080">
                     <TextBlock Text="Celular" Style="{StaticResource PageTitle}"/>
@@ -103,6 +143,8 @@
                             <ComboBox x:Name="MobileNetwork" HorizontalAlignment="Left" MinWidth="190" MinHeight="32"
                                       AutomationProperties.LabeledBy="{Binding ElementName=MobileNetworkLabel}"
                                       AutomationProperties.Name="Endereço do PC na rede do celular" Foreground="#102030" Background="#EDF7FF"/>
+                            <CheckBox x:Name="MobileAllowDevices" Content="Permitir que o celular ligue os PCs e edite os horários"
+                                      Margin="0,12,0,0"/>
                             <Button x:Name="MobileStart" Content="Gerar QR Code" Style="{StaticResource Primary}"
                                     HorizontalAlignment="Left" Margin="0,13,0,0" Click="MobileStart_Click"/>
                             <TextBlock x:Name="MobileStatus" Style="{StaticResource BodyCopy}" Margin="0,12,0,0"
