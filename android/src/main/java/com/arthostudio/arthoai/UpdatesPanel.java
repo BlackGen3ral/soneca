@@ -40,17 +40,15 @@ final class UpdatesPanel {
         this.owner = owner;
         installedVersion = installedVersion();
         root = owner.column();
-        TextView title = owner.label("Atualizações", 32, MainActivity.INK, "sans-serif-medium");
+        TextView title = owner.label("Atualizações", 26, MainActivity.INK, "sans-serif-medium");
         title.setAccessibilityHeading(true);
         root.addView(title);
-        root.addView(owner.label("Consulte, baixe e instale novas versões pelo GitHub.", 15, MainActivity.MUTED, "sans-serif"),
-                owner.spaced(6));
         LinearLayout card = owner.column();
-        card.setBackground(owner.surface(MainActivity.SURFACE, 16, MainActivity.BORDER));
+        card.setBackground(owner.surface(MainActivity.SURFACE, 6, MainActivity.BORDER));
         card.setPadding(owner.dp(18), owner.dp(18), owner.dp(18), owner.dp(16));
         root.addView(card, owner.spaced(18));
-        card.addView(owner.label("INSTALADO  ·  " + installedVersion, 12, MainActivity.ACCENT, "sans-serif-medium"));
-        heading = owner.label("Verificar nova versão", 24, MainActivity.INK, "sans-serif-medium");
+        card.addView(owner.label("Versão instalada  " + installedVersion, 13, MainActivity.MUTED, "sans-serif"));
+        heading = owner.label("Verificar nova versão", 19, MainActivity.INK, "sans-serif-medium");
         card.addView(heading, owner.spaced(8));
         message = owner.label("", 15, MainActivity.MUTED, "sans-serif");
         message.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);

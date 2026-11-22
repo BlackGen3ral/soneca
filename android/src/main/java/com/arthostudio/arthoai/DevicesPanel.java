@@ -40,6 +40,8 @@ final class DevicesPanel {
         notice.setAccessibilityLiveRegion(TextView.ACCESSIBILITY_LIVE_REGION_POLITE);
         panel.addView(notice, owner.spaced(10));
         cards = column();
+        cards.setBackground(owner.surface(MainActivity.SURFACE, 6, MainActivity.BORDER));
+        cards.setVisibility(android.view.View.GONE);
         panel.addView(cards);
     }
 
@@ -49,8 +51,12 @@ final class DevicesPanel {
         request("GET", "/v1/devices", "Consultando os PCs na rede…", result -> {
             JSONArray list = result.getJSONArray("devices");
             cards.removeAllViews();
+            cards.setVisibility(list.length() == 0 ? android.view.View.GONE : android.view.View.VISIBLE);
             notice.setText(list.length() == 0 ? "Pareie os PCs na aba Dispositivos do Windows." : "");
-            for (int index = 0; index < list.length(); index++) addCard(list.getJSONObject(index));
+            for (int index = 0; index < list.length(); index++) {
+                if (index > 0) cards.addView(owner.divider());
+                addCard(list.getJSONObject(index));
+            }
         });
     }
 
@@ -58,11 +64,10 @@ final class DevicesPanel {
         String id = UUID.fromString(pc.optString("id")).toString();
         String name = pc.optString("name");
         LinearLayout card = column();
-        card.setBackground(owner.surface(MainActivity.SURFACE, 16, MainActivity.BORDER));
         card.setPadding(dp(16), dp(14), dp(16), dp(14));
-        cards.addView(card, owner.spaced(10));
+        cards.addView(card);
         TextView title = text(name);
-        title.setTextSize(20);
+        title.setTextSize(17);
         title.setAccessibilityHeading(true);
         title.setPadding(0, 0, 0, dp(4));
         card.addView(title);
@@ -77,13 +82,18 @@ final class DevicesPanel {
         card.addView(text("Ligar " + describe(pc.optJSONObject("wake"))
                 + "\nDesligar " + describe(pc.optJSONObject("shutdown"))), owner.spaced(8));
         if (!pc.isNull("lastRoutine")) card.addView(text(pc.optString("lastRoutine")), owner.spaced(5));
-        Button wake = owner.button("Ligar agora", true);
+        LinearLayout actions = new LinearLayout(owner);
+        card.addView(actions, owner.spaced(8));
+        Button wake = owner.button("Ligar agora", false);
         wake.setOnClickListener(view -> request("POST", "/v1/devices/" + id + "/wake",
                 "Enviando o sinal…", result -> notice.setText("Sinal enviado para " + name + ".")));
-        card.addView(wake, owner.spaced(10));
-        Button edit = owner.button("Editar horários", false);
+        actions.addView(wake, new LinearLayout.LayoutParams(0, -2, 1f));
+        Button edit = owner.button("Horários", false);
+        edit.setContentDescription("Editar horários de " + name);
         edit.setOnClickListener(view -> { if (!busy) edit(id, name, pc); });
-        card.addView(edit, owner.spaced(6));
+        LinearLayout.LayoutParams next = new LinearLayout.LayoutParams(0, -2, 1f);
+        next.leftMargin = dp(6);
+        actions.addView(edit, next);
     }
 
     private static String describe(JSONObject rule) {

@@ -39,6 +39,7 @@ final class PowerPanel {
     private final Button restart;
     private final Button stopSchedule;
     private final Button cancelStop;
+    private final Button connect;
     private StatusClient.Pairing pairing;
     private JSONObject lastState;
     private boolean busy;
@@ -47,17 +48,18 @@ final class PowerPanel {
         this.owner = owner;
         this.worker = worker;
         page = owner.column();
-        TextView title = label("Energia do PC", 32, MainActivity.INK);
+        TextView title = label("Energia do PC", 26, MainActivity.INK);
         title.setAccessibilityHeading(true);
         page.addView(title);
         notice = label("", 14, MainActivity.MUTED);
         notice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         page.addView(notice, owner.spaced(7));
+        connect = action(page, "Parear com Windows", true, owner::showPairing);
 
-        LinearLayout wake = card("Ligar");
+        LinearLayout wake = section("Ligar");
         wakeRule = label("", 14, MainActivity.MUTED);
         wake.addView(wakeRule, owner.spaced(6));
-        wakeNow = action(wake, "Ligar agora", true, this::wake);
+        wakeNow = action(wake, "Ligar agora", false, this::wake);
         wakeSchedule = action(wake, "Programar para ligar", false, this::chooseWakeMode);
         cancelWake = action(wake, "Cancelar horário de ligar", false, () -> {
             WakeSchedules.clearRule(owner);
@@ -69,14 +71,16 @@ final class PowerPanel {
                 .setMessage("Isso remove o PC do celular e cancela o horário de ligar salvo aqui.")
                 .setNegativeButton("Voltar", null).setPositiveButton("Esquecer", (dialog, button) -> owner.disconnect()).show());
 
-        LinearLayout stop = card("Desligar e reiniciar");
+        LinearLayout stop = section("Desligar e reiniciar");
         oneTime = label("", 14, MainActivity.MUTED);
         weekly = label("", 14, MainActivity.MUTED);
         stop.addView(oneTime, owner.spaced(6));
         stop.addView(weekly, owner.spaced(4));
-        stopNow = action(stop, "Desligar agora", false, () -> confirm("Desligar", "shutdown"));
-        restart = action(stop, "Reiniciar agora", false, () -> confirm("Reiniciar", "restart"));
-        stopSchedule = action(stop, "Programar para desligar", true, this::chooseStopMode);
+        LinearLayout immediate = new LinearLayout(owner);
+        stop.addView(immediate, owner.spaced(8));
+        stopNow = inlineAction(immediate, "Desligar agora", () -> confirm("Desligar", "shutdown"), 0);
+        restart = inlineAction(immediate, "Reiniciar agora", () -> confirm("Reiniciar", "restart"), 6);
+        stopSchedule = action(stop, "Programar para desligar", false, this::chooseStopMode);
         cancelStop = action(stop, "Cancelar desligamento único", false,
                 () -> request("POST", "/v1/energy/shutdown/cancel", "Desligamento único cancelado.", false));
         action(stop, "Atualizar estado", false, this::refresh);
@@ -316,7 +320,7 @@ final class PowerPanel {
                 ? Instant.ofEpochMilli(once).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm"))
                 : time.isEmpty() ? "Sem horário programado" : describe(time, WakeSchedules.days(owner));
         String info = target == null
-                ? "Pareie com o controle de energia ativado no Windows para salvar o PC."
+                ? "Aguardando um PC com Wake-on-LAN configurado."
                 : target.name + " · " + ruleInfo;
         String report = WakeSchedules.report(owner);
         if (!report.isEmpty()) info += "\n" + report;
@@ -327,6 +331,7 @@ final class PowerPanel {
         cancelWake.setVisibility(time.isEmpty() ? View.GONE : View.VISIBLE);
         forgetWake.setVisibility(target == null ? View.GONE : View.VISIBLE);
         boolean available = !busy && lastState != null;
+        connect.setVisibility(!busy && lastState == null ? View.VISIBLE : View.GONE);
         stopNow.setEnabled(available);
         restart.setEnabled(available);
         stopSchedule.setEnabled(available);
@@ -355,13 +360,12 @@ final class PowerPanel {
     }
     private static String clock(int hour, int minute) { return String.format(Locale.ROOT, "%02d:%02d", hour, minute); }
 
-    private LinearLayout card(String title) {
-        LinearLayout card = owner.column();
-        card.setPadding(owner.dp(16), owner.dp(14), owner.dp(16), owner.dp(14));
-        card.setBackground(owner.surface(MainActivity.SURFACE, 16, MainActivity.BORDER));
-        card.addView(label(title, 21, MainActivity.INK));
-        page.addView(card, owner.spaced(14));
-        return card;
+    private LinearLayout section(String title) {
+        LinearLayout group = owner.column();
+        group.addView(owner.divider());
+        group.addView(label(title, 17, MainActivity.INK), owner.spaced(10));
+        page.addView(group, owner.spaced(17));
+        return group;
     }
     private LinearLayout form() {
         LinearLayout fields = owner.column();
@@ -373,6 +377,14 @@ final class PowerPanel {
         Button button = owner.button(text, primary);
         button.setOnClickListener(view -> { if (!busy) run.run(); });
         where.addView(button, owner.spaced(6));
+        return button;
+    }
+    private Button inlineAction(LinearLayout where, String text, Runnable run, int inset) {
+        Button button = owner.button(text, false);
+        button.setOnClickListener(view -> { if (!busy) run.run(); });
+        LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -2, 1);
+        size.leftMargin = owner.dp(inset);
+        where.addView(button, size);
         return button;
     }
     private interface RuleResult { void save(String clock, int days); }

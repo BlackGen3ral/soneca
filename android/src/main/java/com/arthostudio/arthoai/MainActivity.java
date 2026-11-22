@@ -10,6 +10,7 @@ import android.graphics.Color;
 import android.graphics.Insets;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.os.Build;
@@ -37,17 +38,17 @@ import javax.net.ssl.SSLHandshakeException;
 import org.json.JSONObject;
 
 public final class MainActivity extends Activity {
-    private static final int BACKGROUND = 0xff141715;
-    private static final int HERO = 0xff29392f;
-    static final int SURFACE = 0xff202622;
-    static final int BORDER = 0xff36423a;
-    static final int INK = 0xfff1f4ee;
-    static final int MUTED = 0xffb4bfb6;
-    static final int ACCENT = 0xffb6dfc2;
+    private static final int BACKGROUND = 0xff191a1c;
+    static final int SURFACE = 0xff242628;
+    static final int BORDER = 0xff3a3c40;
+    static final int INK = 0xfff0f1f2;
+    static final int MUTED = 0xffb3b6bb;
+    static final int ACCENT = 0xffb7d9c3;
     private static final int GREEN = ACCENT;
     private static final int ALERT = 0xffffbcad;
     private static final Locale BRAZIL = new Locale("pt", "BR");
     private static final int SCAN_PAIRING = 17;
+    private static final int[] NAV_ICONS = {R.drawable.nav_home, R.drawable.nav_devices, R.drawable.nav_power, R.drawable.nav_update};
 
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private ScrollView scroll;
@@ -113,6 +114,7 @@ public final class MainActivity extends Activity {
         updates = new UpdatesPanel(this);
         pages[3] = updates.view();
         for (View page : pages) content.addView(page);
+        shell.addView(divider());
         shell.addView(navigation());
         setContentView(shell);
         shell.requestApplyInsets();
@@ -139,50 +141,42 @@ public final class MainActivity extends Activity {
 
     private View dashboard() {
         LinearLayout page = column();
-        TextView title = label("Painel do PC", 32, INK, "sans-serif-medium");
-        title.setAccessibilityHeading(true);
-        page.addView(title);
-        page.addView(hero(), spaced(16));
+        page.addView(connectionPanel());
 
         metrics = column();
         metrics.setVisibility(View.GONE);
-        TextView section = label("Estado do PC", 21, INK, "sans-serif-medium");
+        TextView section = label("Estado do PC", 17, INK, "sans-serif-medium");
         section.setAccessibilityHeading(true);
         metrics.addView(section);
-        LinearLayout performance = row();
-        LinearLayout memoryCard = metric("Memória em uso");
-        memory = value(memoryCard);
+        LinearLayout readings = column();
+        readings.setPadding(dp(13), 0, dp(13), 0);
+        readings.setBackground(surface(SURFACE, 6, BORDER));
+        metrics.addView(readings, spaced(8));
+        memory = information(readings, "Memória em uso");
         memoryBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         memoryBar.setMax(100);
         memoryBar.setProgressTintList(ColorStateList.valueOf(ACCENT));
         memoryBar.setProgressBackgroundTintList(ColorStateList.valueOf(BORDER));
         memoryBar.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         memoryBar.setVisibility(View.GONE);
-        LinearLayout.LayoutParams bar = new LinearLayout.LayoutParams(-1, dp(5));
-        bar.topMargin = dp(8);
-        memoryCard.addView(memoryBar, bar);
-        LinearLayout cpuCard = metric("Processador");
-        cpu = value(cpuCard);
-        addMetricPair(performance, memoryCard, cpuCard);
-        metrics.addView(performance, spaced(10));
-
-        LinearLayout activity = row();
-        LinearLayout uptimeCard = metric("Tempo ligado");
-        uptime = value(uptimeCard);
-        LinearLayout networkCard = metric("Rede do PC");
-        network = value(networkCard);
-        addMetricPair(activity, uptimeCard, networkCard);
-        metrics.addView(activity, spaced(10));
-        page.addView(metrics, spaced(22));
+        LinearLayout.LayoutParams bar = new LinearLayout.LayoutParams(-1, dp(4));
+        bar.bottomMargin = dp(11);
+        readings.addView(memoryBar, bar);
+        readings.addView(divider());
+        cpu = information(readings, "Processador");
+        readings.addView(divider());
+        uptime = information(readings, "Tempo ligado");
+        readings.addView(divider());
+        network = information(readings, "Rede do PC");
+        page.addView(metrics, spaced(19));
         return page;
     }
 
     private View devicePage() {
         LinearLayout page = column();
-        TextView title = label("Dispositivos", 32, INK, "sans-serif-medium");
+        TextView title = label("Dispositivos", 26, INK, "sans-serif-medium");
         title.setAccessibilityHeading(true);
         page.addView(title);
-        page.addView(label("PCs pareados e horários semanais.", 15, MUTED, "sans-serif"), spaced(6));
         deviceContent = column();
         page.addView(deviceContent, spaced(17));
         return page;
@@ -208,17 +202,21 @@ public final class MainActivity extends Activity {
     private View navigation() {
         LinearLayout nav = row();
         nav.setBackgroundColor(SURFACE);
-        nav.setPadding(dp(10), dp(8), dp(10), dp(8));
-        String[] labels = {"Início", "Dispositivos", "Energia", "Atualizar"};
+        nav.setPadding(dp(5), dp(4), dp(5), dp(4));
+        String[] labels = {"Início", "PCs", "Energia", "Atualizar"};
         for (int index = 0; index < tabs.length; index++) {
             final int tab = index;
             Button button = button(labels[index], false);
             button.setTextSize(12);
-            button.setPadding(dp(4), dp(8), dp(4), dp(8));
+            button.setMinHeight(dp(53));
+            button.setPadding(dp(4), dp(5), dp(4), dp(4));
+            button.setCompoundDrawablePadding(dp(3));
+            button.setMaxLines(1);
+            if (index == 1) button.setContentDescription("Dispositivos");
             button.setOnClickListener(view -> showTab(tab));
             tabs[index] = button;
             LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -2, 1f);
-            size.setMargins(dp(3), 0, dp(3), 0);
+            size.setMargins(dp(2), 0, dp(2), 0);
             nav.addView(button, size);
         }
         return nav;
@@ -230,7 +228,7 @@ public final class MainActivity extends Activity {
             boolean selected = index == selectedTab;
             pages[index].setVisibility(selected ? View.VISIBLE : View.GONE);
             tabs[index].setSelected(selected);
-            decorateButton(tabs[index], selected);
+            styleTab(tabs[index], index, selected);
         }
         if (selectedTab == 1) updateDevices();
         if (selectedTab == 2) power.refreshLocal();
@@ -242,48 +240,56 @@ public final class MainActivity extends Activity {
         tabs[3].setContentDescription(available ? "Atualizações, nova versão disponível" : "Atualizações");
     }
 
+    private void styleTab(Button tab, int index, boolean selected) {
+        int tint = selected ? ACCENT : MUTED;
+        Drawable icon = getDrawable(NAV_ICONS[index]).mutate();
+        icon.setTint(tint);
+        tab.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
+        tab.setTextColor(tint);
+        tab.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33b7d9c3),
+                surface(selected ? 0xff333638 : SURFACE, 7, 0), null));
+    }
+
     private View header() {
         LinearLayout header = row();
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(20), dp(10), dp(20), dp(10));
+        header.setPadding(dp(16), dp(9), dp(16), dp(9));
         ImageView mark = new ImageView(this);
         mark.setImageResource(R.drawable.artho_mark);
         mark.setScaleType(ImageView.ScaleType.FIT_CENTER);
         mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        header.addView(mark, new LinearLayout.LayoutParams(dp(36), dp(36)));
-        TextView brand = label("Artho AI", 20, INK, "sans-serif-medium");
+        header.addView(mark, new LinearLayout.LayoutParams(dp(27), dp(27)));
+        TextView brand = label("Artho AI", 18, INK, "sans-serif-medium");
         LinearLayout.LayoutParams brandSize = new LinearLayout.LayoutParams(0, -2, 1f);
         brandSize.leftMargin = dp(10);
         header.addView(brand, brandSize);
         return header;
     }
 
-    private View hero() {
+    private View connectionPanel() {
         LinearLayout panel = column();
-        panel.setBackground(surface(HERO, 18, BORDER));
-        panel.setPadding(dp(19), dp(18), dp(19), dp(18));
-        status = label("Sem conexão", 13, ACCENT, "sans-serif-medium");
+        status = label("Sem conexão", 13, MUTED, "sans-serif");
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         panel.addView(status);
-        computer = label("Conecte seu PC", 27, INK, "sans-serif-medium");
+        computer = label("Conecte seu PC", 26, INK, "sans-serif-medium");
         computer.setAccessibilityHeading(true);
-        panel.addView(computer, spaced(7));
-        detail = label("Abra a aba Celular no Artho AI para Windows e gere um QR Code.", 15, MUTED, "sans-serif");
+        panel.addView(computer, spaced(3));
+        detail = label("No Windows, abra Celular e gere um QR Code.", 15, MUTED, "sans-serif");
         panel.addView(detail, spaced(5));
         primary = button("Conectar ao PC", true);
         primary.setOnClickListener(view -> {
             if (pairing == null) showPairing();
             else requestStatus();
         });
-        panel.addView(primary, spaced(14));
-        connectionOptions = button("Gerenciar conexão", false);
+        panel.addView(primary, spaced(12));
+        connectionOptions = button("Trocar conexão", false);
         connectionOptions.setOnClickListener(view -> showPairing());
         connectionOptions.setVisibility(View.GONE);
         panel.addView(connectionOptions, spaced(6));
         return panel;
     }
 
-    private void showPairing() {
+    void showPairing() {
         if (connecting) return;
         Dialog dialog = new Dialog(this);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
@@ -487,26 +493,22 @@ public final class MainActivity extends Activity {
         });
     }
 
-    private LinearLayout metric(String title) {
-        LinearLayout card = column();
-        card.setMinimumHeight(dp(94));
-        card.setBackground(surface(SURFACE, 16, BORDER));
-        card.setPadding(dp(13), dp(13), dp(13), dp(13));
-        card.addView(label(title, 13, MUTED, "sans-serif-medium"));
-        return card;
-    }
-
-    private TextView value(LinearLayout card) {
-        TextView result = label("—", 18, INK, "sans-serif-medium");
-        card.addView(result, spaced(6));
+    private TextView information(LinearLayout list, String title) {
+        LinearLayout item = row();
+        item.setGravity(Gravity.CENTER_VERTICAL);
+        item.setPadding(0, dp(11), 0, dp(11));
+        item.addView(label(title, 14, MUTED, "sans-serif"), new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView result = label("—", 14, INK, "sans-serif-medium");
+        item.addView(result);
+        list.addView(item);
         return result;
     }
 
-    private void addMetricPair(LinearLayout row, View left, View right) {
-        LinearLayout.LayoutParams first = new LinearLayout.LayoutParams(0, -1, 1);
-        first.rightMargin = dp(10);
-        row.addView(left, first);
-        row.addView(right, new LinearLayout.LayoutParams(0, -1, 1));
+    View divider() {
+        View line = new View(this);
+        line.setBackgroundColor(BORDER);
+        line.setLayoutParams(new LinearLayout.LayoutParams(-1, dp(1)));
+        return line;
     }
 
     Button button(String title, boolean prominent) {
@@ -515,7 +517,7 @@ public final class MainActivity extends Activity {
         button.setText(title);
         button.setTextSize(15);
         button.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        button.setMinHeight(dp(50));
+        button.setMinHeight(dp(44));
         button.setPadding(dp(14), dp(9), dp(14), dp(9));
         button.setStateListAnimator(null);
         button.setBackgroundTintList(null);
@@ -529,7 +531,7 @@ public final class MainActivity extends Activity {
                 new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{prominent ? 0xff4e6957 : MUTED, color}));
         int fill = prominent ? ACCENT : SURFACE;
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(prominent ? 0x30141715 : 0x33b6dfc2),
-                surface(fill, 12, prominent ? 0 : BORDER), null));
+                surface(fill, 6, prominent ? 0 : BORDER), null));
     }
 
     GradientDrawable surface(int color, int radius, int stroke) {
