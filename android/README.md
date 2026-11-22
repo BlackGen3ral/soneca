@@ -14,7 +14,7 @@ Para ligar, o Android envia Wake-on-LAN pelo Wi-Fi local usando o endereço salv
 
 ## Tela remota
 
-No Windows 1.12.0, libere o acesso em **Celular → Tela remota**. Abra **Tela remota** no Android. Você pode tocar para clicar, segurar para clicar com o botão direito, arrastar, rolar ou enviar texto e teclas. Use **Modo ponteiro** para mover o cursor sem clicar.
+No Windows, libere o acesso em **Celular → Tela remota**. Abra **Tela remota** no Android. Incline o joystick para mover o cursor. Incline mais para acelerar. Ao lado dele ficam os cliques, a rolagem e o teclado. Você também pode tocar e arrastar na própria imagem. Gire o celular para colocar os controles ao lado da tela.
 
 ## Atualizar o app
 

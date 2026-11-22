@@ -2,11 +2,16 @@ package com.arthostudio.arthoai;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.res.ColorStateList;
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Insets;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -30,43 +35,50 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class RemoteDesktopActivity extends Activity {
+    private static final int PANEL = 0xff151d2a;
+    private static final int TEXT = 0xffeef4ff;
+    private static final int MUTED = 0xffa7b7cd;
     private final ExecutorService stream = Executors.newSingleThreadExecutor();
     private final ExecutorService input = Executors.newSingleThreadExecutor();
     private final AtomicBoolean painting = new AtomicBoolean();
-    private final AtomicBoolean moving = new AtomicBoolean();
     private final Object lifecycle = new Object();
     private final List<Button> controls = new ArrayList<>();
     private volatile RemoteDesktopClient client;
     private volatile int generation;
     private boolean visible;
-    private boolean pointerOnly;
+    private PointerMove queuedMove;
     private TextView status;
     private Button connection;
     private Screen screen;
+    private LinearLayout workspace, controller;
+    private Joystick joystick;
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         LinearLayout page = column();
-        page.setBackgroundColor(0xff111b2c);
+        getWindow().setStatusBarColor(0xff0d131d);
+        getWindow().setNavigationBarColor(0xff0d131d);
+        page.setBackgroundColor(0xff0d131d);
         page.setOnApplyWindowInsetsListener((view, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 Insets safe = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
-                view.setPadding(safe.left + dp(9), safe.top + dp(7), safe.right + dp(9), safe.bottom + dp(7));
-            } else view.setPadding(dp(9), dp(7), dp(9), dp(7));
+                view.setPadding(safe.left + dp(12), safe.top + dp(6), safe.right + dp(12), safe.bottom + dp(6));
+            } else view.setPadding(dp(12), dp(6), dp(12), dp(6));
             return insets;
         });
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        Button back = button("Voltar");
+        Button back = button("‹");
+        back.setContentDescription("Voltar");
         back.setOnClickListener(view -> finish());
         bar.addView(back);
         TextView title = new TextView(this);
         title.setText("Tela remota");
-        title.setTextSize(19);
-        title.setTextColor(Color.WHITE);
-        title.setPadding(dp(8), 0, 0, 0);
+        title.setTextSize(20);
+        title.setTextColor(TEXT);
+        title.setPadding(dp(12), 0, 0, 0);
         title.setAccessibilityHeading(true);
         bar.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
         connection = button("Conectar");
@@ -79,35 +91,60 @@ public final class RemoteDesktopActivity extends Activity {
 
         status = new TextView(this);
         status.setText("No Windows, abra Celular e libere o acesso à tela.");
-        status.setTextColor(0xffbdcce0);
+        status.setTextColor(MUTED);
         status.setTextSize(13);
         status.setPadding(dp(3), dp(4), dp(3), dp(7));
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         page.addView(status);
 
+        workspace = new LinearLayout(this);
+        page.addView(workspace, new LinearLayout.LayoutParams(-1, 0, 1));
         screen = new Screen();
-        screen.setBackgroundColor(0xff050a13);
+        screen.setBackground(round(0xff050911, 12, 0xff283345));
+        screen.setClipToOutline(true);
         screen.setContentDescription("Tela do Windows. Toque para clicar, segure para clique direito ou arraste.");
-        page.addView(screen, new LinearLayout.LayoutParams(-1, 0, 1));
-
-        LinearLayout mouse = new LinearLayout(this);
-        Button mode = tool(mouse, "Modo ponteiro", () -> { });
-        mode.setOnClickListener(view -> {
-            pointerOnly = !pointerOnly;
-            mode.setText(pointerOnly ? "Modo toque" : "Modo ponteiro");
-            status.setText(pointerOnly ? "Deslize para mover o ponteiro sem clicar." : "Toque para clicar ou arraste para mover um item.");
-        });
-        tool(mouse, "Clique direito", () -> send("right", screen.pointerX, screen.pointerY, null, 0));
-        tool(mouse, "Teclado", this::keyboard);
-        page.addView(mouse);
-
+        workspace.addView(screen);
+        controller = new LinearLayout(this);
+        controller.setGravity(Gravity.CENTER_VERTICAL);
+        controller.setPadding(dp(6), dp(6), dp(6), dp(6));
+        controller.setBackground(round(PANEL, 15, 0xff283345));
+        joystick = new Joystick();
+        controller.addView(joystick, new LinearLayout.LayoutParams(dp(108), dp(117)));
+        LinearLayout actions = column();
+        controller.addView(actions, new LinearLayout.LayoutParams(0, -2, 1));
+        LinearLayout clicks = new LinearLayout(this);
+        actions.addView(clicks);
+        tool(clicks, "Clique", () -> send("click", screen.pointerX, screen.pointerY, null, 0));
+        tool(clicks, "Direito", () -> send("right", screen.pointerX, screen.pointerY, null, 0))
+                .setContentDescription("Clique direito");
         LinearLayout scroll = new LinearLayout(this);
-        tool(scroll, "Rolar para cima", () -> send("scroll", 0, 0, null, 2));
-        tool(scroll, "Rolar para baixo", () -> send("scroll", 0, 0, null, -2));
-        page.addView(scroll);
+        actions.addView(scroll);
+        tool(scroll, "Rolar ↑", () -> send("scroll", 0, 0, null, 2)).setContentDescription("Rolar para cima");
+        tool(scroll, "Rolar ↓", () -> send("scroll", 0, 0, null, -2)).setContentDescription("Rolar para baixo");
+        LinearLayout typing = new LinearLayout(this);
+        actions.addView(typing);
+        tool(typing, "Teclado", this::keyboard);
+        workspace.addView(controller);
+        layoutController(getResources().getConfiguration());
         setContentView(page);
         page.requestApplyInsets();
         ready(false);
+    }
+
+    @Override public void onConfigurationChanged(Configuration configuration) {
+        super.onConfigurationChanged(configuration);
+        joystick.stop();
+        layoutController(configuration);
+    }
+
+    private void layoutController(Configuration configuration) {
+        boolean wide = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE;
+        workspace.setOrientation(wide ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
+        workspace.setGravity(Gravity.CENTER_VERTICAL);
+        screen.setLayoutParams(wide ? new LinearLayout.LayoutParams(0, -1, 1) : new LinearLayout.LayoutParams(-1, 0, 1));
+        LinearLayout.LayoutParams panel = new LinearLayout.LayoutParams(wide ? dp(256) : -1, -2);
+        panel.setMargins(wide ? dp(8) : 0, wide ? 0 : dp(8), 0, 0);
+        controller.setLayoutParams(panel);
     }
 
     @Override protected void onStart() {
@@ -155,13 +192,12 @@ public final class RemoteDesktopActivity extends Activity {
                             if (attempt != generation || !visible) return;
                             if (screen.frame == null) {
                                 ready(true);
-                                status.setText("Arraste ou toque na tela. Gire o celular para ampliar a imagem.");
+                                status.setText("Use o joystick para mover o mouse. Você também pode tocar na imagem.");
                             }
-                            screen.frame = frame;
-                            screen.invalidate();
+                            screen.show(frame);
                         });
                     }
-                    Thread.sleep(Math.max(1, 125 - (SystemClock.elapsedRealtime() - started)));
+                    Thread.sleep(Math.max(1, 50 - (SystemClock.elapsedRealtime() - started)));
                 }
             } catch (Exception error) {
                 String message = error instanceof SecurityException ? "Vínculo removido. Pareie novamente."
@@ -184,6 +220,7 @@ public final class RemoteDesktopActivity extends Activity {
             client = null;
         }
         if (previous != null) input.execute(previous::disconnect);
+        joystick.stop();
         screen.clear();
         ready(false);
         status.setText(message);
@@ -192,28 +229,56 @@ public final class RemoteDesktopActivity extends Activity {
     private void ready(boolean active) {
         connection.setEnabled(true);
         connection.setText(active ? "Encerrar" : "Conectar");
+        joystick.setEnabled(active);
+        joystick.invalidate();
         for (Button control : controls) control.setEnabled(active);
     }
 
     private void send(String action, int x, int y, String text, int delta) {
         RemoteDesktopClient current = client;
         if (current == null) return;
-        boolean move = action.equals("move");
-        if (move && !moving.compareAndSet(false, true)) return;
-        try {
-            input.execute(() -> {
-                try {
-                    if (client == current) current.input(action, x, y, text, delta);
-                } catch (Exception error) {
-                    runOnUiThread(() -> {
-                        if (client == current && visible) status.setText("O PC não aceitou o comando. Confira a sessão do Windows.");
-                    });
-                } finally {
-                    if (move) moving.set(false);
+        if (action.equals("move")) {
+            synchronized (lifecycle) {
+                if (queuedMove != null && queuedMove.client == current) {
+                    queuedMove.x = x;
+                    queuedMove.y = y;
+                    return;
                 }
+                PointerMove move = new PointerMove(current, x, y);
+                queuedMove = move;
+                input.execute(() -> {
+                    synchronized (lifecycle) {
+                        if (queuedMove == move) queuedMove = null;
+                    }
+                    transmit(move.client, "move", move.x, move.y, null, 0);
+                });
+            }
+            return;
+        }
+        // Keep pointer updates on the correct side of button presses and releases.
+        synchronized (lifecycle) { queuedMove = null; }
+        try {
+            input.execute(() -> transmit(current, action, x, y, text, delta));
+        } catch (RejectedExecutionException stopped) { }
+    }
+
+    private void transmit(RemoteDesktopClient target, String action, int x, int y, String text, int delta) {
+        try {
+            if (client == target) target.input(action, x, y, text, delta);
+        } catch (Exception error) {
+            runOnUiThread(() -> {
+                if (client == target && visible) status.setText("O PC não aceitou o comando. Confira a sessão do Windows.");
             });
-        } catch (RejectedExecutionException stopped) {
-            if (move) moving.set(false);
+        }
+    }
+
+    private static final class PointerMove {
+        final RemoteDesktopClient client;
+        int x, y;
+        PointerMove(RemoteDesktopClient client, int x, int y) {
+            this.client = client;
+            this.x = x;
+            this.y = y;
         }
     }
 
@@ -252,27 +317,140 @@ public final class RemoteDesktopActivity extends Activity {
         button.setAllCaps(false);
         button.setText(label);
         button.setTextSize(13);
-        button.setMinHeight(dp(43));
-        button.setPadding(dp(5), dp(4), dp(5), dp(4));
+        button.setTextColor(new ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled}, new int[0]},
+                new int[]{0xff78869a, TEXT}));
+        button.setMinimumWidth(dp(44));
+        button.setMinHeight(dp(44));
+        button.setPadding(dp(6), 0, dp(6), 0);
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x446ca4ff),
+                round(0xff222e40, 9, 0xff35435a), null));
         return button;
     }
 
     private Button tool(LinearLayout row, String label, Runnable run) {
         Button button = button(label);
         button.setOnClickListener(view -> run.run());
-        row.addView(button, new LinearLayout.LayoutParams(0, -2, 1));
+        LinearLayout.LayoutParams item = new LinearLayout.LayoutParams(0, dp(44), 1);
+        item.setMargins(dp(3), dp(2), dp(3), dp(2));
+        row.addView(button, item);
         controls.add(button);
         return button;
     }
 
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
 
+    private GradientDrawable round(int color, int radius, int edge) {
+        GradientDrawable shape = new GradientDrawable();
+        shape.setColor(color);
+        shape.setCornerRadius(dp(radius));
+        shape.setStroke(dp(1), edge);
+        return shape;
+    }
+
+    private final class Joystick extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Runnable step = this::advance;
+        private int finger = -1;
+        private float axisX, axisY;
+        private long lastStep;
+
+        Joystick() {
+            super(RemoteDesktopActivity.this);
+            setContentDescription("Joystick do mouse. Mantenha o dedo inclinado para mover o ponteiro.");
+        }
+
+        private float centerY() { return (getHeight() - dp(16)) / 2f; }
+        private float radius() { return Math.min(getWidth() / 2f - dp(6), centerY() - dp(3)); }
+
+        @Override protected void onDraw(Canvas canvas) {
+            float x = getWidth() / 2f, y = centerY(), ring = radius();
+            if (ring <= 0) return;
+            paint.setColor(0xff263247);
+            canvas.drawCircle(x, y, ring, paint);
+            paint.setColor(0xff101824);
+            canvas.drawCircle(x, y, ring - dp(2), paint);
+            paint.setColor(0xff40506b);
+            for (int dir = 0; dir < 4; dir++) {
+                double angle = dir * Math.PI / 2;
+                canvas.drawCircle(x + (float) Math.cos(angle) * (ring - dp(6)),
+                        y + (float) Math.sin(angle) * (ring - dp(6)), dp(1), paint);
+            }
+            float knobX = x + axisX * ring * .55f, knobY = y + axisY * ring * .55f;
+            paint.setColor(finger != -1 ? 0xff75aaff : 0xff425a7a);
+            canvas.drawCircle(knobX, knobY, ring * .39f, paint);
+            paint.setColor(finger != -1 ? 0xffb3d1ff : 0xff829fc6);
+            canvas.drawCircle(knobX, knobY, dp(3), paint);
+            paint.setColor(MUTED);
+            paint.setTextSize(dp(11));
+            paint.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText("Joystick", x, getHeight() - dp(1), paint);
+        }
+
+        @Override public boolean onTouchEvent(MotionEvent event) {
+            if (!isEnabled() || radius() <= 0) return false;
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    finger = event.getPointerId(0);
+                    steer(event.getX(), event.getY());
+                    lastStep = SystemClock.uptimeMillis();
+                    postOnAnimation(step);
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    int index = event.findPointerIndex(finger);
+                    if (index >= 0) steer(event.getX(index), event.getY(index));
+                    return true;
+                case MotionEvent.ACTION_POINTER_UP:
+                    if (event.getPointerId(event.getActionIndex()) == finger) stop();
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    stop();
+                    return true;
+                default: return finger != -1;
+            }
+        }
+
+        private void steer(float x, float y) {
+            float reach = radius() * .73f;
+            float dx = (x - getWidth() / 2f) / reach, dy = (y - centerY()) / reach;
+            float scale = Math.max(1f, (float) Math.hypot(dx, dy));
+            axisX = dx / scale;
+            axisY = dy / scale;
+            invalidate();
+        }
+
+        private void advance() {
+            if (finger == -1 || !isEnabled()) return;
+            long now = SystemClock.uptimeMillis();
+            float seconds = Math.min(34, now - lastStep) / 1000f;
+            lastStep = now;
+            float strength = (float) Math.hypot(axisX, axisY);
+            if (strength > .13f) {
+                float amount = (strength - .13f) / .87f;
+                float distance = (0.04f + .95f * amount * amount) * seconds;
+                screen.move(axisX / strength * distance, axisY / strength * distance);
+            }
+            postOnAnimation(step);
+        }
+
+        void stop() {
+            finger = -1;
+            axisX = axisY = 0f;
+            removeCallbacks(step);
+            invalidate();
+        }
+    }
+
     private final class Screen extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         private final RectF fit = new RectF();
+        private final Path cursor = new Path();
         private final int slop = ViewConfiguration.get(RemoteDesktopActivity.this).getScaledTouchSlop();
         RemoteDesktopClient.Frame frame;
         int pointerX = 32768, pointerY = 32768;
+        private float preciseX = pointerX, preciseY = pointerY;
+        private long movedAt;
+        private boolean hasPointer;
         private float startX, startY;
         private long touchAt;
         private boolean down, dragging;
@@ -287,17 +465,44 @@ public final class RemoteDesktopActivity extends Activity {
             float left = (getWidth() - width) / 2, top = (getHeight() - height) / 2;
             fit.set(left, top, left + width, top + height);
             canvas.drawBitmap(frame.image, null, fit, paint);
-            if (frame.x >= 0 && frame.x <= 65535 && frame.y >= 0 && frame.y <= 65535) {
-                float x = fit.left + fit.width() * frame.x / 65535f;
-                float y = fit.top + fit.height() * frame.y / 65535f;
+            if (hasPointer) {
+                float x = fit.left + fit.width() * pointerX / 65535f;
+                float y = fit.top + fit.height() * pointerY / 65535f;
+                cursor.reset();
+                cursor.moveTo(x, y);
+                cursor.lineTo(x, y + dp(17));
+                cursor.lineTo(x + dp(5), y + dp(12));
+                cursor.lineTo(x + dp(12), y + dp(12));
+                cursor.close();
                 paint.setStyle(Paint.Style.STROKE);
                 paint.setStrokeWidth(dp(2));
                 paint.setColor(Color.BLACK);
-                canvas.drawCircle(x, y, dp(5), paint);
-                paint.setColor(Color.WHITE);
-                canvas.drawCircle(x, y, dp(4), paint);
+                canvas.drawPath(cursor, paint);
                 paint.setStyle(Paint.Style.FILL);
+                paint.setColor(Color.WHITE);
+                canvas.drawPath(cursor, paint);
             }
+        }
+
+        void show(RemoteDesktopClient.Frame next) {
+            frame = next;
+            if (!down && joystick.finger == -1 && SystemClock.uptimeMillis() - movedAt > 450) {
+                hasPointer = next.x >= 0 && next.x <= 65535 && next.y >= 0 && next.y <= 65535;
+                if (hasPointer) {
+                    preciseX = pointerX = next.x;
+                    preciseY = pointerY = next.y;
+                }
+            }
+            invalidate();
+        }
+
+        void move(float x, float y) {
+            if (frame == null || down) return;
+            float aspect = (float) frame.image.getWidth() / frame.image.getHeight();
+            preciseX = clamp(preciseX + x * 65535 / Math.max(1f, aspect));
+            preciseY = clamp(preciseY + y * 65535 * Math.min(1f, aspect));
+            int nextX = Math.round(preciseX), nextY = Math.round(preciseY);
+            if (nextX != pointerX || nextY != pointerY) at("move", nextX, nextY);
         }
 
         @Override public boolean onTouchEvent(MotionEvent event) {
@@ -311,20 +516,18 @@ public final class RemoteDesktopActivity extends Activity {
                     startX = x;
                     startY = y;
                     touchAt = SystemClock.elapsedRealtime();
-                    if (pointerOnly) point("move", x, y);
                     return true;
                 case MotionEvent.ACTION_MOVE:
                     if (!down) return false;
-                    if (!pointerOnly && !dragging && Math.hypot(x - startX, y - startY) > slop) {
+                    if (!dragging && Math.hypot(x - startX, y - startY) > slop) {
                         dragging = true;
                         point("down", startX, startY);
                     }
-                    if (pointerOnly || dragging) point("move", x, y);
+                    if (dragging) point("move", x, y);
                     return true;
                 case MotionEvent.ACTION_UP:
                     if (!down) return false;
                     if (dragging) point("up", x, y);
-                    else if (pointerOnly) point("move", x, y);
                     else {
                         point(SystemClock.elapsedRealtime() - touchAt > 500 ? "right" : "click", x, y);
                         performClick();
@@ -343,10 +546,22 @@ public final class RemoteDesktopActivity extends Activity {
         @Override public boolean performClick() { return super.performClick(); }
 
         private void point(String action, float x, float y) {
-            pointerX = normalized(x, fit.left, fit.width());
-            pointerY = normalized(y, fit.top, fit.height());
+            int nextX = normalized(x, fit.left, fit.width()), nextY = normalized(y, fit.top, fit.height());
+            preciseX = nextX;
+            preciseY = nextY;
+            at(action, nextX, nextY);
+        }
+
+        private void at(String action, int x, int y) {
+            pointerX = x;
+            pointerY = y;
+            movedAt = SystemClock.uptimeMillis();
+            hasPointer = true;
+            invalidate();
             send(action, pointerX, pointerY, null, 0);
         }
+
+        private float clamp(float value) { return Math.max(0f, Math.min(65535f, value)); }
 
         private int normalized(float value, float origin, float span) {
             return Math.round(65535 * Math.max(0f, Math.min(1f, (value - origin) / span)));
@@ -355,6 +570,10 @@ public final class RemoteDesktopActivity extends Activity {
         void clear() {
             frame = null;
             down = dragging = false;
+            movedAt = 0;
+            hasPointer = false;
+            preciseX = pointerX = 32768;
+            preciseY = pointerY = 32768;
             invalidate();
         }
     }

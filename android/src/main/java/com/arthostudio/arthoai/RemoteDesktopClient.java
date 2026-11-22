@@ -8,12 +8,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.net.ssl.HttpsURLConnection;
 import org.json.JSONObject;
 
 final class RemoteDesktopClient {
     private final StatusClient.Pairing pairing;
     private final String route;
+    private final AtomicBoolean closed = new AtomicBoolean();
 
     private RemoteDesktopClient(StatusClient.Pairing pairing, UUID id) {
         this.pairing = pairing;
@@ -72,10 +74,21 @@ final class RemoteDesktopClient {
             connection.setFixedLengthStreamingMode(packet.length);
             try (OutputStream output = connection.getOutputStream()) { output.write(packet); }
             checkResponse(connection);
+            try (InputStream reply = connection.getInputStream()) {
+                // Read the small acknowledgment so the HTTPS connection can be reused.
+                byte[] buffer = new byte[64];
+                int remaining = 512;
+                while (remaining > 0) {
+                    int count = reply.read(buffer, 0, Math.min(remaining, buffer.length));
+                    if (count < 0) break;
+                    remaining -= count;
+                }
+            }
         } finally { connection.disconnect(); }
     }
 
     void disconnect() {
+        if (!closed.compareAndSet(false, true)) return;
         try { StatusClient.request(pairing, "POST", route + "/close"); }
         catch (Exception ignored) { }
     }
