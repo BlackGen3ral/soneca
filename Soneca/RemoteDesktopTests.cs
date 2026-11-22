@@ -1,0 +1,65 @@
+namespace Soneca;
+
+internal static class RemoteDesktopTests
+{
+    public static int Run()
+    {
+        int count = 0;
+        void Check(bool condition)
+        {
+            count++;
+            if (!condition) throw new InvalidOperationException($"Falha no teste de tela remota {count}.");
+        }
+
+        var surface = new FakeSurface();
+        var clock = new FakeClock();
+        var desktop = new RemoteDesktopSession(surface, clock);
+        Check(desktop.Connect() is null && surface.Captures == 0);
+        Check(desktop.Enable());
+        var lease = desktop.Connect()!.Value;
+        Check(desktop.Read(Guid.NewGuid()) is null && surface.Captures == 0);
+        Check(desktop.Read(lease) is not null && desktop.Read(lease) is not null && surface.Captures == 1);
+        clock.Advance(0.2);
+        Check(desktop.Read(lease) is not null && surface.Captures == 2);
+        Check(!desktop.Input(lease, new DesktopInput("move", -1, 0)) && surface.Inputs == 0);
+        Check(!desktop.Input(lease, new DesktopInput("key", Value: "unknown")) && surface.Inputs == 0);
+        Check(desktop.Input(lease, new DesktopInput("down", 4000, 5000)) && surface.Inputs == 1);
+        clock.Advance(3);
+        desktop.Status();
+        Check(surface.Releases == 1 && desktop.Read(lease) is not null);
+        Check(desktop.Input(lease, new DesktopInput("down", 6000, 5000)));
+        desktop.Disconnect(lease);
+        Check(surface.Releases == 2 && desktop.Read(lease) is null && !desktop.Status().Viewing);
+        lease = desktop.Connect()!.Value;
+        clock.Advance(9);
+        Check(desktop.Read(lease) is null);
+        lease = desktop.Connect()!.Value;
+        surface.Available = false;
+        Check(desktop.Read(lease) is null && desktop.Status().Expires is null);
+        surface.Available = true;
+        Check(desktop.Enable());
+        clock.Advance(901);
+        Check(desktop.Connect() is null);
+        Check(WindowsDesktopSurface.Coordinate(65535, 3840) == 3839 &&
+            WindowsDesktopSurface.Coordinate(0, 2160) == 0 &&
+            WindowsDesktopSurface.Coordinate(32768, 1920) is >= 958 and <= 961);
+        return count;
+    }
+
+    private sealed class FakeSurface : IDesktopSurface
+    {
+        public bool Available = true;
+        public int Captures, Inputs, Releases;
+        public bool IsAvailable() => Available;
+        public DesktopFrame Capture() { Captures++; return new DesktopFrame([1], 0, 0); }
+        public void Apply(DesktopInput input) => Inputs++;
+        public void Release() => Releases++;
+    }
+
+    private sealed class FakeClock : TimeProvider
+    {
+        private DateTimeOffset current = DateTimeOffset.UnixEpoch;
+        public override DateTimeOffset GetUtcNow() => current;
+        public void Advance(double seconds) => current = current.AddSeconds(seconds);
+    }
+}

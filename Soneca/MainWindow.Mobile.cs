@@ -112,7 +112,8 @@ public partial class MainWindow
             () => Dispatcher.BeginInvoke(new Action(MobilePaired)),
             allowDevices, allowPower, () => Dispatcher.BeginInvoke(new Action(RefreshSchedule)),
             restored: profile,
-            revoked: () => Dispatcher.BeginInvoke(new Action(MobileRevoked))));
+            revoked: () => Dispatcher.BeginInvoke(new Action(MobileRevoked)),
+            remoteDesktop: remoteDesktop));
         if (!IsLoaded) { await session.DisposeAsync(); return; }
         mobileSession = session;
     }
@@ -194,6 +195,7 @@ public partial class MainWindow
 
     private async Task StopMobileAsync()
     {
+        EndRemoteDesktop();
         mobileTimer.Stop();
         mobileReconnectTimer.Stop();
         mobileTimer.Tick -= MobileExpired;
@@ -215,5 +217,6 @@ public partial class MainWindow
         MobileStop.Visibility = mobileRemembered || mobileSession is not null || MobileQr.Visibility == Visibility.Visible
             ? Visibility.Visible : Visibility.Collapsed;
         MobileStop.IsEnabled = !mobileBusy;
+        RefreshRemoteDesktop();
     }
 }

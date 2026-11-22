@@ -25,7 +25,8 @@ internal sealed class MobilePairingServer(WebApplication app, X509Certificate2 c
 
     public static async Task<MobilePairingServer> StartAsync(IPAddress address, Action connected, bool allowDevices = false,
         bool allowLocalPower = false, Action? scheduleChanged = null, Func<PowerCommand, bool>? performPower = null,
-        MobileProfile? restored = null, Action? revoked = null, Action<MobileProfile?>? persist = null, int port = 47834)
+        MobileProfile? restored = null, Action? revoked = null, Action<MobileProfile?>? persist = null, int port = 47834,
+        RemoteDesktopSession? remoteDesktop = null)
     {
         var adapter = PcLan.Adapters().FirstOrDefault(candidate => candidate.Address.Equals(address))
             ?? throw new InvalidOperationException("O endereço de rede mudou.");
@@ -126,6 +127,7 @@ internal sealed class MobilePairingServer(WebApplication app, X509Certificate2 c
             if (restored?.AllowDevices ?? allowDevices) MobileDeviceApi.Map(app, context => Authorized(context), address);
             if (restored?.AllowPower ?? allowLocalPower)
                 LocalPower.Map(app, context => Authorized(context), adapter, scheduleChanged, performPower);
+            if (remoteDesktop is not null) RemoteDesktopApi.Map(app, context => Authorized(context), remoteDesktop);
             await app.StartAsync().ConfigureAwait(false);
             return new MobilePairingServer(app, certificate, invitation, expires, ForgetLink, HasLink);
 

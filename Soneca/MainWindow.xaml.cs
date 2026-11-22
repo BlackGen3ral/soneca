@@ -20,6 +20,7 @@ public partial class MainWindow : Window
         this.demo = demo; this.skipIntro = skipIntro; schedule = new Schedule(demo);
         InitializeComponent();
         mobileReconnectTimer.Tick += async (_, _) => await RestoreMobileAsync();
+        remoteDesktopTimer.Tick += (_, _) => RefreshRemoteDesktop();
         CleanupPanel.Demo = demo;
         VersionLabel.Text = "v" + Updater.Current.ToString(3);
         InstalledVersionLabel.Text = "Versão instalada  " + Updater.Current.ToString(3);
@@ -47,6 +48,7 @@ public partial class MainWindow : Window
         };
         Closed += async (_, _) =>
         {
+            EndRemoteDesktop();
             timer.Stop(); dashboardTimer.Stop(); devicesTimer.Stop(); FinishIntro();
             CloseUpdates();
             await StopPcAgentAsync();
