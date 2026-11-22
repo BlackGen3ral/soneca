@@ -48,6 +48,7 @@ public partial class MainWindow : Window
         };
         Closed += async (_, _) =>
         {
+            androidOperation?.Cancel();
             EndRemoteDesktop();
             timer.Stop(); dashboardTimer.Stop(); devicesTimer.Stop(); FinishIntro();
             CloseUpdates();

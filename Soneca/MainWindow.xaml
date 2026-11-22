@@ -167,14 +167,64 @@
             <ScrollViewer x:Name="MobilePanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="30,25,30,25" MaxWidth="1080">
                     <TextBlock Text="Celular" Style="{StaticResource PageTitle}"/>
-                    <TextBlock Text="Conecte o Android para consultar este PC pela rede local." Style="{StaticResource BodyCopy}" Margin="0,5,0,18"/>
+                    <TextBlock Text="Espelhe o Android neste PC ou controle o Windows pelo celular." Style="{StaticResource BodyCopy}" Margin="0,5,0,18"/>
                     <Border Style="{StaticResource Panel}">
                         <StackPanel>
-                            <TextBlock Text="Parear com QR Code" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="Controlar Android pelo PC" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="Abra a tela do celular em uma janela e use o mouse e o teclado deste PC."
+                                       Style="{StaticResource BodyCopy}" Margin="0,6,0,12"/>
+                            <WrapPanel>
+                                <Button x:Name="AndroidUsb" Content="Abrir por USB" Style="{StaticResource Primary}"
+                                        Click="AndroidUsb_Click" Margin="0,0,8,0"/>
+                                <Button x:Name="AndroidStop" Content="Encerrar controle" IsEnabled="False" Click="AndroidStop_Click"/>
+                            </WrapPanel>
+                            <TextBlock x:Name="AndroidStatus" Text="Conecte o celular por USB ou use as opções de Wi-Fi."
+                                       Style="{StaticResource BodyCopy}" Margin="0,10,0,12" AutomationProperties.LiveSetting="Polite"/>
+                            <Expander Header="Como conectar por USB">
+                                <TextBlock Text="No Android, ative a Depuração USB em Opções do desenvolvedor. Conecte um cabo de dados, clique em Abrir por USB e aceite a autorização no celular. Na primeira vez, o Artho AI baixa o scrcpy oficial."
+                                           Style="{StaticResource BodyCopy}" Margin="0,7,0,8"/>
+                            </Expander>
+                            <Expander Header="Conectar por Wi-Fi" Margin="0,7,0,0">
+                                <StackPanel Margin="0,7,0,0">
+                                    <TextBlock Text="No Android 11 ou superior, ative a Depuração sem fio. PC e celular devem estar na mesma rede."
+                                               Style="{StaticResource BodyCopy}" Margin="0,0,0,8"/>
+                                    <TextBlock x:Name="AndroidConnectLabel" Text="Endereço e porta da tela principal de Depuração sem fio"
+                                               Style="{StaticResource BodyCopy}" Margin="0,0,0,3"/>
+                                    <TextBox x:Name="AndroidConnectAddress" MaxLength="21" MinWidth="160" HorizontalAlignment="Left"
+                                             AutomationProperties.LabeledBy="{Binding ElementName=AndroidConnectLabel}"/>
+                                    <Button x:Name="AndroidWifi" Content="Abrir por Wi-Fi" Click="AndroidWifi_Click" HorizontalAlignment="Left" Margin="0,7,0,0"/>
+                                    <Expander x:Name="AndroidPairHelp" Header="Parear um novo Android" Margin="0,10,0,0">
+                                        <StackPanel Margin="0,7,0,0">
+                                            <TextBlock Text="No celular, toque em Parear dispositivo com código de pareamento. Use o endereço e o código dessa tela."
+                                                       Style="{StaticResource BodyCopy}" Margin="0,0,0,6"/>
+                                            <TextBlock x:Name="AndroidPairLabel" Text="Endereço e porta de pareamento" Style="{StaticResource BodyCopy}"/>
+                                            <TextBox x:Name="AndroidPairAddress" MaxLength="21" MinWidth="160" HorizontalAlignment="Left"
+                                                     AutomationProperties.LabeledBy="{Binding ElementName=AndroidPairLabel}"/>
+                                            <TextBlock x:Name="AndroidCodeLabel" Text="Código de seis dígitos" Style="{StaticResource BodyCopy}" Margin="0,7,0,0"/>
+                                            <PasswordBox x:Name="AndroidPairCode" MaxLength="6" MinWidth="120" MinHeight="29" HorizontalAlignment="Left"
+                                                         AutomationProperties.LabeledBy="{Binding ElementName=AndroidCodeLabel}"/>
+                                            <Button x:Name="AndroidPair" Content="Parear Android" Click="AndroidPair_Click" HorizontalAlignment="Left" Margin="0,7,0,0"/>
+                                        </StackPanel>
+                                    </Expander>
+                                </StackPanel>
+                            </Expander>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Panel}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Controlar PC pelo Android" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="Pareie pelo QR Code para ver a tela do PC e usar os controles liberados na rede local."
+                                       Style="{StaticResource BodyCopy}" Margin="0,6,0,0"/>
                             <TextBlock x:Name="MobileNetworkLabel" Text="Endereço do PC na rede do celular" Style="{StaticResource BodyCopy}" Margin="0,13,0,5"/>
                             <ComboBox x:Name="MobileNetwork" HorizontalAlignment="Left" MinWidth="190" MinHeight="32"
                                       AutomationProperties.LabeledBy="{Binding ElementName=MobileNetworkLabel}"
-                                      AutomationProperties.Name="Endereço do PC na rede do celular" Foreground="#102030" Background="#EDF7FF"/>
+                                      AutomationProperties.Name="Endereço do PC na rede do celular" Foreground="#102030" Background="#EDF7FF">
+                                <ComboBox.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#102030"/>
+                                    </Style>
+                                </ComboBox.Resources>
+                            </ComboBox>
                             <CheckBox x:Name="MobileAllowDevices" Content="Permitir que o celular ligue os PCs e edite os horários"
                                       Margin="0,12,0,0"/>
                             <CheckBox x:Name="MobileAllowPower" Content="Permitir que o celular desligue, reinicie e programe este PC"/>
@@ -187,13 +237,7 @@
                                    AutomationProperties.Name="QR Code de pareamento com o celular"/>
                             <Button x:Name="MobileStop" Content="Encerrar conexão" Visibility="Collapsed"
                                     HorizontalAlignment="Left" Margin="0,13,0,0" Click="MobileStop_Click"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}" Margin="0,12,0,0">
-                        <StackPanel>
-                            <TextBlock Text="Tela remota" Style="{StaticResource SectionTitle}"/>
-                            <TextBlock Text="Permita que o celular pareado veja a tela principal e use mouse e teclado."
-                                       Style="{StaticResource BodyCopy}" Margin="0,6,0,0"/>
+                            <TextBlock Text="Tela remota do PC" Style="{StaticResource SectionTitle}" Margin="0,17,0,0"/>
                             <TextBlock x:Name="RemoteDesktopStatus" Text="Acesso à tela desativado." Style="{StaticResource BodyCopy}"
                                        Margin="0,7,0,0" AutomationProperties.LiveSetting="Polite"/>
                             <Button x:Name="RemoteDesktopButton" Content="Liberar acesso à tela" Click="RemoteDesktop_Click"

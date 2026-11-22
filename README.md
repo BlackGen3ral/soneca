@@ -38,9 +38,15 @@ Para o celular controlar a energia deste PC, marque **Permitir que o celular des
 
 O Android guarda o endereço do equipamento para que **Ligar agora** e **Programar para ligar** funcionem também com o PC desligado. Para programar, autorize alarmes exatos no Android. O celular precisa estar ligado e no mesmo Wi-Fi no momento do disparo. O PC precisa aceitar Wake-on-LAN. Se o IP do Windows mudar, desvincule o celular e gere um novo QR Code com o endereço atualizado.
 
-### Tela remota
+### Controlar o Android pelo PC
 
-Com o pareamento salvo, no Windows abra **Celular → Tela remota → Liberar acesso à tela**. No Android, abra **Tela remota**. Incline o joystick para mover o cursor ou toque e arraste diretamente na imagem. O painel oferece cliques, rolagem e teclado. Ao girar o celular, o painel fica ao lado da imagem.
+Na aba **Celular**, use **Controlar Android pelo PC → Abrir por USB**. Ative a Depuração USB nas Opções do desenvolvedor do Android, conecte um cabo de dados e aceite a autorização no telefone. O Artho AI baixa e verifica a distribuição oficial do scrcpy no primeiro uso. A tela abre em uma janela própria para usar mouse e teclado.
+
+Para usar Wi-Fi no Android 11 ou superior, ative a **Depuração sem fio** com os dois aparelhos na mesma rede. Abra **Conectar por Wi-Fi → Parear um novo Android** e informe o endereço e o código da tela de pareamento do celular. Depois use **Abrir por Wi-Fi** com o endereço e a porta da tela principal de Depuração sem fio. Feche a janela ou clique em **Encerrar controle** para terminar a sessão. O Android gerencia a autorização de depuração.
+
+### Controlar o PC pelo Android
+
+Com o pareamento salvo, no Windows abra **Celular → Controlar PC pelo Android → Liberar acesso à tela**. No Android, abra **Tela remota**. Incline o joystick para mover o cursor ou toque e arraste diretamente na imagem. O painel oferece cliques, rolagem e teclado. Ao girar o celular, o painel fica ao lado da imagem.
 
 A sessão mostra o monitor principal na rede local. A liberação fica válida enquanto o Artho AI estiver aberto, até usar **Encerrar acesso à tela** ou desvincular o celular. Ao bloquear o Windows, o acesso à imagem e aos controles para. Depois de desbloquear, reabra **Tela remota** no celular. Telas seguras do Windows e janelas que exigem privilégios elevados não podem ser controladas pelo celular.
 
@@ -84,6 +90,6 @@ O ativo principal é `ArthoAI-Setup.exe`. `ArthoControl-Setup.exe` e `Soneca-Set
 
 ## Desenvolvimento
 
-Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.13.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
+Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.14.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
 
 O repositório e os identificadores técnicos ainda se chamam `soneca` para preservar atualizações existentes. A marca visível no produto é Artho AI.
