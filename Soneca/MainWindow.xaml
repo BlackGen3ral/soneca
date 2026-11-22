@@ -196,7 +196,7 @@
                                        Style="{StaticResource BodyCopy}" Margin="0,6,0,0"/>
                             <TextBlock x:Name="RemoteDesktopStatus" Text="Acesso à tela desativado." Style="{StaticResource BodyCopy}"
                                        Margin="0,7,0,0" AutomationProperties.LiveSetting="Polite"/>
-                            <Button x:Name="RemoteDesktopButton" Content="Liberar por 15 minutos" Click="RemoteDesktop_Click"
+                            <Button x:Name="RemoteDesktopButton" Content="Liberar acesso à tela" Click="RemoteDesktop_Click"
                                     IsEnabled="False" HorizontalAlignment="Left" Margin="0,11,0,0"/>
                         </StackPanel>
                     </Border>

@@ -26,11 +26,12 @@ internal interface IDesktopSurface
 
 internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider? time = null)
 {
-    private static readonly TimeSpan GrantDuration = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan ViewerTimeout = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(50);
     private readonly TimeProvider clock = time ?? TimeProvider.System;
     private readonly object gate = new();
-    private DateTimeOffset? expires;
+    private readonly object captureGate = new();
+    private bool enabled;
     private Guid? lease;
     private DateTimeOffset lastSeen;
     private DateTimeOffset lastDrag;
@@ -44,7 +45,7 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
         {
             if (!surface.IsAvailable()) return false;
             ClearViewer();
-            expires = clock.GetUtcNow().Add(GrantDuration);
+            enabled = true;
             return true;
         }
     }
@@ -54,16 +55,16 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
         lock (gate)
         {
             ClearViewer();
-            expires = null;
+            enabled = false;
         }
     }
 
-    public (DateTimeOffset? Expires, bool Viewing) Status()
+    public (bool Enabled, bool Viewing) Status()
     {
         lock (gate)
         {
             Sweep();
-            return (expires, lease is not null);
+            return (enabled, lease is not null);
         }
     }
 
@@ -72,7 +73,7 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
         lock (gate)
         {
             Sweep();
-            if (expires is null) return null;
+            if (!enabled || !surface.IsAvailable()) return null;
             ClearViewer();
             lastSeen = clock.GetUtcNow();
             lease = Guid.NewGuid();
@@ -88,17 +89,26 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
 
     public DesktopFrame? Read(Guid client)
     {
-        lock (gate)
+        // Encoding a frame cannot delay mouse and keyboard events.
+        lock (captureGate)
         {
-            Sweep();
-            if (lease != client) return null;
-            lastSeen = clock.GetUtcNow();
-            if (frame is null || lastSeen - frameAt >= TimeSpan.FromMilliseconds(125))
+            DateTimeOffset started;
+            lock (gate)
             {
-                frame = surface.Capture();
-                frameAt = clock.GetUtcNow();
+                Sweep();
+                if (lease != client) return null;
+                started = lastSeen = clock.GetUtcNow();
+                if (frame is not null && started - frameAt < FrameInterval) return frame;
             }
-            return frame;
+            var captured = surface.Capture();
+            lock (gate)
+            {
+                Sweep();
+                if (lease != client) return null;
+                frame = captured;
+                frameAt = started;
+                return frame;
+            }
         }
     }
 
@@ -126,14 +136,9 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
 
     private void Sweep()
     {
-        if (expires is null) return;
+        if (!enabled || lease is null) return;
         var now = clock.GetUtcNow();
-        if (now >= expires || !surface.IsAvailable())
-        {
-            expires = null;
-            ClearViewer();
-        }
-        else if (lease is not null && now - lastSeen > ViewerTimeout) ClearViewer();
+        if (!surface.IsAvailable() || now - lastSeen > ViewerTimeout) ClearViewer();
         else if (held && now - lastDrag > TimeSpan.FromSeconds(2)) Release();
     }
 

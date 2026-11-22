@@ -40,9 +40,9 @@ O Android guarda o endereço do equipamento para que **Ligar agora** e **Program
 
 ### Tela remota
 
-Com o pareamento salvo, no Windows abra **Celular → Tela remota → Liberar por 15 minutos**. No Android, abra **Tela remota** na tela inicial. Toque para clicar, segure para clicar com o botão direito ou arraste. A barra oferece modo ponteiro, rolagem e teclado. Para uma imagem maior, gire o celular.
+Com o pareamento salvo, no Windows abra **Celular → Tela remota → Liberar acesso à tela**. No Android, abra **Tela remota**. Incline o joystick para mover o cursor ou toque e arraste diretamente na imagem. O painel oferece cliques, rolagem e teclado. Ao girar o celular, o painel fica ao lado da imagem.
 
-A sessão mostra o monitor principal na rede local. O PC exibe um aviso enquanto compartilha a tela e oferece **Encerrar**. O compartilhamento termina ao bloquear o Windows, fechar o app ou expirar a liberação. Telas seguras do Windows e janelas que exigem privilégios elevados não podem ser controladas pelo celular.
+A sessão mostra o monitor principal na rede local. A liberação fica válida enquanto o Artho AI estiver aberto, até usar **Encerrar acesso à tela** ou desvincular o celular. Ao bloquear o Windows, o acesso à imagem e aos controles para. Depois de desbloquear, reabra **Tela remota** no celular. Telas seguras do Windows e janelas que exigem privilégios elevados não podem ser controladas pelo celular.
 
 ### Dispositivos
 
@@ -84,6 +84,6 @@ O ativo principal é `ArthoAI-Setup.exe`. `ArthoControl-Setup.exe` e `Soneca-Set
 
 ## Desenvolvimento
 
-Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.12.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
+Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.13.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
 
 O repositório e os identificadores técnicos ainda se chamam `soneca` para preservar atualizações existentes. A marca visível no produto é Artho AI.

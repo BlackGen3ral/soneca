@@ -35,10 +35,23 @@ internal static class RemoteDesktopTests
         Check(desktop.Read(lease) is null);
         lease = desktop.Connect()!.Value;
         surface.Available = false;
-        Check(desktop.Read(lease) is null && desktop.Status().Expires is null);
+        Check(desktop.Read(lease) is null && desktop.Status().Enabled && desktop.Connect() is null);
         surface.Available = true;
-        Check(desktop.Enable());
-        clock.Advance(901);
+        clock.Advance(60 * 60 * 24);
+        lease = desktop.Connect()!.Value;
+        using var encoding = new ManualResetEventSlim();
+        using var releaseFrame = new ManualResetEventSlim();
+        surface.OnCapture = () => { encoding.Set(); releaseFrame.Wait(TimeSpan.FromSeconds(5)); };
+        var pendingFrame = Task.Run(() => desktop.Read(lease));
+        try
+        {
+            Check(encoding.Wait(TimeSpan.FromSeconds(5)));
+            var command = Task.Run(() => desktop.Input(lease, new DesktopInput("move", 1000, 1000)));
+            Check(command.Wait(TimeSpan.FromSeconds(2)) && command.Result);
+            desktop.Disable();
+        }
+        finally { releaseFrame.Set(); }
+        Check(pendingFrame.Wait(TimeSpan.FromSeconds(5)) && pendingFrame.Result is null);
         Check(desktop.Connect() is null);
         Check(WindowsDesktopSurface.Coordinate(65535, 3840) == 3839 &&
             WindowsDesktopSurface.Coordinate(0, 2160) == 0 &&
@@ -50,8 +63,9 @@ internal static class RemoteDesktopTests
     {
         public bool Available = true;
         public int Captures, Inputs, Releases;
+        public Action? OnCapture;
         public bool IsAvailable() => Available;
-        public DesktopFrame Capture() { Captures++; return new DesktopFrame([1], 0, 0); }
+        public DesktopFrame Capture() { Captures++; OnCapture?.Invoke(); return new DesktopFrame([1], 0, 0); }
         public void Apply(DesktopInput input) => Inputs++;
         public void Release() => Releases++;
     }
