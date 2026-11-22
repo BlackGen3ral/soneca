@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
+import android.content.pm.ActivityInfo;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Insets;
@@ -49,6 +50,7 @@ public final class RemoteDesktopActivity extends Activity {
     private PointerMove queuedMove;
     private TextView status;
     private Button connection;
+    private Button orientation;
     private Screen screen;
     private LinearLayout workspace, controller;
     private Joystick joystick;
@@ -81,6 +83,14 @@ public final class RemoteDesktopActivity extends Activity {
         title.setPadding(dp(12), 0, 0, 0);
         title.setAccessibilityHeading(true);
         bar.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        orientation = button("Horizontal");
+        orientation.setOnClickListener(view -> setRequestedOrientation(
+                getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE
+                        ? ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                        : ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE));
+        LinearLayout.LayoutParams rotationButton = new LinearLayout.LayoutParams(-2, -2);
+        rotationButton.rightMargin = dp(6);
+        bar.addView(orientation, rotationButton);
         connection = button("Conectar");
         connection.setOnClickListener(view -> {
             if (client == null) connect();
@@ -114,8 +124,8 @@ public final class RemoteDesktopActivity extends Activity {
         controller.addView(actions, new LinearLayout.LayoutParams(0, -2, 1));
         LinearLayout clicks = new LinearLayout(this);
         actions.addView(clicks);
-        tool(clicks, "Clique", () -> send("click", screen.pointerX, screen.pointerY, null, 0));
-        tool(clicks, "Direito", () -> send("right", screen.pointerX, screen.pointerY, null, 0))
+        tool(clicks, "Clique", () -> screen.click("click"));
+        tool(clicks, "Direito", () -> screen.click("right"))
                 .setContentDescription("Clique direito");
         LinearLayout scroll = new LinearLayout(this);
         actions.addView(scroll);
@@ -134,11 +144,13 @@ public final class RemoteDesktopActivity extends Activity {
     @Override public void onConfigurationChanged(Configuration configuration) {
         super.onConfigurationChanged(configuration);
         joystick.stop();
+        screen.cancelGesture();
         layoutController(configuration);
     }
 
     private void layoutController(Configuration configuration) {
         boolean wide = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE;
+        orientation.setText(wide ? "Vertical" : "Horizontal");
         workspace.setOrientation(wide ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
         workspace.setGravity(Gravity.CENTER_VERTICAL);
         screen.setLayoutParams(wide ? new LinearLayout.LayoutParams(0, -1, 1) : new LinearLayout.LayoutParams(-1, 0, 1));
@@ -447,10 +459,7 @@ public final class RemoteDesktopActivity extends Activity {
         private final Path cursor = new Path();
         private final int slop = ViewConfiguration.get(RemoteDesktopActivity.this).getScaledTouchSlop();
         RemoteDesktopClient.Frame frame;
-        int pointerX = 32768, pointerY = 32768;
-        private float preciseX = pointerX, preciseY = pointerY;
-        private long movedAt;
-        private boolean hasPointer;
+        private RemotePointer pointer = new RemotePointer();
         private float startX, startY;
         private long touchAt;
         private boolean down, dragging;
@@ -465,9 +474,9 @@ public final class RemoteDesktopActivity extends Activity {
             float left = (getWidth() - width) / 2, top = (getHeight() - height) / 2;
             fit.set(left, top, left + width, top + height);
             canvas.drawBitmap(frame.image, null, fit, paint);
-            if (hasPointer) {
-                float x = fit.left + fit.width() * pointerX / 65535f;
-                float y = fit.top + fit.height() * pointerY / 65535f;
+            if (pointer.visible()) {
+                float x = fit.left + fit.width() * pointer.x() / RemotePointer.MAX;
+                float y = fit.top + fit.height() * pointer.y() / RemotePointer.MAX;
                 cursor.reset();
                 cursor.moveTo(x, y);
                 cursor.lineTo(x, y + dp(17));
@@ -486,23 +495,20 @@ public final class RemoteDesktopActivity extends Activity {
 
         void show(RemoteDesktopClient.Frame next) {
             frame = next;
-            if (!down && joystick.finger == -1 && SystemClock.uptimeMillis() - movedAt > 450) {
-                hasPointer = next.x >= 0 && next.x <= 65535 && next.y >= 0 && next.y <= 65535;
-                if (hasPointer) {
-                    preciseX = pointerX = next.x;
-                    preciseY = pointerY = next.y;
-                }
-            }
+            // Frames can arrive after newer mouse commands. Only use their cursor before local input.
+            if (!down && joystick.finger == -1) pointer.observe(next.x, next.y);
             invalidate();
         }
 
         void move(float x, float y) {
             if (frame == null || down) return;
             float aspect = (float) frame.image.getWidth() / frame.image.getHeight();
-            preciseX = clamp(preciseX + x * 65535 / Math.max(1f, aspect));
-            preciseY = clamp(preciseY + y * 65535 * Math.min(1f, aspect));
-            int nextX = Math.round(preciseX), nextY = Math.round(preciseY);
-            if (nextX != pointerX || nextY != pointerY) at("move", nextX, nextY);
+            if (pointer.advance(x, y, aspect)) dispatch("move");
+        }
+
+        void click(String action) {
+            pointer.set(pointer.x(), pointer.y());
+            dispatch(action);
         }
 
         @Override public boolean onTouchEvent(MotionEvent event) {
@@ -536,8 +542,7 @@ public final class RemoteDesktopActivity extends Activity {
                     return true;
                 case MotionEvent.ACTION_CANCEL:
                 case MotionEvent.ACTION_POINTER_DOWN:
-                    if (dragging) send("up", pointerX, pointerY, null, 0);
-                    down = dragging = false;
+                    finishGesture();
                     return true;
                 default: return down;
             }
@@ -546,34 +551,34 @@ public final class RemoteDesktopActivity extends Activity {
         @Override public boolean performClick() { return super.performClick(); }
 
         private void point(String action, float x, float y) {
-            int nextX = normalized(x, fit.left, fit.width()), nextY = normalized(y, fit.top, fit.height());
-            preciseX = nextX;
-            preciseY = nextY;
-            at(action, nextX, nextY);
+            pointer.set(normalized(x, fit.left, fit.width()), normalized(y, fit.top, fit.height()));
+            dispatch(action);
         }
 
-        private void at(String action, int x, int y) {
-            pointerX = x;
-            pointerY = y;
-            movedAt = SystemClock.uptimeMillis();
-            hasPointer = true;
+        private void dispatch(String action) {
             invalidate();
-            send(action, pointerX, pointerY, null, 0);
+            send(action, pointer.x(), pointer.y(), null, 0);
         }
-
-        private float clamp(float value) { return Math.max(0f, Math.min(65535f, value)); }
 
         private int normalized(float value, float origin, float span) {
-            return Math.round(65535 * Math.max(0f, Math.min(1f, (value - origin) / span)));
+            return Math.round(RemotePointer.MAX * Math.max(0f, Math.min(1f, (value - origin) / span)));
+        }
+
+        void cancelGesture() {
+            finishGesture();
+            fit.setEmpty();
+        }
+
+        private void finishGesture() {
+            if (dragging) dispatch("up");
+            down = dragging = false;
         }
 
         void clear() {
             frame = null;
+            fit.setEmpty();
             down = dragging = false;
-            movedAt = 0;
-            hasPointer = false;
-            preciseX = pointerX = 32768;
-            preciseY = pointerY = 32768;
+            pointer = new RemotePointer();
             invalidate();
         }
     }
