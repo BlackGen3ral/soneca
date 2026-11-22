@@ -13,6 +13,44 @@ public partial class MainWindow
 
     private async void AndroidUsb_Click(object sender, RoutedEventArgs e) => await OpenAndroidAsync(null);
 
+    private async void AndroidQr_Click(object sender, RoutedEventArgs e)
+    {
+        await UseAndroidAsync("Preparando o QR Code…", async token =>
+        {
+            var invite = AndroidPairingQr.Create();
+            AndroidQrImage.Source = BuildQrImage(invite.Payload);
+            AndroidQrPanel.Visibility = Visibility.Visible;
+            AndroidQrPanel.BringIntoView();
+            AndroidStatus.Text = "Aguardando a leitura do QR Code pelo Android…";
+            string? endpoint;
+            try
+            {
+                endpoint = await androidControl.PairQrAsync(invite, () =>
+                {
+                    HideAndroidQr();
+                    AndroidStatus.Text = "QR Code lido. Concluindo o pareamento…";
+                }, token);
+            }
+            finally { HideAndroidQr(); }
+            if (endpoint is null)
+            {
+                AndroidManual.IsExpanded = true;
+                AndroidStatus.Text = "Android pareado. A rede não informou a porta para abrir a tela. Use o endereço da tela principal de Depuração sem fio.";
+                AndroidConnectAddress.Focus();
+                return;
+            }
+            AndroidConnectAddress.Text = endpoint;
+            AndroidStatus.Text = "Android pareado. Abrindo a tela…";
+            await MirrorAndroidAsync(endpoint, token);
+        });
+    }
+
+    private void HideAndroidQr()
+    {
+        AndroidQrImage.Source = null;
+        AndroidQrPanel.Visibility = Visibility.Collapsed;
+    }
+
     private async void AndroidWifi_Click(object sender, RoutedEventArgs e)
     {
         try { await OpenAndroidAsync(AndroidControl.LocalEndpoint(AndroidConnectAddress.Text)); }
@@ -42,12 +80,14 @@ public partial class MainWindow
     private async Task OpenAndroidAsync(string? wifiEndpoint)
     {
         await UseAndroidAsync(wifiEndpoint is null ? "Procurando o Android conectado por USB…" : "Conectando ao Android por Wi-Fi…",
-            async token =>
-            {
-                await androidControl.MirrorAsync(wifiEndpoint,
-                    () => AndroidStatus.Text = "Tela do Android aberta. Use o mouse e o teclado na janela de controle.", token);
-                AndroidStatus.Text = "Controle do Android encerrado.";
-            });
+            token => MirrorAndroidAsync(wifiEndpoint, token));
+    }
+
+    private async Task MirrorAndroidAsync(string? endpoint, CancellationToken token)
+    {
+        await androidControl.MirrorAsync(endpoint,
+            () => AndroidStatus.Text = "Tela do Android aberta. Use o mouse e o teclado na janela de controle.", token);
+        AndroidStatus.Text = "Controle do Android encerrado.";
     }
 
     private async Task UseAndroidAsync(string message, Func<CancellationToken, Task> operation)
@@ -60,7 +100,7 @@ public partial class MainWindow
         if (androidOperation is not null) return;
         using var cancellation = new CancellationTokenSource();
         androidOperation = cancellation;
-        AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = false;
+        AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = false;
         AndroidStop.IsEnabled = true;
         AndroidStatus.Text = message;
         try
@@ -80,7 +120,7 @@ public partial class MainWindow
         finally
         {
             androidOperation = null;
-            AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = true;
+            AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = true;
             AndroidStop.IsEnabled = false;
         }
     }

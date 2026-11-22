@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 namespace Soneca;
 
@@ -52,26 +53,79 @@ internal sealed class AndroidControl(string folder)
         File.Exists(Path.Combine(path, "adb.exe")) &&
         File.Exists(Path.Combine(path, "scrcpy-server"));
 
-    public static string LocalEndpoint(string value)
+    public static string LocalEndpoint(string value) => LocalEndpoint(value, PcLan.Adapters()).ToString();
+
+    private static IPEndPoint LocalEndpoint(string value, LanAdapter[] adapters)
     {
         string text = value.Trim();
         if (!IPEndPoint.TryParse(text, out var endpoint) || endpoint.Port == 0 ||
             !PcLan.IsPrivate(endpoint.Address) || endpoint.ToString() != text)
             throw new ArgumentException("Copie o endereço IPv4 e a porta exibidos no celular.");
-        var adapter = PcLan.Adapters().FirstOrDefault(local => local.Prefix <= 30 &&
+        var adapter = adapters.FirstOrDefault(local => local.Prefix <= 30 &&
             PcLan.SameSubnet(local, endpoint.Address) && !local.Address.Equals(endpoint.Address) &&
             !PcLan.Broadcast(local.Address, local.Prefix).Equals(endpoint.Address));
         if (adapter is null) throw new ArgumentException("O PC e o celular precisam estar na mesma rede local.");
-        return endpoint.ToString();
+        return endpoint;
     }
 
     public static bool ValidCode(string code) => code.Length == 6 && code.All(char.IsAsciiDigit);
 
-    public async Task PairAsync(string endpoint, string code, CancellationToken token)
+    public async Task<string> PairAsync(string endpoint, string code, CancellationToken token)
     {
         var log = await RunAdbAsync(["pair", endpoint], code, token);
-        if (!log.Contains("Successfully paired", StringComparison.OrdinalIgnoreCase))
+        var paired = Regex.Match(log, @"Successfully paired to [^\r\n]+? \[guid=([a-zA-Z0-9._-]{1,128})\]");
+        if (!paired.Success)
             throw new IOException("O Android recusou o pareamento. Abra um novo código e confira o endereço e a porta dessa tela.");
+        return paired.Groups[1].Value;
+    }
+
+    public async Task<string?> PairQrAsync(AndroidPairingQr invite, Action scanned, CancellationToken token)
+    {
+        var pair = await FindServiceAsync("_adb-tls-pairing._tcp", invite.Name, null, TimeSpan.FromMinutes(2), token)
+            ?? throw new IOException("O QR Code expirou. Gere outro ou abra o pareamento manual.");
+        token.ThrowIfCancellationRequested();
+        scanned();
+        string guid = await PairAsync(pair.ToString(), invite.Secret, token);
+        var endpoint = await FindServiceAsync("_adb-tls-connect._tcp", guid, pair.Address, TimeSpan.FromSeconds(9), token);
+        return endpoint?.ToString();
+    }
+
+    private async Task<IPEndPoint?> FindServiceAsync(string type, string name, IPAddress? pairedAddress,
+        TimeSpan duration, CancellationToken token)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+        deadline.CancelAfter(duration);
+        try
+        {
+            while (true)
+            {
+                var log = await RunAdbAsync(["mdns", "services"], null, deadline.Token);
+                var endpoint = FindService(log, type, name, pairedAddress, PcLan.Adapters());
+                if (endpoint is not null) return endpoint;
+                await Task.Delay(800, deadline.Token);
+            }
+        }
+        catch (OperationCanceledException) when (deadline.IsCancellationRequested && !token.IsCancellationRequested)
+        { return null; }
+    }
+
+    internal static IPEndPoint? FindService(string log, string type, string name, IPAddress? pairedAddress, LanAdapter[] adapters)
+    {
+        foreach (string line in log.Split('\n'))
+        {
+            string[] fields = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            if (fields.Length < 3 || fields[1].TrimEnd('.') != type) continue;
+            bool matching = fields[0] == name || (pairedAddress is not null && fields[0].StartsWith(name + "-", StringComparison.Ordinal));
+            if (!matching) continue;
+            foreach (string field in fields.Skip(2))
+            {
+                IPEndPoint endpoint;
+                try { endpoint = LocalEndpoint(field, adapters); }
+                catch (ArgumentException) { continue; }
+                if (pairedAddress is null || endpoint.Address.Equals(pairedAddress)) return endpoint;
+            }
+        }
+        return null;
     }
 
     public async Task MirrorAsync(string? endpoint, Action onOpen, CancellationToken token)
@@ -171,4 +225,12 @@ internal sealed class AndroidControl(string folder)
         catch (InvalidOperationException) { }
         catch (Win32Exception) { }
     }
+}
+
+internal sealed record AndroidPairingQr(string Name, string Secret)
+{
+    public static AndroidPairingQr Create() => new("studio-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(5)),
+        RandomNumberGenerator.GetString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", 10));
+
+    public string Payload => $"WIFI:T:ADB;S:{Name};P:{Secret};;";
 }

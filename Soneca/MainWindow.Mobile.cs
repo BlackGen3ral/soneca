@@ -148,6 +148,12 @@ public partial class MainWindow
 
     private void ShowQr(string payload)
     {
+        MobileQr.Source = BuildQrImage(payload);
+        MobileQr.Visibility = Visibility.Visible;
+    }
+
+    private static BitmapImage BuildQrImage(string payload)
+    {
         using var data = QRCodeGenerator.GenerateQrCode(payload, QRCodeGenerator.ECCLevel.M);
         using var stream = new MemoryStream(new PngByteQRCode(data).GetGraphic(8));
         var bitmap = new BitmapImage();
@@ -155,8 +161,7 @@ public partial class MainWindow
         bitmap.CacheOption = BitmapCacheOption.OnLoad;
         bitmap.StreamSource = stream;
         bitmap.EndInit();
-        MobileQr.Source = bitmap;
-        MobileQr.Visibility = Visibility.Visible;
+        return bitmap;
     }
 
     private void HideQr()

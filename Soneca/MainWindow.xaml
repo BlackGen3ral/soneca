@@ -188,22 +188,35 @@
                                 <StackPanel Margin="0,7,0,0">
                                     <TextBlock Text="No Android 11 ou superior, ative a Depuração sem fio. PC e celular devem estar na mesma rede."
                                                Style="{StaticResource BodyCopy}" Margin="0,0,0,8"/>
-                                    <TextBlock x:Name="AndroidConnectLabel" Text="Endereço e porta da tela principal de Depuração sem fio"
-                                               Style="{StaticResource BodyCopy}" Margin="0,0,0,3"/>
-                                    <TextBox x:Name="AndroidConnectAddress" MaxLength="21" MinWidth="160" HorizontalAlignment="Left"
-                                             AutomationProperties.LabeledBy="{Binding ElementName=AndroidConnectLabel}"/>
-                                    <Button x:Name="AndroidWifi" Content="Abrir por Wi-Fi" Click="AndroidWifi_Click" HorizontalAlignment="Left" Margin="0,7,0,0"/>
-                                    <Expander x:Name="AndroidPairHelp" Header="Parear um novo Android" Margin="0,10,0,0">
+                                    <Button x:Name="AndroidPairQr" Content="Parear com QR Code" Style="{StaticResource Primary}"
+                                            Click="AndroidQr_Click" HorizontalAlignment="Left"/>
+                                    <StackPanel x:Name="AndroidQrPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                                        <TextBlock Text="Na Depuração sem fio do Android, toque em Parear dispositivo com código QR e escaneie esta imagem. O código vale por dois minutos."
+                                                   Style="{StaticResource BodyCopy}"/>
+                                        <Image x:Name="AndroidQrImage" Width="216" Height="216" HorizontalAlignment="Left" Margin="0,9,0,0"
+                                               RenderOptions.BitmapScalingMode="NearestNeighbor" AutomationProperties.Name="QR Code para o pareamento sem fio do Android"/>
+                                        <Button Content="Cancelar QR Code" Click="AndroidStop_Click" HorizontalAlignment="Left" Margin="0,9,0,0"/>
+                                    </StackPanel>
+                                    <Expander x:Name="AndroidManual" Header="Conexão manual" Margin="0,10,0,0">
                                         <StackPanel Margin="0,7,0,0">
-                                            <TextBlock Text="No celular, toque em Parear dispositivo com código de pareamento. Use o endereço e o código dessa tela."
-                                                       Style="{StaticResource BodyCopy}" Margin="0,0,0,6"/>
-                                            <TextBlock x:Name="AndroidPairLabel" Text="Endereço e porta de pareamento" Style="{StaticResource BodyCopy}"/>
-                                            <TextBox x:Name="AndroidPairAddress" MaxLength="21" MinWidth="160" HorizontalAlignment="Left"
-                                                     AutomationProperties.LabeledBy="{Binding ElementName=AndroidPairLabel}"/>
-                                            <TextBlock x:Name="AndroidCodeLabel" Text="Código de seis dígitos" Style="{StaticResource BodyCopy}" Margin="0,7,0,0"/>
-                                            <PasswordBox x:Name="AndroidPairCode" MaxLength="6" MinWidth="120" MinHeight="29" HorizontalAlignment="Left"
-                                                         AutomationProperties.LabeledBy="{Binding ElementName=AndroidCodeLabel}"/>
-                                            <Button x:Name="AndroidPair" Content="Parear Android" Click="AndroidPair_Click" HorizontalAlignment="Left" Margin="0,7,0,0"/>
+                                            <TextBlock x:Name="AndroidConnectLabel" Text="Endereço e porta da tela principal de Depuração sem fio"
+                                                       Style="{StaticResource BodyCopy}" Margin="0,0,0,3"/>
+                                            <TextBox x:Name="AndroidConnectAddress" MaxLength="21" MinWidth="160" HorizontalAlignment="Left"
+                                                     AutomationProperties.LabeledBy="{Binding ElementName=AndroidConnectLabel}"/>
+                                            <Button x:Name="AndroidWifi" Content="Abrir por Wi-Fi" Click="AndroidWifi_Click" HorizontalAlignment="Left" Margin="0,7,0,0"/>
+                                            <Expander x:Name="AndroidPairHelp" Header="Parear com código de seis dígitos" Margin="0,10,0,0">
+                                                <StackPanel Margin="0,7,0,0">
+                                                    <TextBlock Text="No celular, toque em Parear dispositivo com código de pareamento. Use o endereço e o código dessa tela."
+                                                               Style="{StaticResource BodyCopy}" Margin="0,0,0,6"/>
+                                                    <TextBlock x:Name="AndroidPairLabel" Text="Endereço e porta de pareamento" Style="{StaticResource BodyCopy}"/>
+                                                    <TextBox x:Name="AndroidPairAddress" MaxLength="21" MinWidth="160" HorizontalAlignment="Left"
+                                                             AutomationProperties.LabeledBy="{Binding ElementName=AndroidPairLabel}"/>
+                                                    <TextBlock x:Name="AndroidCodeLabel" Text="Código de seis dígitos" Style="{StaticResource BodyCopy}" Margin="0,7,0,0"/>
+                                                    <PasswordBox x:Name="AndroidPairCode" MaxLength="6" MinWidth="120" MinHeight="29" HorizontalAlignment="Left"
+                                                                 AutomationProperties.LabeledBy="{Binding ElementName=AndroidCodeLabel}"/>
+                                                    <Button x:Name="AndroidPair" Content="Parear Android" Click="AndroidPair_Click" HorizontalAlignment="Left" Margin="0,7,0,0"/>
+                                                </StackPanel>
+                                            </Expander>
                                         </StackPanel>
                                     </Expander>
                                 </StackPanel>
