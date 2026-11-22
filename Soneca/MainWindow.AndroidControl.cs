@@ -22,26 +22,35 @@ public partial class MainWindow
             AndroidQrPanel.Visibility = Visibility.Visible;
             AndroidQrPanel.BringIntoView();
             AndroidStatus.Text = "Aguardando a leitura do QR Code pelo Android…";
-            string? endpoint;
+            string device;
             try
             {
-                endpoint = await androidControl.PairQrAsync(invite, () =>
+                device = await androidControl.PairQrAsync(invite, () =>
                 {
                     HideAndroidQr();
                     AndroidStatus.Text = "QR Code lido. Concluindo o pareamento…";
                 }, token);
             }
             finally { HideAndroidQr(); }
-            if (endpoint is null)
+            androidControl.Remember(device);
+            await MirrorPairedAndroidAsync(device, token);
+        });
+    }
+
+    private async void AndroidRemembered_Click(object sender, RoutedEventArgs e)
+    {
+        await UseAndroidAsync("Localizando o Android pareado…", async token =>
+        {
+            var device = androidControl.RememberedDevice();
+            while (device is null)
             {
-                AndroidManual.IsExpanded = true;
-                AndroidStatus.Text = "Android pareado. A rede não informou a porta para abrir a tela. Use o endereço da tela principal de Depuração sem fio.";
-                AndroidConnectAddress.Focus();
-                return;
+                AndroidStatus.Text = "Aguardando um Android pareado na rede. Ative a Depuração por Wi-Fi no celular.";
+                try { device = await androidControl.FindExistingDeviceAsync(null, token); }
+                catch (AndroidConnectionException) { }
+                if (device is null) await Task.Delay(1800, token);
             }
-            AndroidConnectAddress.Text = endpoint;
-            AndroidStatus.Text = "Android pareado. Abrindo a tela…";
-            await MirrorAndroidAsync(endpoint, token);
+            androidControl.Remember(device);
+            await MirrorPairedAndroidAsync(device, token);
         });
     }
 
@@ -67,11 +76,11 @@ public partial class MainWindow
             AndroidPairCode.Clear();
             await UseAndroidAsync("Pareando com o Android…", async token =>
             {
-                await androidControl.PairAsync(endpoint, code, token);
+                var device = await androidControl.PairAsync(endpoint, code, token);
+                androidControl.Remember(device);
                 AndroidPairAddress.Clear();
                 AndroidPairHelp.IsExpanded = false;
-                AndroidStatus.Text = "Pareado. Use o endereço da tela principal de Depuração sem fio para conectar.";
-                AndroidConnectAddress.Focus();
+                await MirrorPairedAndroidAsync(device, token);
             });
         }
         catch (ArgumentException ex) { AndroidStatus.Text = ex.Message; }
@@ -80,15 +89,35 @@ public partial class MainWindow
     private async Task OpenAndroidAsync(string? wifiEndpoint)
     {
         await UseAndroidAsync(wifiEndpoint is null ? "Procurando o Android conectado por USB…" : "Conectando ao Android por Wi-Fi…",
-            token => MirrorAndroidAsync(wifiEndpoint, token));
+            async token =>
+            {
+                var device = wifiEndpoint is null ? null : await androidControl.FindExistingDeviceAsync(wifiEndpoint, token);
+                if (device is not null)
+                {
+                    androidControl.Remember(device);
+                    await MirrorPairedAndroidAsync(device, token);
+                }
+                else await MirrorAndroidAsync(wifiEndpoint, token);
+            });
     }
 
     private async Task MirrorAndroidAsync(string? endpoint, CancellationToken token)
     {
-        await androidControl.MirrorAsync(endpoint,
-            () => AndroidStatus.Text = "Tela do Android aberta. Use o mouse e o teclado na janela de controle.", token);
+        await androidControl.MirrorAsync(endpoint, AndroidScreenOpened, token);
         AndroidStatus.Text = "Controle do Android encerrado.";
     }
+
+    private async Task MirrorPairedAndroidAsync(string device, CancellationToken token)
+    {
+        await androidControl.MirrorWifiAsync(device,
+            () => AndroidStatus.Text = "Aguardando o Android na rede. A tela vai abrir quando a Depuração por Wi-Fi voltar a responder.",
+            endpoint => AndroidConnectAddress.Text = endpoint,
+            AndroidScreenOpened, token);
+        AndroidStatus.Text = "Controle do Android encerrado.";
+    }
+
+    private void AndroidScreenOpened() =>
+        AndroidStatus.Text = "Tela do Android aberta. Use o mouse e o teclado na janela de controle.";
 
     private async Task UseAndroidAsync(string message, Func<CancellationToken, Task> operation)
     {
@@ -100,7 +129,7 @@ public partial class MainWindow
         if (androidOperation is not null) return;
         using var cancellation = new CancellationTokenSource();
         androidOperation = cancellation;
-        AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = false;
+        AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = AndroidRemembered.IsEnabled = false;
         AndroidStop.IsEnabled = true;
         AndroidStatus.Text = message;
         try
@@ -120,7 +149,7 @@ public partial class MainWindow
         finally
         {
             androidOperation = null;
-            AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = true;
+            AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = AndroidRemembered.IsEnabled = true;
             AndroidStop.IsEnabled = false;
         }
     }

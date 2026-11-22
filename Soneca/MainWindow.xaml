@@ -188,8 +188,11 @@
                                 <StackPanel Margin="0,7,0,0">
                                     <TextBlock Text="No Android 11 ou superior, ative a Depuração sem fio. PC e celular devem estar na mesma rede."
                                                Style="{StaticResource BodyCopy}" Margin="0,0,0,8"/>
-                                    <Button x:Name="AndroidPairQr" Content="Parear com QR Code" Style="{StaticResource Primary}"
-                                            Click="AndroidQr_Click" HorizontalAlignment="Left"/>
+                                    <WrapPanel>
+                                        <Button x:Name="AndroidRemembered" Content="Abrir Android pareado" Style="{StaticResource Primary}"
+                                                Click="AndroidRemembered_Click" Margin="0,0,8,6"/>
+                                        <Button x:Name="AndroidPairQr" Content="Parear com QR Code" Click="AndroidQr_Click" Margin="0,0,0,6"/>
+                                    </WrapPanel>
                                     <StackPanel x:Name="AndroidQrPanel" Visibility="Collapsed" Margin="0,10,0,0">
                                         <TextBlock Text="Na Depuração sem fio do Android, toque em Parear dispositivo com código QR e escaneie esta imagem. O código vale por dois minutos."
                                                    Style="{StaticResource BodyCopy}"/>

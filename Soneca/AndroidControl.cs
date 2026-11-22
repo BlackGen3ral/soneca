@@ -14,8 +14,24 @@ internal sealed class AndroidControl(string folder)
     private const string Package = "scrcpy-win64-v5.0.1";
     private const string Release = "https://github.com/Genymobile/scrcpy/releases/download/v5.0.1/" + Package + ".zip";
     private const string ExpectedHash = "B12A2C4EE8BE317422451FC7DCF8EE20A71B5EA7EF9AD73DDD825A25316227A5";
+    private const string ConnectService = "_adb-tls-connect._tcp";
     private static readonly HttpClient Client = new() { Timeout = TimeSpan.FromMinutes(2), MaxResponseContentBufferSize = 16 * 1024 * 1024 };
     private string PackagePath => Path.Combine(folder, Package);
+    private string SavedDevicePath => Path.Combine(folder, "wifi-device.txt");
+
+    public string? RememberedDevice()
+    {
+        if (!File.Exists(SavedDevicePath)) return null;
+        string name = File.ReadAllText(SavedDevicePath).Trim();
+        return Regex.IsMatch(name, @"^[a-zA-Z0-9._-]{1,128}$") ? name : null;
+    }
+
+    public void Remember(string name)
+    {
+        string temporary = SavedDevicePath + ".new";
+        File.WriteAllText(temporary, name);
+        File.Move(temporary, SavedDevicePath, overwrite: true);
+    }
 
     public async Task PrepareAsync(Action downloading, CancellationToken token)
     {
@@ -79,15 +95,13 @@ internal sealed class AndroidControl(string folder)
         return paired.Groups[1].Value;
     }
 
-    public async Task<string?> PairQrAsync(AndroidPairingQr invite, Action scanned, CancellationToken token)
+    public async Task<string> PairQrAsync(AndroidPairingQr invite, Action scanned, CancellationToken token)
     {
         var pair = await FindServiceAsync("_adb-tls-pairing._tcp", invite.Name, null, TimeSpan.FromMinutes(2), token)
             ?? throw new IOException("O QR Code expirou. Gere outro ou abra o pareamento manual.");
         token.ThrowIfCancellationRequested();
         scanned();
-        string guid = await PairAsync(pair.ToString(), invite.Secret, token);
-        var endpoint = await FindServiceAsync("_adb-tls-connect._tcp", guid, pair.Address, TimeSpan.FromSeconds(9), token);
-        return endpoint?.ToString();
+        return await PairAsync(pair.ToString(), invite.Secret, token);
     }
 
     private async Task<IPEndPoint?> FindServiceAsync(string type, string name, IPAddress? pairedAddress,
@@ -110,35 +124,113 @@ internal sealed class AndroidControl(string folder)
     }
 
     internal static IPEndPoint? FindService(string log, string type, string name, IPAddress? pairedAddress, LanAdapter[] adapters)
+        => LocalServices(log, type, adapters).FirstOrDefault(service =>
+            (service.Name.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+                (pairedAddress is not null && MatchesDevice(service.Name, name))) &&
+            (pairedAddress is null || service.Endpoint.Address.Equals(pairedAddress)))?.Endpoint;
+
+    private static IEnumerable<WifiService> LocalServices(string log, string type, LanAdapter[] adapters)
     {
         foreach (string line in log.Split('\n'))
         {
             string[] fields = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
             if (fields.Length < 3 || fields[1].TrimEnd('.') != type) continue;
-            bool matching = fields[0] == name || (pairedAddress is not null && fields[0].StartsWith(name + "-", StringComparison.Ordinal));
-            if (!matching) continue;
+            if (!Regex.IsMatch(fields[0], @"^[a-zA-Z0-9._-]{1,128}$")) continue;
             foreach (string field in fields.Skip(2))
             {
                 IPEndPoint endpoint;
                 try { endpoint = LocalEndpoint(field, adapters); }
                 catch (ArgumentException) { continue; }
-                if (pairedAddress is null || endpoint.Address.Equals(pairedAddress)) return endpoint;
+                yield return new WifiService(fields[0], endpoint);
             }
         }
-        return null;
     }
 
-    public async Task MirrorAsync(string? endpoint, Action onOpen, CancellationToken token)
+    private sealed record WifiService(string Name, IPEndPoint Endpoint)
     {
+        public string Serial => Name + "." + ConnectService;
+    }
+
+    private static bool MatchesDevice(string advertised, string remembered) =>
+        advertised.Equals(remembered, StringComparison.OrdinalIgnoreCase) ||
+        advertised.StartsWith(remembered + "-", StringComparison.OrdinalIgnoreCase);
+
+    private async Task<WifiService[]> DiscoverWifiAsync(CancellationToken token)
+    {
+        var local = PcLan.Adapters();
+        if (local.Length == 0) return [];
+        string listing = await RunAdbAsync(["mdns", "services"], null, token);
+        return LocalServices(listing, ConnectService, local).Distinct().ToArray();
+    }
+
+    private async Task<HashSet<string>> OnlineDevicesAsync(CancellationToken token)
+    {
+        string listing = await RunAdbAsync(["devices"], null, token);
+        return listing.Split('\n').Select(line => line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+            .Where(fields => fields.Length == 2 && fields[1] == "device")
+            .Select(fields => fields[0]).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public async Task<string?> FindExistingDeviceAsync(string? endpoint, CancellationToken token)
+    {
+        var services = await DiscoverWifiAsync(token);
         if (endpoint is not null)
+            return services.FirstOrDefault(device => device.Endpoint.ToString() == endpoint)?.Name;
+        var online = await OnlineDevicesAsync(token);
+        var matches = services.Where(device => OnlineSerial(device, online) is not null).Select(device => device.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase).Take(2).ToArray();
+        return matches.Length == 1 ? matches[0] : null;
+    }
+
+    private static string? OnlineSerial(WifiService device, HashSet<string> online)
+    {
+        if (online.Contains(device.Serial)) return device.Serial;
+        string address = device.Endpoint.ToString();
+        return online.Contains(address) ? address : null;
+    }
+
+    public async Task MirrorWifiAsync(string name, Action waiting, Action<string> addressChanged,
+        Action onOpen, CancellationToken token)
+    {
+        waiting();
+        while (true)
+        {
+            token.ThrowIfCancellationRequested();
+            try
+            {
+                var matching = (await DiscoverWifiAsync(token)).Where(device => MatchesDevice(device.Name, name)).ToArray();
+                var exact = matching.Where(device => device.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
+                var candidates = exact.Length == 0 ? matching : exact;
+                if (candidates.Length > 0)
+                {
+                    var online = await OnlineDevicesAsync(token);
+                    var active = candidates.Where(device => online.Contains(device.Endpoint.ToString())).ToArray();
+                    var device = candidates.Length == 1 ? candidates[0] : active.Length == 1 ? active[0] : null;
+                    if (device is not null)
+                    {
+                        string endpoint = device.Endpoint.ToString();
+                        addressChanged(endpoint);
+                        await MirrorAsync(endpoint, onOpen, token, OnlineSerial(device, online));
+                        return;
+                    }
+                }
+            }
+            catch (AndroidConnectionException) { waiting(); }
+            await Task.Delay(1800, token);
+        }
+    }
+
+    public async Task MirrorAsync(string? endpoint, Action onOpen, CancellationToken token, string? onlineSerial = null)
+    {
+        if (endpoint is not null && onlineSerial is null)
         {
             var log = await RunAdbAsync(["connect", endpoint], null, token);
             if (!log.Contains("connected to " + endpoint, StringComparison.OrdinalIgnoreCase))
-                throw new IOException("Não consegui conectar ao Android. Confira o pareamento e o endereço da tela principal de Depuração sem fio.");
+                throw new AndroidConnectionException("Não consegui conectar ao Android. Confira o endereço atual na tela de Depuração por Wi-Fi.");
         }
         token.ThrowIfCancellationRequested();
         using var viewer = Start("scrcpy.exe", [
-            endpoint is null ? "--select-usb" : "--serial=" + endpoint,
+            endpoint is null ? "--select-usb" : "--serial=" + (onlineSerial ?? endpoint),
             "--window-title=Artho AI · Tela do Android", "--max-size=1600", "--max-fps=60", "--no-audio"
         ]);
         using var stopping = token.Register(() => Stop(viewer));
@@ -168,8 +260,11 @@ internal sealed class AndroidControl(string folder)
                 throw new IOException("Desbloqueie o Android e aceite a autorização de depuração no celular.");
             if (log.Contains("multiple", StringComparison.OrdinalIgnoreCase))
                 throw new IOException("Há mais de um Android conectado. Deixe conectado apenas o celular que quer controlar.");
-            if (log.Contains("disconnected", StringComparison.OrdinalIgnoreCase))
-                throw new IOException("O celular foi desconectado. Reconecte e tente de novo.");
+            if (viewer.ExitCode == 2 || log.Contains("disconnected", StringComparison.OrdinalIgnoreCase))
+                throw new AndroidConnectionException("O celular foi desconectado. Reconecte e tente de novo.");
+            if (endpoint is not null && (log.Contains("device offline", StringComparison.OrdinalIgnoreCase) ||
+                (log.Contains("ADB device", StringComparison.OrdinalIgnoreCase) && log.Contains("not found", StringComparison.OrdinalIgnoreCase))))
+                throw new AndroidConnectionException("O Android saiu da rede antes de abrir a tela.");
             throw new IOException(endpoint is null
                 ? "Não consegui abrir o Android por USB. Confira o cabo de dados, a Depuração USB e a autorização no celular."
                 : "Não consegui abrir a tela do Android. Confira se a Depuração sem fio continua ativa e tente de novo.");
@@ -198,7 +293,7 @@ internal sealed class AndroidControl(string folder)
             return (await output) + (await errors);
         }
         catch (OperationCanceledException) when (!token.IsCancellationRequested)
-        { throw new IOException("O Android demorou para responder. Confira a rede e a Depuração sem fio no celular."); }
+        { throw new AndroidConnectionException("O Android demorou para responder. Confira a rede e a Depuração sem fio no celular."); }
         finally { Stop(command); }
     }
 
@@ -226,6 +321,8 @@ internal sealed class AndroidControl(string folder)
         catch (Win32Exception) { }
     }
 }
+
+internal sealed class AndroidConnectionException(string message) : IOException(message);
 
 internal sealed record AndroidPairingQr(string Name, string Secret)
 {
