@@ -21,7 +21,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         CleanupPanel.Demo = demo;
         VersionLabel.Text = "v" + Updater.Current.ToString(3);
-        InstalledVersionLabel.Text = "INSTALADO  ·  " + Updater.Current.ToString(3);
+        InstalledVersionLabel.Text = "Versão instalada  " + Updater.Current.ToString(3);
         if (demo) { Title = "Artho AI · demonstração"; UpdateLabel.Text = "Demonstração · operações simuladas"; }
         bool startWithWindows = !demo && StartupRegistration.ResolvePreference(StartupRegistration.Preference);
         StartupCheckBox.IsChecked = startWithWindows;
@@ -59,10 +59,9 @@ public partial class MainWindow : Window
     }
     private void LoadDashboard()
     {
-        TodayLabel.Text = DateTime.Now.ToString("dddd, d 'de' MMMM", BrazilianPortuguese);
         var local = LocalComputerAgent.Read();
         ComputerNameLabel.Text = local.Name;
-        ComputerDetailsLabel.Text = "Este computador · Windows · build " + Environment.OSVersion.Version.Build;
+        ComputerDetailsLabel.Text = "Windows · compilação " + Environment.OSVersion.Version.Build;
         bool hasMemory = local.TotalMemoryGb > 0;
         MemoryValue.Text = hasMemory ? local.MemoryInUseGb.ToString("0.0", BrazilianPortuguese) + " GB" : "Indisponível";
         MemoryTotal.Text = hasMemory ? "de " + local.TotalMemoryGb.ToString("0.0", BrazilianPortuguese) + " GB" : "";
@@ -83,7 +82,8 @@ public partial class MainWindow : Window
     private void Render()
     {
         bool active = target.HasValue && target > DateTimeOffset.Now;
-        StatusLabel.Text = active ? "DESLIGAMENTO AGENDADO" : "NENHUM DESLIGAMENTO AGENDADO";
+        StatusLabel.Text = active ? "Desligamento agendado" : "Nenhum desligamento agendado";
+        HomeEnergySubtitle.Text = active ? $"Agendado para {target!.Value.LocalDateTime:dd/MM 'às' HH:mm}" : "Definir horário ou contagem regressiva";
         if (active)
         {
             CountdownLabel.Text = TimeRules.Countdown(target!.Value, DateTimeOffset.Now);

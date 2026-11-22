@@ -43,7 +43,7 @@ public partial class MainWindow
                 UpdateLabel.Text = $"{update.Size / (1024d * 1024):0.#} MB para baixar. O Artho AI vai reabrir após a instalação.";
                 HomeUpdateText.Text = UpdateHeading.Text;
                 HomeUpdateBanner.Visibility = Visibility.Visible;
-                UpdatesNav.Content = "Atualizações · nova";
+                UpdatesNav.Content = "Atualizações •";
                 UpdateNotes.Visibility = Visibility.Visible;
                 UpdateButton.Content = "Baixar atualização";
             }

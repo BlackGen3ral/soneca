@@ -4,7 +4,7 @@
         <StackPanel Margin="30,25,30,25" MaxWidth="1080">
             <TextBlock Text="Limpeza" Style="{StaticResource PageTitle}"/>
             <TextBlock Text="Analise os arquivos e confira o espaço encontrado antes de limpar." Style="{StaticResource BodyCopy}" Margin="0,5,0,18"/>
-            <Border Style="{StaticResource Panel}" Background="#29392F">
+            <Border Style="{StaticResource Panel}">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="15,0,0,0">
                         <TextBlock Text="ESPAÇO ENCONTRADO" Style="{StaticResource Overline}"/>

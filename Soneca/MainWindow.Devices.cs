@@ -45,23 +45,31 @@ public partial class MainWindow
                 : await Task.Run(() => PcDeviceService.ListAsync());
             if (!IsLoaded) return;
             DeviceCards.Children.Clear();
+            DeviceList.Visibility = Visibility.Visible;
             if (cards.Length == 0)
-                DeviceCards.Children.Add(new TextBlock { Text = "Nenhum PC pareado.", Style = (Style)FindResource("BodyCopy") });
-            foreach (var pc in cards) DeviceCards.Children.Add(DeviceCard(pc));
+                DeviceCards.Children.Add(new TextBlock { Text = "Nenhum PC pareado.", Margin = new Thickness(13), Style = (Style)FindResource("BodyCopy") });
+            for (int index = 0; index < cards.Length; index++)
+                DeviceCards.Children.Add(DeviceRow(cards[index], index < cards.Length - 1));
         }
         catch (Exception ex) { ShowDeviceNotice(ex.Message); }
         finally { devicesRefreshing = false; }
     }
 
-    private Border DeviceCard(PcCard pc)
+    private Border DeviceRow(PcCard pc, bool hasFollowing)
     {
         var body = new StackPanel();
-        var panel = new Border { Style = (Style)FindResource("Panel"), Margin = new Thickness(0, 0, 0, 8), Child = body };
+        var panel = new Border
+        {
+            Padding = new Thickness(15, 12, 15, 11), Child = body,
+            BorderBrush = (System.Windows.Media.Brush)FindResource("Line"),
+            BorderThickness = new Thickness(0, 0, 0, hasFollowing ? 1 : 0)
+        };
         var heading = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
         var state = new TextBlock
         {
             Text = pc.Online ? "Online" : "Sem resposta",
-            Style = (Style)FindResource(pc.Online ? "Overline" : "BodyCopy"),
+            Style = (Style)FindResource("BodyCopy"),
+            Foreground = (System.Windows.Media.Brush)FindResource(pc.Online ? "Accent" : "Muted"),
             Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center
         };
         DockPanel.SetDock(state, Dock.Right);
