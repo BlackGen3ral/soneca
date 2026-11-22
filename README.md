@@ -48,7 +48,7 @@ Em **Conectar por Wi-Fi → Abrir Android pareado**, o Artho AI localiza o celul
 
 No painel **Tela do Android**, **Acender tela** funciona com o celular ligado e conectado. Desbloqueie pelo método configurado no Android. Algumas telas protegidas podem exigir o desbloqueio no aparelho.
 
-Se a rede bloquear a descoberta automática, use **Conexão manual**. Para parear, informe o endereço e os seis dígitos da tela de pareamento do celular. Use **Abrir por Wi-Fi** com o endereço e a porta da tela principal de Depuração sem fio.
+Se a descoberta automática ficar aguardando, use **Conectar com IP e porta** no painel de espera. Informe o endereço da tela principal de **Depuração por Wi-Fi** e clique em **Abrir por Wi-Fi**. Um Android já pareado pode reconectar com esse endereço sem gerar outro código.
 
 ### Controlar o PC pelo Android
 
@@ -96,6 +96,6 @@ O ativo principal é `ArthoAI-Setup.exe`. `ArthoControl-Setup.exe` e `Soneca-Set
 
 ## Desenvolvimento
 
-Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.17.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
+Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.17.1 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
 
 O repositório e os identificadores técnicos ainda se chamam `soneca` para preservar atualizações existentes. A marca visível no produto é Artho AI.

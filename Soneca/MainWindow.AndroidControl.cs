@@ -15,6 +15,7 @@ public partial class MainWindow
     private bool showingAndroid;
     private bool wakingAndroid;
     private string? androidViewError;
+    private bool openAndroidManual;
 
     private async void AndroidUsb_Click(object sender, RoutedEventArgs e) => await OpenAndroidAsync(null);
 
@@ -158,8 +159,10 @@ public partial class MainWindow
     {
         if (AndroidViewerPanel.Visibility != Visibility.Visible || androidView is not { } view || androidScreen.IsAttached(view))
             return;
+        AndroidSurface.Visibility = Visibility.Visible;
         AndroidViewerPanel.UpdateLayout();
         androidScreen.Attach(view);
+        AndroidWaitingPanel.Visibility = Visibility.Collapsed;
         AndroidWake.IsEnabled = !wakingAndroid && view.Serial is not null;
     }
 
@@ -168,6 +171,8 @@ public partial class MainWindow
         androidScreen.Clear();
         androidView = null;
         AndroidWake.IsEnabled = false;
+        AndroidSurface.Visibility = Visibility.Collapsed;
+        AndroidWaitingPanel.Visibility = Visibility.Visible;
     }
 
     private async void AndroidWake_Click(object sender, RoutedEventArgs e)
@@ -203,6 +208,7 @@ public partial class MainWindow
         using var cancellation = new CancellationTokenSource();
         androidOperation = cancellation;
         androidViewError = null;
+        openAndroidManual = false;
         AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = AndroidRemembered.IsEnabled = false;
         AndroidStop.IsEnabled = true;
         AndroidStatus.Text = message;
@@ -228,7 +234,21 @@ public partial class MainWindow
             androidOperation = null;
             AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = AndroidRemembered.IsEnabled = true;
             AndroidStop.IsEnabled = false;
+            if (openAndroidManual && IsLoaded)
+            {
+                AndroidWifiOptions.IsExpanded = AndroidManual.IsExpanded = true;
+                MobilePanel.UpdateLayout();
+                AndroidConnectAddress.BringIntoView();
+                AndroidConnectAddress.Focus();
+                AndroidStatus.Text = "Use o endereço e a porta que aparecem na tela de Depuração por Wi-Fi do Android.";
+            }
         }
+    }
+
+    private void AndroidManualFromViewer_Click(object sender, RoutedEventArgs e)
+    {
+        openAndroidManual = true;
+        androidOperation?.Cancel();
     }
 
     private void AndroidStop_Click(object sender, RoutedEventArgs e) => androidOperation?.Cancel();

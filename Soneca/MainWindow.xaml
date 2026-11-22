@@ -184,7 +184,7 @@
                                 <TextBlock Text="No Android, ative a Depuração USB em Opções do desenvolvedor. Conecte um cabo de dados, clique em Abrir por USB e aceite a autorização no celular. Na primeira vez, o Artho AI baixa o scrcpy oficial."
                                            Style="{StaticResource BodyCopy}" Margin="0,7,0,8"/>
                             </Expander>
-                            <Expander Header="Conectar por Wi-Fi" Margin="0,7,0,0">
+                            <Expander x:Name="AndroidWifiOptions" Header="Conectar por Wi-Fi" Margin="0,7,0,0">
                                 <StackPanel Margin="0,7,0,0">
                                     <TextBlock Text="No Android 11 ou superior, ative a Depuração sem fio. PC e celular devem estar na mesma rede."
                                                Style="{StaticResource BodyCopy}" Margin="0,0,0,8"/>
@@ -273,8 +273,18 @@
                 </DockPanel>
                 <TextBlock x:Name="AndroidViewerStatus" Grid.Row="1" Text="{Binding ElementName=AndroidStatus, Path=Text}"
                            Style="{StaticResource BodyCopy}" Margin="1,0,0,11" AutomationProperties.LiveSetting="Polite"/>
-                <Border Grid.Row="2" Background="#FF080B12" BorderBrush="{StaticResource GlassEdge}" BorderThickness="1">
-                    <ContentControl x:Name="AndroidSurface" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+                <Border Grid.Row="2" Background="{StaticResource Surface}" BorderBrush="{StaticResource GlassEdge}" BorderThickness="1">
+                    <Grid>
+                        <StackPanel x:Name="AndroidWaitingPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    MaxWidth="360" Margin="24">
+                            <TextBlock Text="Aguardando o celular" Style="{StaticResource SectionTitle}" TextAlignment="Center"/>
+                            <TextBlock Text="Por Wi-Fi, mantenha a Depuração por Wi-Fi ativa no Android e os dois aparelhos na mesma rede."
+                                       Style="{StaticResource BodyCopy}" TextAlignment="Center" Margin="0,8,0,12"/>
+                            <Button Content="Conectar com IP e porta" Click="AndroidManualFromViewer_Click" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <ContentControl x:Name="AndroidSurface" Visibility="Collapsed" HorizontalContentAlignment="Stretch"
+                                        VerticalContentAlignment="Stretch"/>
+                    </Grid>
                 </Border>
             </Grid>
 

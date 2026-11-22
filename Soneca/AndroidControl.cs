@@ -189,6 +189,15 @@ internal sealed class AndroidControl(string folder)
         return online.Contains(address) ? address : null;
     }
 
+    internal static string? ConnectedWirelessSerial(string remembered, IEnumerable<string> online)
+    {
+        const string suffix = "." + ConnectService;
+        var matches = online.Where(serial => serial.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) &&
+            MatchesDevice(serial[..^suffix.Length], remembered)).ToArray();
+        return matches.FirstOrDefault(serial => serial.Equals(remembered + suffix, StringComparison.OrdinalIgnoreCase))
+            ?? (matches.Length == 1 ? matches[0] : null);
+    }
+
     public async Task MirrorWifiAsync(string name, Action waiting, Action<string> addressChanged,
         Action<AndroidViewWindow> onOpen, CancellationToken token)
     {
@@ -198,12 +207,17 @@ internal sealed class AndroidControl(string folder)
             token.ThrowIfCancellationRequested();
             try
             {
+                var online = await OnlineDevicesAsync(token);
+                if (ConnectedWirelessSerial(name, online) is { } connected)
+                {
+                    await MirrorAsync(null, onOpen, token, connected);
+                    return;
+                }
                 var matching = (await DiscoverWifiAsync(token)).Where(device => MatchesDevice(device.Name, name)).ToArray();
                 var exact = matching.Where(device => device.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
                 var candidates = exact.Length == 0 ? matching : exact;
                 if (candidates.Length > 0)
                 {
-                    var online = await OnlineDevicesAsync(token);
                     var active = candidates.Where(device => online.Contains(device.Endpoint.ToString())).ToArray();
                     var device = candidates.Length == 1 ? candidates[0] : active.Length == 1 ? active[0] : null;
                     if (device is not null)
@@ -222,6 +236,7 @@ internal sealed class AndroidControl(string folder)
 
     public async Task MirrorAsync(string? endpoint, Action<AndroidViewWindow> onOpen, CancellationToken token, string? onlineSerial = null)
     {
+        bool wireless = endpoint is not null || onlineSerial is not null;
         if (endpoint is not null && onlineSerial is null)
         {
             var log = await RunAdbAsync(["connect", endpoint], null, token);
@@ -270,12 +285,12 @@ internal sealed class AndroidControl(string folder)
                 throw new IOException("Há mais de um Android conectado. Deixe conectado apenas o celular que quer controlar.");
             if (viewer.ExitCode == 2 || log.Contains("disconnected", StringComparison.OrdinalIgnoreCase))
                 throw new AndroidConnectionException("O celular foi desconectado. Reconecte e tente de novo.");
-            if (endpoint is not null && (log.Contains("device offline", StringComparison.OrdinalIgnoreCase) ||
+            if (wireless && (log.Contains("device offline", StringComparison.OrdinalIgnoreCase) ||
                 (log.Contains("ADB device", StringComparison.OrdinalIgnoreCase) && log.Contains("not found", StringComparison.OrdinalIgnoreCase))))
                 throw new AndroidConnectionException("O Android saiu da rede antes de abrir a tela.");
-            throw new IOException(endpoint is null
-                ? "Não consegui abrir o Android por USB. Confira o cabo de dados, a Depuração USB e a autorização no celular."
-                : "Não consegui abrir a tela do Android. Confira se a Depuração sem fio continua ativa e tente de novo.");
+            throw new IOException(wireless
+                ? "Não consegui abrir a tela do Android. Confira se a Depuração sem fio continua ativa e tente de novo."
+                : "Não consegui abrir o Android por USB. Confira o cabo de dados, a Depuração USB e a autorização no celular.");
         }
         finally { Stop(viewer); }
     }
