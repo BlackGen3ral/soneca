@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
@@ -256,7 +257,9 @@ internal sealed class AndroidControl(string folder)
             "--window-borderless", "--window-x=-30000", "--window-y=-30000",
             "--no-window-aspect-ratio-lock", "--render-fit=letterbox"
         ]);
-        using var stopping = token.Register(() => Stop(viewer));
+        IntPtr viewerWindow = IntPtr.Zero;
+        int closeRequested = 0;
+        using var stopping = token.Register(RequestClose);
         var output = viewer.StandardOutput.ReadToEndAsync();
         var errors = viewer.StandardError.ReadToEndAsync();
         try
@@ -267,6 +270,8 @@ internal sealed class AndroidControl(string folder)
                 viewer.Refresh();
                 if (viewer.MainWindowHandle is var handle && handle != IntPtr.Zero)
                 {
+                    Interlocked.Exchange(ref viewerWindow, handle);
+                    token.ThrowIfCancellationRequested();
                     onOpen(new AndroidViewWindow(handle, viewer.Id, serial));
                     await viewer.WaitForExitAsync(token);
                     token.ThrowIfCancellationRequested();
@@ -292,7 +297,22 @@ internal sealed class AndroidControl(string folder)
                 ? "Não consegui abrir a tela do Android. Confira se a Depuração sem fio continua ativa e tente de novo."
                 : "Não consegui abrir o Android por USB. Confira o cabo de dados, a Depuração USB e a autorização no celular.");
         }
-        finally { Stop(viewer); }
+        finally
+        {
+            RequestClose();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            try { await viewer.WaitForExitAsync(timeout.Token); }
+            catch (OperationCanceledException) { Stop(viewer); }
+        }
+
+        void RequestClose()
+        {
+            if (Interlocked.Exchange(ref closeRequested, 1) != 0 || viewer.HasExited) return;
+            IntPtr handle = Volatile.Read(ref viewerWindow);
+            if (handle != IntPtr.Zero && GetWindowThreadProcessId(handle, out var owner) != 0 &&
+                owner == viewer.Id && PostMessageW(handle, 0x0010, IntPtr.Zero, IntPtr.Zero)) return;
+            Stop(viewer);
+        }
     }
 
     public async Task WakeScreenAsync(string serial, CancellationToken token)
@@ -351,6 +371,10 @@ internal sealed class AndroidControl(string folder)
         catch (InvalidOperationException) { }
         catch (Win32Exception) { }
     }
+
+    [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+    [DllImport("user32.dll", ExactSpelling = true)]
+    private static extern bool PostMessageW(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
 }
 
 internal sealed class AndroidConnectionException(string message) : IOException(message);

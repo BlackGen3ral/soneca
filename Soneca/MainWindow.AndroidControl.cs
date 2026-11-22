@@ -135,7 +135,28 @@ public partial class MainWindow
     private void EnterAndroidViewer()
     {
         showingAndroid = true;
+        AndroidResume.Visibility = Visibility.Collapsed;
         ShowMobilePage(MobileNav.IsChecked == true);
+        if (androidView is not null) ShowAndroidConnectedStatus();
+    }
+
+    private void AndroidBack_Click(object sender, RoutedEventArgs e)
+    {
+        if (androidOperation is null)
+        {
+            ExitAndroidViewer();
+            return;
+        }
+        showingAndroid = false;
+        AndroidResume.Visibility = Visibility.Visible;
+        ShowMobilePage(MobileNav.IsChecked == true);
+        if (androidView is not null) ShowAndroidConnectedStatus();
+        AndroidResume.Focus();
+    }
+
+    private void AndroidResume_Click(object sender, RoutedEventArgs e)
+    {
+        if (androidOperation?.IsCancellationRequested == false) EnterAndroidViewer();
     }
 
     private void ShowMobilePage(bool visible)
@@ -155,8 +176,13 @@ public partial class MainWindow
         androidOperation?.Token.ThrowIfCancellationRequested();
         androidView = view;
         AttachVisibleAndroidScreen();
-        AndroidStatus.Text = "Android conectado. Clique na tela abaixo para usar o mouse e o teclado.";
+        ShowAndroidConnectedStatus();
     }
+
+    private void ShowAndroidConnectedStatus() =>
+        AndroidStatus.Text = showingAndroid
+            ? "Android conectado. Clique na tela abaixo para usar o mouse e o teclado."
+            : "Android conectado. Clique em Mostrar tela para retomar o controle.";
 
     private void AttachVisibleAndroidScreen()
     {
@@ -182,6 +208,7 @@ public partial class MainWindow
     {
         ClearAndroidScreen();
         showingAndroid = false;
+        AndroidResume.Visibility = Visibility.Collapsed;
         if (IsLoaded) ShowMobilePage(MobileNav.IsChecked == true);
     }
 

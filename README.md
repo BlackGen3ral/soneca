@@ -44,7 +44,9 @@ Na aba **Celular**, use **Controlar Android pelo PC → Abrir por USB**. Ative a
 
 Para usar Wi-Fi no Android 11 ou superior, ative a **Depuração sem fio** com os dois aparelhos na mesma rede. No PC, abra **Conectar por Wi-Fi → Parear com QR Code**. No celular, toque em **Parear dispositivo com código QR** na tela de Depuração sem fio e escaneie o código. A tela abre quando o PC encontra o celular pareado na rede.
 
-Em **Conectar por Wi-Fi → Abrir Android pareado**, o Artho AI localiza o celular salvo e retoma o controle se a rede cair. O endereço e a porta são atualizados pela descoberta na rede. A Depuração por Wi-Fi precisa estar ativa no Android. Use **Voltar e encerrar** para terminar a sessão e cancelar as tentativas de reconexão.
+Em **Conectar por Wi-Fi → Abrir Android pareado**, o Artho AI localiza o celular salvo e retoma o controle se a rede cair. O endereço e a porta são atualizados pela descoberta na rede. A Depuração por Wi-Fi precisa estar ativa no Android.
+
+**Voltar** abre os controles da aba Celular e mantém o espelhamento em segundo plano. Use **Mostrar tela** para retomar. **Encerrar controle** fecha o espelhamento e cancela as tentativas de reconexão. A Depuração por Wi-Fi é gerenciada pelo Android.
 
 No painel **Tela do Android**, **Acender tela** funciona com o celular ligado e conectado. Desbloqueie pelo método configurado no Android. Algumas telas protegidas podem exigir o desbloqueio no aparelho.
 
@@ -96,6 +98,6 @@ O ativo principal é `ArthoAI-Setup.exe`. `ArthoControl-Setup.exe` e `Soneca-Set
 
 ## Desenvolvimento
 
-Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.17.2 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
+Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.17.3 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
 
 O repositório e os identificadores técnicos ainda se chamam `soneca` para preservar atualizações existentes. A marca visível no produto é Artho AI.
