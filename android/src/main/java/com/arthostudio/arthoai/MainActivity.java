@@ -81,6 +81,7 @@ public final class MainActivity extends Activity {
     private ProgressBar memoryBar;
     private Button primary;
     private Button connectionOptions;
+    private Button remoteDesktop;
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -322,6 +323,10 @@ public final class MainActivity extends Activity {
             else requestStatus();
         });
         panel.addView(primary, spaced(12));
+        remoteDesktop = button("Tela remota", false);
+        remoteDesktop.setVisibility(View.GONE);
+        remoteDesktop.setOnClickListener(view -> startActivity(new Intent(this, RemoteDesktopActivity.class)));
+        panel.addView(remoteDesktop, spaced(6));
         connectionOptions = button("Trocar conexão", false);
         connectionOptions.setOnClickListener(view -> showPairing());
         connectionOptions.setVisibility(View.GONE);
@@ -592,6 +597,7 @@ public final class MainActivity extends Activity {
         primary.setEnabled(true);
         connectionOptions.setEnabled(true);
         connectionOptions.setVisibility(pairing == null ? View.GONE : View.VISIBLE);
+        remoteDesktop.setVisibility(online && pairing != null && pairing.durable ? View.VISIBLE : View.GONE);
         if (selectedTab == 1) updateDevices();
     }
 

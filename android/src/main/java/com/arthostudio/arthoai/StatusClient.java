@@ -10,6 +10,7 @@ import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import org.json.JSONObject;
@@ -29,7 +30,7 @@ final class StatusClient {
         request(invitation, "POST", "/v1/pair/complete", credential.token);
     }
 
-    private static JSONObject request(Pairing pairing, String method, String path, String proposal) throws Exception {
+    private static SSLSocketFactory createFactory(Pairing pairing) throws Exception {
         SSLContext tls = SSLContext.getInstance("TLS");
         tls.init(null, new TrustManager[] {new X509TrustManager() {
             @Override public void checkServerTrusted(X509Certificate[] chain, String auth)
@@ -49,14 +50,24 @@ final class StatusClient {
                     throws CertificateException { throw new CertificateException("Cliente não suportado"); }
             @Override public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
         }}, null);
+        return tls.getSocketFactory();
+    }
+
+    static HttpsURLConnection open(Pairing pairing, String method, String path) throws Exception {
         URL url = new URL("https://" + pairing.host + ":47834" + path);
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection(java.net.Proxy.NO_PROXY);
-        connection.setSSLSocketFactory(tls.getSocketFactory());
+        connection.setSSLSocketFactory(pairing.factory());
         connection.setInstanceFollowRedirects(false);
+        connection.setUseCaches(false);
         connection.setConnectTimeout(4500);
         connection.setReadTimeout(12000);
         connection.setRequestMethod(method);
         connection.setRequestProperty("Authorization", "Bearer " + pairing.token);
+        return connection;
+    }
+
+    private static JSONObject request(Pairing pairing, String method, String path, String proposal) throws Exception {
+        HttpsURLConnection connection = open(pairing, method, path);
         if (proposal != null) connection.setRequestProperty("X-Artho-Pair-Key", proposal);
         try {
             if ("POST".equals(method)) {
@@ -94,12 +105,18 @@ final class StatusClient {
         final byte[] fingerprint;
         final String token;
         final boolean durable;
+        private SSLSocketFactory ssl;
 
         Pairing(String host, byte[] fingerprint, String token, boolean durable) {
             this.host = host;
             this.fingerprint = fingerprint;
             this.token = token;
             this.durable = durable;
+        }
+
+        synchronized SSLSocketFactory factory() throws Exception {
+            if (ssl == null) ssl = createFactory(this);
+            return ssl;
         }
 
         Pairing generateCredential() {
