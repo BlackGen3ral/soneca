@@ -40,21 +40,21 @@ O Android guarda o endereço do equipamento para que **Ligar agora** e **Program
 
 ### Controlar o Android pelo PC
 
-Na aba **Celular**, use **Controlar Android pelo PC → Abrir por USB**. Ative a Depuração USB nas Opções do desenvolvedor do Android, conecte um cabo de dados e aceite a autorização no telefone. O Artho AI baixa e verifica a distribuição oficial do scrcpy no primeiro uso. A tela abre no painel **Tela do Android**. Clique na imagem para usar o mouse e o teclado.
+Na aba **Celular → Controlar Android**, use **USB e conexão manual → Abrir por USB** para conexão com cabo. Ative a Depuração USB nas Opções do desenvolvedor do Android, conecte um cabo de dados e aceite a autorização no telefone. O Artho AI baixa e verifica a distribuição oficial do scrcpy no primeiro uso. A tela abre em uma moldura de celular. Clique na imagem para usar o mouse e o teclado.
 
-Para usar Wi-Fi no Android 11 ou superior, ative a **Depuração sem fio** com os dois aparelhos na mesma rede. No PC, abra **Conectar por Wi-Fi → Parear com QR Code**. No celular, toque em **Parear dispositivo com código QR** na tela de Depuração sem fio e escaneie o código. A tela abre quando o PC encontra o celular pareado na rede.
+Para usar Wi-Fi no Android 11 ou superior, ative a **Depuração sem fio** com os dois aparelhos na mesma rede. No PC, abra **Controlar Android → Parear com QR Code**. No celular, toque em **Parear dispositivo com código QR** na tela de Depuração sem fio e escaneie o código. A tela abre quando o PC encontra o celular pareado na rede.
 
-Em **Conectar por Wi-Fi → Abrir Android pareado**, o Artho AI localiza o celular salvo e retoma o controle se a rede cair. O endereço e a porta são atualizados pela descoberta na rede. A Depuração por Wi-Fi precisa estar ativa no Android.
+Em **Abrir Android pareado**, o Artho AI localiza o celular salvo e retoma o controle se a rede cair. O endereço e a porta são atualizados pela descoberta na rede. A Depuração por Wi-Fi precisa estar ativa no Android.
 
 **Voltar** abre os controles da aba Celular e mantém o espelhamento em segundo plano. Use **Mostrar tela** para retomar. **Encerrar controle** fecha o espelhamento e cancela as tentativas de reconexão. A Depuração por Wi-Fi é gerenciada pelo Android.
 
-No painel **Tela do Android**, **Acender tela** funciona com o celular ligado e conectado. Desbloqueie pelo método configurado no Android. Algumas telas protegidas podem exigir o desbloqueio no aparelho.
+No painel **Tela do Android**, use **Acender tela** ou **Desligar tela** com o celular ligado e conectado. A tela pode bloquear ao desligar, conforme a configuração do Android. **Reiniciar celular** pede confirmação e interrompe o espelhamento durante o reinício. Desbloqueie pelo método configurado no Android.
 
 Se a descoberta automática ficar aguardando, use **Conectar com IP e porta** no painel de espera. Informe o endereço da tela principal de **Depuração por Wi-Fi** e clique em **Abrir por Wi-Fi**. Um Android já pareado pode reconectar com esse endereço sem gerar outro código.
 
 ### Controlar o PC pelo Android
 
-Com o pareamento salvo, no Windows abra **Celular → Controlar PC pelo Android → Liberar acesso à tela**. No Android, abra **Tela remota**. Incline o joystick para mover o cursor ou toque e arraste diretamente na imagem. O painel oferece cliques, rolagem e teclado. Ao girar o celular, o painel fica ao lado da imagem.
+Com o pareamento salvo, no Windows abra **Celular → Controlar PC → Liberar acesso à tela**. No Android, abra **Tela remota**. Incline o joystick para mover o cursor ou toque e arraste diretamente na imagem. O painel oferece cliques, rolagem e teclado. Ao girar o celular, o painel fica ao lado da imagem.
 
 A sessão mostra o monitor principal na rede local. A liberação fica válida enquanto o Artho AI estiver aberto, até usar **Encerrar acesso à tela** ou desvincular o celular. Ao bloquear o Windows, o acesso à imagem e aos controles para. Depois de desbloquear, reabra **Tela remota** no celular. Telas seguras do Windows e janelas que exigem privilégios elevados não podem ser controladas pelo celular.
 
@@ -98,6 +98,6 @@ O ativo principal é `ArthoAI-Setup.exe`. `ArthoControl-Setup.exe` e `Soneca-Set
 
 ## Desenvolvimento
 
-Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.17.3 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
+Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.18.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
 
 O repositório e os identificadores técnicos ainda se chamam `soneca` para preservar atualizações existentes. A marca visível no produto é Artho AI.

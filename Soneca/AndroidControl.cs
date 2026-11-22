@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
@@ -200,7 +201,7 @@ internal sealed class AndroidControl(string folder)
     }
 
     public async Task MirrorWifiAsync(string name, Action waiting, Action<string> addressChanged,
-        Action<AndroidViewWindow> onOpen, CancellationToken token)
+        Action<AndroidViewWindow> onOpen, CancellationToken token, Action<int, int>? onFrameSize = null)
     {
         waiting();
         while (true)
@@ -211,7 +212,7 @@ internal sealed class AndroidControl(string folder)
                 var online = await OnlineDevicesAsync(token);
                 if (ConnectedWirelessSerial(name, online) is { } connected)
                 {
-                    await MirrorAsync(null, onOpen, token, connected);
+                    await MirrorAsync(null, onOpen, token, connected, onFrameSize);
                     return;
                 }
                 var matching = (await DiscoverWifiAsync(token)).Where(device => MatchesDevice(device.Name, name)).ToArray();
@@ -225,7 +226,7 @@ internal sealed class AndroidControl(string folder)
                     {
                         string endpoint = device.Endpoint.ToString();
                         addressChanged(endpoint);
-                        await MirrorAsync(endpoint, onOpen, token, OnlineSerial(device, online));
+                        await MirrorAsync(endpoint, onOpen, token, OnlineSerial(device, online), onFrameSize);
                         return;
                     }
                 }
@@ -235,7 +236,8 @@ internal sealed class AndroidControl(string folder)
         }
     }
 
-    public async Task MirrorAsync(string? endpoint, Action<AndroidViewWindow> onOpen, CancellationToken token, string? onlineSerial = null)
+    public async Task MirrorAsync(string? endpoint, Action<AndroidViewWindow> onOpen, CancellationToken token, string? onlineSerial = null,
+        Action<int, int>? onFrameSize = null)
     {
         bool wireless = endpoint is not null || onlineSerial is not null;
         if (endpoint is not null && onlineSerial is null)
@@ -259,9 +261,11 @@ internal sealed class AndroidControl(string folder)
         ]);
         IntPtr viewerWindow = IntPtr.Zero;
         int closeRequested = 0;
+        bool frameSizeReported = false;
         using var stopping = token.Register(RequestClose);
-        var output = viewer.StandardOutput.ReadToEndAsync();
-        var errors = viewer.StandardError.ReadToEndAsync();
+        using var stopReading = new CancellationTokenSource();
+        var output = ReadViewerLogAsync(viewer.StandardOutput, ReportFrameSize, stopReading.Token);
+        var errors = ReadViewerLogAsync(viewer.StandardError, ReportFrameSize, stopReading.Token);
         try
         {
             DateTimeOffset deadline = DateTimeOffset.UtcNow.AddSeconds(30);
@@ -272,6 +276,8 @@ internal sealed class AndroidControl(string folder)
                 {
                     Interlocked.Exchange(ref viewerWindow, handle);
                     token.ThrowIfCancellationRequested();
+                    if (!frameSizeReported && GetClientRect(handle, out var extent))
+                        ReportFrameSize(extent.Right, extent.Bottom);
                     onOpen(new AndroidViewWindow(handle, viewer.Id, serial));
                     await viewer.WaitForExitAsync(token);
                     token.ThrowIfCancellationRequested();
@@ -303,6 +309,16 @@ internal sealed class AndroidControl(string folder)
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             try { await viewer.WaitForExitAsync(timeout.Token); }
             catch (OperationCanceledException) { Stop(viewer); }
+            stopReading.Cancel();
+            try { await Task.WhenAll(output, errors); }
+            catch (OperationCanceledException) when (stopReading.IsCancellationRequested) { }
+        }
+
+        void ReportFrameSize(int width, int height)
+        {
+            if (width < 2 || height < 2 || token.IsCancellationRequested) return;
+            frameSizeReported = true;
+            onFrameSize?.Invoke(width, height);
         }
 
         void RequestClose()
@@ -315,12 +331,33 @@ internal sealed class AndroidControl(string folder)
         }
     }
 
-    public async Task WakeScreenAsync(string serial, CancellationToken token)
+    private static async Task<string> ReadViewerLogAsync(StreamReader stream, Action<int, int> frameSize, CancellationToken token)
     {
-        await RunAdbAsync(["-s", serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP"], null, token, requireSuccess: true);
+        var log = new StringBuilder();
+        while (await stream.ReadLineAsync(token) is { } line)
+        {
+            log.AppendLine(line);
+            if (log.Length > 8192) log.Remove(0, log.Length - 8192);
+            var match = Regex.Match(line, @"\bTexture:\s*(\d{1,5})x(\d{1,5})\b");
+            if (match.Success && int.TryParse(match.Groups[1].Value, out int width) &&
+                int.TryParse(match.Groups[2].Value, out int height)) frameSize(width, height);
+        }
+        return log.ToString();
     }
 
-    private async Task<string> RunAdbAsync(string[] args, string? input, CancellationToken token, bool requireSuccess = false)
+    public Task WakeScreenAsync(string serial, CancellationToken token) =>
+        RunAdbAsync(["-s", serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP"], null, token,
+            failure: "Não consegui acender a tela. Confira se o Android ainda está conectado.");
+
+    public Task SleepScreenAsync(string serial, CancellationToken token) =>
+        RunAdbAsync(["-s", serial, "shell", "input", "keyevent", "KEYCODE_SLEEP"], null, token,
+            failure: "Não consegui desligar a tela. Confira se o Android ainda está conectado.");
+
+    public Task RebootAsync(string serial, CancellationToken token) =>
+        RunAdbAsync(["-s", serial, "reboot"], null, token,
+            failure: "Não consegui reiniciar o celular. Confira se o Android ainda está conectado.");
+
+    private async Task<string> RunAdbAsync(string[] args, string? input, CancellationToken token, string? failure = null)
     {
         token.ThrowIfCancellationRequested();
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -339,8 +376,7 @@ internal sealed class AndroidControl(string folder)
             await command.WaitForExitAsync(timeout.Token);
             timeout.Token.ThrowIfCancellationRequested();
             string log = (await output) + (await errors);
-            if (requireSuccess && command.ExitCode != 0)
-                throw new AndroidConnectionException("Não consegui acender a tela. Confira se o Android ainda está conectado.");
+            if (failure is not null && command.ExitCode != 0) throw new AndroidConnectionException(failure);
             return log;
         }
         catch (OperationCanceledException) when (!token.IsCancellationRequested)
@@ -373,8 +409,12 @@ internal sealed class AndroidControl(string folder)
     }
 
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+    [DllImport("user32.dll")] private static extern bool GetClientRect(IntPtr window, out NativeRect rect);
     [DllImport("user32.dll", ExactSpelling = true)]
     private static extern bool PostMessageW(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect { public int Left, Top, Right, Bottom; }
 }
 
 internal sealed class AndroidConnectionException(string message) : IOException(message);

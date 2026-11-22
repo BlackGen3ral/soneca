@@ -14,9 +14,17 @@ public partial class MainWindow
     private readonly AndroidScreenHost androidScreen = new();
     private AndroidViewWindow? androidView;
     private bool showingAndroid;
-    private bool wakingAndroid;
+    private bool androidActionBusy;
     private string? androidViewError;
     private bool openAndroidManual;
+    private double androidAspect = 9d / 20;
+
+    private void MobileDirection_Click(object sender, RoutedEventArgs e)
+    {
+        bool controlAndroid = AndroidMode.IsChecked == true;
+        AndroidModePanel.Visibility = controlAndroid ? Visibility.Visible : Visibility.Collapsed;
+        PcMobileModePanel.Visibility = controlAndroid ? Visibility.Collapsed : Visibility.Visible;
+    }
 
     private async void AndroidUsb_Click(object sender, RoutedEventArgs e) => await OpenAndroidAsync(null);
 
@@ -114,7 +122,7 @@ public partial class MainWindow
 
     private async Task MirrorAndroidAsync(string? endpoint, CancellationToken token)
     {
-        await androidControl.MirrorAsync(endpoint, AndroidScreenOpened, token);
+        await androidControl.MirrorAsync(endpoint, AndroidScreenOpened, token, onFrameSize: AndroidFrameSizeChanged);
         AndroidStatus.Text = "Controle do Android encerrado.";
     }
 
@@ -128,13 +136,15 @@ public partial class MainWindow
                 AndroidStatus.Text = "Aguardando o Android na rede. A tela vai abrir quando a Depuração por Wi-Fi voltar a responder.";
             },
             endpoint => AndroidConnectAddress.Text = endpoint,
-            AndroidScreenOpened, token);
+            AndroidScreenOpened, token, AndroidFrameSizeChanged);
         AndroidStatus.Text = "Controle do Android encerrado.";
     }
 
     private void EnterAndroidViewer()
     {
         showingAndroid = true;
+        AndroidMode.IsChecked = true;
+        MobileDirection_Click(this, new RoutedEventArgs());
         AndroidResume.Visibility = Visibility.Collapsed;
         ShowMobilePage(MobileNav.IsChecked == true);
         if (androidView is not null) ShowAndroidConnectedStatus();
@@ -149,6 +159,7 @@ public partial class MainWindow
         }
         showingAndroid = false;
         AndroidResume.Visibility = Visibility.Visible;
+        AndroidRemembered.Visibility = AndroidPairQr.Visibility = Visibility.Collapsed;
         ShowMobilePage(MobileNav.IsChecked == true);
         if (androidView is not null) ShowAndroidConnectedStatus();
         AndroidResume.Focus();
@@ -188,19 +199,38 @@ public partial class MainWindow
     {
         if (AndroidViewerPanel.Visibility != Visibility.Visible || androidView is not { } view || androidScreen.IsAttached(view))
             return;
-        AndroidSurface.Visibility = Visibility.Visible;
+        AndroidPhoneFrame.Visibility = Visibility.Visible;
+        FitAndroidPhone();
         AndroidViewerPanel.UpdateLayout();
         androidScreen.Attach(view);
         AndroidWaitingPanel.Visibility = Visibility.Collapsed;
-        AndroidWake.IsEnabled = !wakingAndroid && view.Serial is not null;
+        UpdateAndroidPowerButtons();
+    }
+
+    private void AndroidStage_SizeChanged(object sender, SizeChangedEventArgs e) => FitAndroidPhone();
+
+    private void AndroidFrameSizeChanged(int width, int height)
+    {
+        androidAspect = Math.Clamp((double)width / height, 0.3, 3.5);
+        FitAndroidPhone();
+    }
+
+    private void FitAndroidPhone()
+    {
+        if (AndroidPhoneFrame is null || AndroidStage is null ||
+            AndroidStage.ActualWidth < 45 || AndroidStage.ActualHeight < 65) return;
+        double width = AndroidStage.ActualWidth - 44;
+        double height = Math.Min(AndroidStage.ActualHeight - 56, width / androidAspect);
+        AndroidPhoneFrame.Width = Math.Floor(height * androidAspect) + 20;
+        AndroidPhoneFrame.Height = Math.Floor(height) + 32;
     }
 
     private void ClearAndroidScreen()
     {
         androidScreen.Clear();
         androidView = null;
-        AndroidWake.IsEnabled = false;
-        AndroidSurface.Visibility = Visibility.Collapsed;
+        UpdateAndroidPowerButtons();
+        AndroidPhoneFrame.Visibility = Visibility.Collapsed;
         AndroidWaitingPanel.Visibility = Visibility.Visible;
     }
 
@@ -209,6 +239,7 @@ public partial class MainWindow
         ClearAndroidScreen();
         showingAndroid = false;
         AndroidResume.Visibility = Visibility.Collapsed;
+        AndroidRemembered.Visibility = AndroidPairQr.Visibility = Visibility.Visible;
         if (IsLoaded) ShowMobilePage(MobileNav.IsChecked == true);
     }
 
@@ -217,25 +248,46 @@ public partial class MainWindow
         if (androidOperation is { } operation) androidCancellation ??= operation.CancelAsync();
     }
 
-    private async void AndroidWake_Click(object sender, RoutedEventArgs e)
+    private void UpdateAndroidPowerButtons() =>
+        AndroidWake.IsEnabled = AndroidSleep.IsEnabled = AndroidReboot.IsEnabled =
+            !androidActionBusy && androidView?.Serial is not null;
+
+    private async void AndroidWake_Click(object sender, RoutedEventArgs e) =>
+        await RunAndroidActionAsync(androidControl.WakeScreenAsync, "Comando para acender a tela enviado ao Android.");
+
+    private async void AndroidSleep_Click(object sender, RoutedEventArgs e) =>
+        await RunAndroidActionAsync(androidControl.SleepScreenAsync, "Comando para desligar a tela enviado ao Android.");
+
+    private async void AndroidReboot_Click(object sender, RoutedEventArgs e)
     {
-        if (wakingAndroid || androidView is not { Serial: { } serial } active || androidOperation is null) return;
-        wakingAndroid = true;
-        AndroidWake.IsEnabled = false;
+        var device = androidView;
+        if (device?.Serial is null || androidActionBusy) return;
+        var result = MessageBox.Show(this, "O celular será reiniciado e a tela remota será interrompida. Quer continuar?",
+            "Reiniciar celular", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+        if (result == MessageBoxResult.Yes && androidView == device)
+            await RunAndroidActionAsync(androidControl.RebootAsync, "Reinício solicitado. Aguarde o Android voltar.");
+    }
+
+    private async Task RunAndroidActionAsync(Func<string, CancellationToken, Task> action, string completed)
+    {
+        if (androidActionBusy || androidView is not { Serial: { } serial } active || androidOperation is null) return;
+        androidActionBusy = true;
+        UpdateAndroidPowerButtons();
         try
         {
-            await androidControl.WakeScreenAsync(serial, androidOperation.Token);
-            if (androidView == active) AndroidStatus.Text = "Comando para acender a tela enviado ao Android.";
+            await action(serial, androidOperation.Token);
+            if (androidView == active) AndroidStatus.Text = completed;
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) when (ex is IOException or Win32Exception)
         {
-            if (androidView == active) AndroidStatus.Text = "Não consegui acender a tela. Confira a conexão com o Android.";
+            if (androidView == active)
+                AndroidStatus.Text = ex is IOException ? ex.Message : "O Windows não conseguiu enviar o comando ao Android.";
         }
         finally
         {
-            wakingAndroid = false;
-            AndroidWake.IsEnabled = androidView?.Serial is not null;
+            androidActionBusy = false;
+            UpdateAndroidPowerButtons();
         }
     }
 
@@ -254,6 +306,7 @@ public partial class MainWindow
         openAndroidManual = false;
         AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = AndroidRemembered.IsEnabled = false;
         AndroidStop.IsEnabled = true;
+        AndroidStop.Visibility = Visibility.Visible;
         AndroidStatus.Text = message;
         try
         {
@@ -277,6 +330,7 @@ public partial class MainWindow
             androidOperation = null;
             AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = AndroidRemembered.IsEnabled = true;
             AndroidStop.IsEnabled = false;
+            AndroidStop.Visibility = Visibility.Collapsed;
             if (openAndroidManual && IsLoaded)
             {
                 AndroidWifiOptions.IsExpanded = AndroidManual.IsExpanded = true;

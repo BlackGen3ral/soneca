@@ -1,4 +1,4 @@
-param([string]$Version = '1.17.3', [string]$Dotnet = 'dotnet', [string]$InnoCompiler = '')
+param([string]$Version = '1.18.0', [string]$Dotnet = 'dotnet', [string]$InnoCompiler = '')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 Push-Location $root
