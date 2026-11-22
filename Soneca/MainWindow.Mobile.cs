@@ -10,75 +10,145 @@ namespace Soneca;
 public partial class MainWindow
 {
     private readonly DispatcherTimer mobileTimer = new();
+    private readonly DispatcherTimer mobileReconnectTimer = new() { Interval = TimeSpan.FromSeconds(12) };
     private MobilePairingServer? mobileSession;
+    private bool mobileBusy;
+    private bool mobileRemembered;
 
     private void Mobile_Click(object sender, RoutedEventArgs e)
     {
         Navigate(4);
-        if (mobileSession is not null || !MobileNetwork.IsEnabled) return;
-        var previous = MobileNetwork.SelectedItem as IPAddress;
-        var addresses = MobilePairingServer.Addresses();
-        MobileNetwork.ItemsSource = addresses;
-        MobileNetwork.SelectedItem = previous is not null && addresses.Contains(previous) ? previous : addresses.FirstOrDefault();
-        MobileStart.IsEnabled = addresses.Length > 0;
-        if (addresses.Length == 0) MobileStatus.Text = "Conecte este PC à rede local e reabra a aba Celular.";
+        RefreshMobileAddresses();
+    }
+
+    private void RefreshMobileAddresses()
+    {
+        if (mobileSession is null && !mobileBusy && !mobileRemembered)
+        {
+            var previous = MobileNetwork.SelectedItem as IPAddress;
+            var addresses = MobilePairingServer.Addresses();
+            MobileNetwork.ItemsSource = addresses;
+            MobileNetwork.SelectedItem = previous is not null && addresses.Contains(previous) ? previous : addresses.FirstOrDefault();
+            if (addresses.Length == 0) MobileStatus.Text = "Conecte este PC à rede local.";
+        }
+        UpdateMobileButtons();
+    }
+
+    private async Task RestoreMobileAsync()
+    {
+        if (mobileBusy || mobileSession is not null) return;
+        mobileBusy = true;
+        UpdateMobileButtons();
+        try
+        {
+            var profile = await Task.Run(() => PcStore.Read().Mobile);
+            mobileRemembered = profile is not null;
+            if (profile is null) return;
+            mobileReconnectTimer.Stop();
+            MobileStatus.Text = "Reabrindo o pareamento salvo…";
+            MobileAllowDevices.IsChecked = profile.AllowDevices;
+            MobileAllowPower.IsChecked = profile.AllowPower;
+            if (!IPAddress.TryParse(profile.Address, out var address)) throw new IOException("Endereço salvo inválido.");
+            MobileNetwork.ItemsSource = new[] { address };
+            MobileNetwork.SelectedItem = address;
+            await StartMobileAsync(address, profile);
+            if (mobileSession is not null)
+                MobileStatus.Text = "Pareamento salvo. O celular pode se conectar na rede local.";
+        }
+        catch (Exception)
+        {
+            MobileStatus.Text = "O pareamento salvo está indisponível. Confira a rede do PC e toque em Reconectar. Se o endereço mudou, gere outro QR Code.";
+            if (mobileRemembered && IsLoaded) mobileReconnectTimer.Start();
+        }
+        finally
+        {
+            mobileBusy = false;
+            if (MobilePanel.IsVisible) RefreshMobileAddresses();
+            else UpdateMobileButtons();
+        }
     }
 
     private async void MobileStart_Click(object sender, RoutedEventArgs e)
     {
-        if (mobileSession is not null || MobileNetwork.SelectedItem is not IPAddress address) return;
-        MobileStart.IsEnabled = false;
-        MobileNetwork.IsEnabled = false;
-        bool allowDevices = MobileAllowDevices.IsChecked == true;
-        bool allowPower = MobileAllowPower.IsChecked == true;
-        MobileAllowDevices.IsEnabled = false;
-        MobileAllowPower.IsEnabled = false;
-        if (demo)
-        {
-            using var sample = QRCodeGenerator.GenerateQrCode("Artho AI · Demonstração", QRCodeGenerator.ECCLevel.M);
-            ShowQr(new PngByteQRCode(sample).GetGraphic(8));
-            MobileStatus.Text = "Demonstração do QR Code. A conexão é iniciada no aplicativo instalado.";
-            return;
-        }
-
-        MobileStatus.Text = "Preparando a conexão…";
+        if (mobileBusy || mobileSession is not null) return;
+        if (mobileRemembered) { await RestoreMobileAsync(); return; }
+        if (MobileNetwork.SelectedItem is not IPAddress address) return;
+        mobileBusy = true;
+        UpdateMobileButtons();
         try
         {
-            var session = await Task.Run(() => MobilePairingServer.StartAsync(address, () =>
-                Dispatcher.BeginInvoke(() =>
-                {
-                    if (mobileSession is null) return;
-                    mobileTimer.Stop();
-                    HideQr();
-                    MobileStatus.Text = "Celular pareado. A conexão local está disponível enquanto o Artho AI estiver aberto.";
-                }), allowDevices, allowPower, () => Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    try { target = schedule.Read(); Render(); }
-                    catch (Exception ex) { ErrorLabel.Text = ex.Message; }
-                }))));
-            if (!IsLoaded)
+            if (demo)
             {
-                await session.DisposeAsync();
+                ShowQr("Artho AI · Demonstração");
+                MobileStatus.Text = "QR Code de demonstração.";
                 return;
             }
-            mobileSession = session;
-            using var data = QRCodeGenerator.GenerateQrCode(session.Payload, QRCodeGenerator.ECCLevel.M);
-            ShowQr(new PngByteQRCode(data).GetGraphic(8));
-            MobileStatus.Text = "No Android, toque em Conectar ao PC e escaneie este QR Code. Ele expira em 3 minutos.";
-            mobileTimer.Interval = session.Expires - DateTimeOffset.UtcNow;
+            MobileStatus.Text = "Preparando o pareamento…";
+            await StartMobileAsync(address, null);
+            if (mobileSession is not { Payload: { } invitation } session) return;
+            ShowQr(invitation);
+            MobileStatus.Text = "Escaneie o QR Code no Artho AI para Android. Ele vale por 3 minutos e só pode ser usado uma vez.";
+            mobileTimer.Interval = TimeSpan.FromSeconds(Math.Max(1, (session.Expires - DateTimeOffset.UtcNow).TotalSeconds));
             mobileTimer.Tick += MobileExpired;
             mobileTimer.Start();
         }
         catch (Exception)
         {
             await StopMobileAsync();
-            MobileStatus.Text = "Não foi possível abrir a conexão. Confira o endereço e feche a ponte antiga do Artho AI, se estiver aberta.";
+            MobileStatus.Text = "Não foi possível abrir a conexão. Confira a rede local e feche a ponte antiga do Artho AI, se estiver aberta.";
+        }
+        finally
+        {
+            mobileBusy = false;
+            UpdateMobileButtons();
         }
     }
 
-    private void ShowQr(byte[] png)
+    private async Task StartMobileAsync(IPAddress address, MobileProfile? profile)
     {
-        using var stream = new MemoryStream(png);
+        bool allowDevices = MobileAllowDevices.IsChecked == true;
+        bool allowPower = MobileAllowPower.IsChecked == true;
+        var session = await Task.Run(() => MobilePairingServer.StartAsync(address,
+            () => Dispatcher.BeginInvoke(new Action(MobilePaired)),
+            allowDevices, allowPower, () => Dispatcher.BeginInvoke(new Action(RefreshSchedule)),
+            restored: profile,
+            revoked: () => Dispatcher.BeginInvoke(new Action(MobileRevoked))));
+        if (!IsLoaded) { await session.DisposeAsync(); return; }
+        mobileSession = session;
+    }
+
+    private void MobilePaired()
+    {
+        if (mobileSession is null) return;
+        mobileRemembered = true;
+        mobileTimer.Stop();
+        mobileTimer.Tick -= MobileExpired;
+        HideQr();
+        MobileStatus.Text = "Celular pareado. A conexão será retomada quando o Artho AI voltar a abrir nesta rede.";
+        UpdateMobileButtons();
+    }
+
+    private async void MobileRevoked()
+    {
+        mobileRemembered = false;
+        try { await StopMobileAsync(); }
+        finally
+        {
+            RefreshMobileAddresses();
+            MobileStatus.Text = "Celular desvinculado.";
+        }
+    }
+
+    private void RefreshSchedule()
+    {
+        try { target = schedule.Read(); Render(); }
+        catch (Exception ex) { ErrorLabel.Text = ex.Message; }
+    }
+
+    private void ShowQr(string payload)
+    {
+        using var data = QRCodeGenerator.GenerateQrCode(payload, QRCodeGenerator.ECCLevel.M);
+        using var stream = new MemoryStream(new PngByteQRCode(data).GetGraphic(8));
         var bitmap = new BitmapImage();
         bitmap.BeginInit();
         bitmap.CacheOption = BitmapCacheOption.OnLoad;
@@ -86,7 +156,6 @@ public partial class MainWindow
         bitmap.EndInit();
         MobileQr.Source = bitmap;
         MobileQr.Visibility = Visibility.Visible;
-        MobileStop.Visibility = Visibility.Visible;
     }
 
     private void HideQr()
@@ -97,34 +166,54 @@ public partial class MainWindow
 
     private async void MobileExpired(object? sender, EventArgs e)
     {
+        if (mobileSession?.HasLink == true) { MobilePaired(); return; }
         await StopMobileAsync();
         MobileStatus.Text = "O QR Code expirou. Gere outro para conectar.";
     }
 
     private async void MobileStop_Click(object sender, RoutedEventArgs e)
     {
-        await StopMobileAsync();
-        MobileStatus.Text = "Conexão encerrada.";
+        if (mobileBusy) return;
+        mobileBusy = true;
+        UpdateMobileButtons();
+        try
+        {
+            if (mobileSession is { } active) await Task.Run(active.Forget);
+            else if (mobileRemembered && !demo) await Task.Run(() => PcStore.Update(state => state.Mobile = null));
+            mobileRemembered = false;
+            await StopMobileAsync();
+            MobileStatus.Text = "Celular desvinculado.";
+        }
+        catch (Exception) { MobileStatus.Text = "Não foi possível desvincular o celular. Tente novamente."; }
+        finally
+        {
+            mobileBusy = false;
+            RefreshMobileAddresses();
+        }
     }
 
     private async Task StopMobileAsync()
     {
         mobileTimer.Stop();
+        mobileReconnectTimer.Stop();
         mobileTimer.Tick -= MobileExpired;
         HideQr();
-        MobileStop.Visibility = Visibility.Collapsed;
         var session = mobileSession;
         mobileSession = null;
-        try
-        {
-            if (session is not null) await session.DisposeAsync();
-        }
-        finally
-        {
-            MobileNetwork.IsEnabled = true;
-            MobileAllowDevices.IsEnabled = true;
-            MobileAllowPower.IsEnabled = true;
-            MobileStart.IsEnabled = MobileNetwork.SelectedItem is not null;
-        }
+        if (session is not null) await session.DisposeAsync();
+        UpdateMobileButtons();
+    }
+
+    private void UpdateMobileButtons()
+    {
+        bool busy = mobileBusy || mobileSession is not null || mobileRemembered;
+        MobileNetwork.IsEnabled = MobileAllowDevices.IsEnabled = MobileAllowPower.IsEnabled = !busy;
+        MobileStart.Content = mobileRemembered ? "Reconectar" : "Gerar QR Code";
+        MobileStart.IsEnabled = !mobileBusy && mobileSession is null &&
+            MobileQr.Visibility != Visibility.Visible && (mobileRemembered || MobileNetwork.SelectedItem is not null);
+        MobileStop.Content = mobileRemembered ? "Desvincular celular" : "Cancelar QR Code";
+        MobileStop.Visibility = mobileRemembered || mobileSession is not null || MobileQr.Visibility == Visibility.Visible
+            ? Visibility.Visible : Visibility.Collapsed;
+        MobileStop.IsEnabled = !mobileBusy;
     }
 }

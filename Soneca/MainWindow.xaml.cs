@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     {
         this.demo = demo; this.skipIntro = skipIntro; schedule = new Schedule(demo);
         InitializeComponent();
+        mobileReconnectTimer.Tick += async (_, _) => await RestoreMobileAsync();
         CleanupPanel.Demo = demo;
         VersionLabel.Text = "v" + Updater.Current.ToString(3);
         InstalledVersionLabel.Text = "Versão instalada  " + Updater.Current.ToString(3);
@@ -39,6 +40,7 @@ public partial class MainWindow : Window
         {
             if (demo) return;
             _ = RestorePcAgentAsync();
+            _ = RestoreMobileAsync();
             if (!skipIntro) await RunIntro();
             await Task.Delay(1800);
             if (IsVisible && !updateBusy && availableUpdate is null) await CheckUpdateAsync();

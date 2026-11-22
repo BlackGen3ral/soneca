@@ -3,10 +3,13 @@
         Title="Artho AI" Icon="Assets/ArthoAI.ico" Width="990" Height="710" MinWidth="760" MinHeight="590"
         Background="{StaticResource Canvas}" Foreground="{StaticResource Ink}"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True">
-    <Grid Background="{StaticResource Canvas}">
+    <Grid Background="{StaticResource Backdrop}">
+        <Rectangle Fill="{StaticResource BackdropLight}" IsHitTestVisible="False"/>
+        <Rectangle Fill="{StaticResource BackdropTint}" IsHitTestVisible="False"/>
         <Grid x:Name="DashboardContent">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="185"/><ColumnDefinition/></Grid.ColumnDefinitions>
-            <Border Background="{StaticResource Sidebar}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0" Padding="12,17,12,14">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="200"/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <Border Background="{StaticResource Sidebar}" BorderBrush="{StaticResource GlassEdge}" BorderThickness="1"
+                    CornerRadius="15" Padding="12,15,12,13" Margin="12,12,0,12">
                 <Grid>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <StackPanel>
@@ -33,11 +36,20 @@
 
             <ScrollViewer x:Name="HomePanel" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel MaxWidth="960" Margin="32,29,32,28">
-                    <TextBlock Text="Este computador" Style="{StaticResource PageTitle}"/>
-                    <WrapPanel Margin="0,5,0,0">
-                        <TextBlock x:Name="ComputerNameLabel" Style="{StaticResource InfoValue}" Margin="0,0,10,0"/>
-                        <TextBlock x:Name="ComputerDetailsLabel" Style="{StaticResource BodyCopy}"/>
-                    </WrapPanel>
+                    <Border Style="{StaticResource Panel}" Background="{StaticResource GlassHero}" Padding="23,17">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="Este computador" Style="{StaticResource BodyCopy}"/>
+                                <TextBlock x:Name="ComputerNameLabel" FontSize="31" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,4,0,3"/>
+                                <TextBlock x:Name="ComputerDetailsLabel" Style="{StaticResource BodyCopy}"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" CornerRadius="18" Background="#71335062" BorderBrush="#675F99A4"
+                                    BorderThickness="1" Padding="13,7" Margin="12,0,0,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="NetworkStatusLabel" Foreground="{StaticResource Accent}" FontSize="12"/>
+                            </Border>
+                        </Grid>
+                    </Border>
                     <Border x:Name="HomeUpdateBanner" Style="{StaticResource Panel}" Visibility="Collapsed" Margin="0,17,0,0" Padding="12">
                         <DockPanel>
                             <Button Content="Ver atualização" DockPanel.Dock="Right" Click="UpdatesNav_Click" Margin="12,0,0,0"/>
@@ -75,13 +87,6 @@
                                             <TextBlock x:Name="UptimeValue" Style="{StaticResource InfoValue}"/>
                                         </StackPanel>
                                         <TextBlock Text="Tempo ligado" Style="{StaticResource BodyCopy}"/>
-                                    </DockPanel>
-                                    <Border Style="{StaticResource Divider}"/>
-                                    <DockPanel Margin="0,12">
-                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
-                                            <TextBlock x:Name="NetworkStatusLabel" Style="{StaticResource InfoValue}"/>
-                                        </StackPanel>
-                                        <TextBlock Text="Rede local" Style="{StaticResource BodyCopy}"/>
                                     </DockPanel>
                                 </StackPanel>
                             </Border>

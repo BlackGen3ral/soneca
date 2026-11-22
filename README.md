@@ -30,13 +30,13 @@ Baixe [ArthoAI-Setup.exe](https://github.com/BlackGen3ral/soneca/releases/latest
 
 Conecte o PC e o celular à mesma rede local. No Windows, abra **Celular**, selecione o endereço do PC nessa rede e clique em **Gerar QR Code**. No Artho AI para Android, abra **Conectar ao PC → Escanear QR Code** e aponte para o código.
 
-Se o Windows solicitar acesso pelo firewall, permita somente na sua rede privada. O QR Code expira em três minutos se o celular ainda não tiver concluído o pareamento. O Android pode consultar os dados do PC até que você encerre a conexão ou feche o Artho AI para Windows.
+Se o Windows solicitar acesso pelo firewall, permita somente na sua rede privada. O QR Code é de uso único e expira em três minutos. Após atualizar para Windows 1.11.0 e Android 0.8.0, escaneie um novo QR Code uma vez para salvar o pareamento. O Android reconecta quando o Artho AI voltar a abrir no mesmo endereço da rede. Use **Desvincular celular** para cancelar a autorização.
 
-Para gerenciar outros PCs do Android, marque **Permitir que o celular ligue os PCs e edite os horários** antes de gerar o QR Code. Depois do pareamento, abra **Dispositivos** no Android. Essa permissão vale apenas para a sessão atual.
+Para gerenciar outros PCs do Android, marque **Permitir que o celular ligue os PCs e edite os horários** antes de gerar o QR Code. Depois do pareamento, abra **Dispositivos** no Android. As permissões escolhidas ficam associadas a esse vínculo até ele ser removido.
 
 Para o celular controlar a energia deste PC, marque **Permitir que o celular desligue, reinicie e programe este PC** antes de gerar outro QR Code. Em **Energia** no Android, desligue ou reinicie com confirmação e programe um desligamento único ou semanal. As rotinas de desligamento ficam no Windows e o usuário precisa estar conectado no horário escolhido. O painel do Windows pode estar fechado depois que o horário for salvo.
 
-O Android guarda o endereço do equipamento para que **Ligar agora** e **Programar para ligar** funcionem também com o PC desligado. Para programar, autorize alarmes exatos no Android. O celular precisa estar ligado e no mesmo Wi-Fi no momento do disparo. O PC precisa aceitar Wake-on-LAN. Depois de fechar ou reiniciar o Artho AI no Windows, gere outro QR Code para uma nova sessão de controle.
+O Android guarda o endereço do equipamento para que **Ligar agora** e **Programar para ligar** funcionem também com o PC desligado. Para programar, autorize alarmes exatos no Android. O celular precisa estar ligado e no mesmo Wi-Fi no momento do disparo. O PC precisa aceitar Wake-on-LAN. Se o IP do Windows mudar, desvincule o celular e gere um novo QR Code com o endereço atualizado.
 
 ### Dispositivos
 
@@ -78,6 +78,6 @@ O ativo principal é `ArthoAI-Setup.exe`. `ArthoControl-Setup.exe` e `Soneca-Set
 
 ## Desenvolvimento
 
-Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.10.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
+Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.11.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
 
 O repositório e os identificadores técnicos ainda se chamam `soneca` para preservar atualizações existentes. A marca visível no produto é Artho AI.

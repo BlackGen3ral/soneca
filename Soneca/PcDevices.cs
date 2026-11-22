@@ -37,6 +37,7 @@ internal sealed class PcDeviceState
 {
     public List<PairedPc> Computers { get; init; } = [];
     public PcAgentSettings? Agent { get; set; }
+    public MobileProfile? Mobile { get; set; }
     public WeeklyRule? LocalShutdown { get; set; }
     public string? LastLocalShutdownSlot { get; set; }
 }

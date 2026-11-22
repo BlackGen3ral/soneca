@@ -12,7 +12,11 @@ public partial class App : Application
         if (e.Args.Contains("--uninstall-cleanup"))
         {
             StartupRegistration.RemoveAll();
-            try { PcRoutineSchedule.Remove(); }
+            try
+            {
+                PcRoutineSchedule.Remove();
+                if (PcStore.Read().Mobile is not null) PcStore.Update(state => state.Mobile = null);
+            }
             finally { Shutdown(); }
             return;
         }
