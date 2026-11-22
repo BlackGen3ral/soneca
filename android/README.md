@@ -2,7 +2,7 @@
 
 ## Parear com o Windows
 
-No Artho AI para Windows 1.5.1 ou mais recente, abra **Celular → Gerar QR Code**. Com os dois aparelhos na mesma rede local, abra **Conectar ao PC → Escanear QR Code** no Android. Permita o uso da câmera e aponte para o QR da janela do Windows. O Android consulta o estado do PC enquanto a sessão estiver aberta. Instalações antigas da ponte ainda podem ser usadas pelo botão **Usar código da ponte antiga**.
+No Artho AI para Windows, abra **Celular → Gerar QR Code**. Com os dois aparelhos na mesma rede local, abra **Conectar ao PC → Escanear QR Code** no Android. A partir do Windows 1.11.0 e do Android 0.8.0, um novo pareamento fica salvo e é retomado quando o app do PC voltar a abrir no mesmo endereço da rede, inclusive após atualizações. Instalações antigas da ponte ainda oferecem conexão temporária pelo botão **Usar código da ponte antiga**.
 
 No Windows 1.6.0 ou mais recente, pareie os PCs na aba **Dispositivos**. Na aba **Celular**, marque **Permitir que o celular ligue os PCs e edite os horários** e gere um novo QR Code. Após parear, abra **Dispositivos** no Android para consultar o último contato, enviar Wake-on-LAN ou escolher os horários e dias de ligar e desligar. As rotinas são salvas e executadas no PC de controle.
 

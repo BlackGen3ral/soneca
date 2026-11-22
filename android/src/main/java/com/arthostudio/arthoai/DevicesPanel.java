@@ -40,7 +40,7 @@ final class DevicesPanel {
         notice.setAccessibilityLiveRegion(TextView.ACCESSIBILITY_LIVE_REGION_POLITE);
         panel.addView(notice, owner.spaced(10));
         cards = column();
-        cards.setBackground(owner.surface(MainActivity.SURFACE, 6, MainActivity.BORDER));
+        cards.setBackground(owner.surface(MainActivity.SURFACE, 16, MainActivity.BORDER));
         cards.setVisibility(android.view.View.GONE);
         panel.addView(cards);
     }

@@ -44,7 +44,7 @@ final class UpdatesPanel {
         title.setAccessibilityHeading(true);
         root.addView(title);
         LinearLayout card = owner.column();
-        card.setBackground(owner.surface(MainActivity.SURFACE, 6, MainActivity.BORDER));
+        card.setBackground(owner.surface(MainActivity.SURFACE, 16, MainActivity.BORDER));
         card.setPadding(owner.dp(18), owner.dp(18), owner.dp(18), owner.dp(16));
         root.addView(card, owner.spaced(18));
         card.addView(owner.label("Versão instalada  " + installedVersion, 13, MainActivity.MUTED, "sans-serif"));

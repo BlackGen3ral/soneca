@@ -362,8 +362,9 @@ final class PowerPanel {
 
     private LinearLayout section(String title) {
         LinearLayout group = owner.column();
-        group.addView(owner.divider());
-        group.addView(label(title, 17, MainActivity.INK), owner.spaced(10));
+        group.setPadding(owner.dp(15), owner.dp(13), owner.dp(15), owner.dp(13));
+        group.setBackground(owner.surface(MainActivity.SURFACE, 16, MainActivity.BORDER));
+        group.addView(label(title, 17, MainActivity.INK));
         page.addView(group, owner.spaced(17));
         return group;
     }
