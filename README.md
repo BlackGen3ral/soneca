@@ -55,13 +55,14 @@ Mantenha a sessão conectada. O despertar da suspensão depende do hardware e da
 
 ### Limpeza
 
-1. Selecione %temp%, Prefetch e, opcionalmente, Lixeira (desmarcada por padrão).
-2. Clique em **Analisar selecionados**. Essa etapa não remove arquivos.
-3. Confira a estimativa e clique em **Limpar selecionados**. A confirmação lista as categorias; a remoção é permanente.
+1. Selecione as categorias que deseja conferir. Os temporários do usuário com mais de um dia vêm selecionados por padrão.
+2. Clique em **Analisar**. Confira os totais por categoria e expanda a lista para ver até 15 dos maiores arquivos elegíveis.
+3. Clique em **Limpar** e confirme a remoção. O resultado informa quantos arquivos foram removidos ou ignorados. A análise e a limpeza de arquivos locais podem ser interrompidas entre arquivos.
 
-- **%temp%:** arquivos da pasta temporária do usuário e suas subpastas. Preserva pastas, arquivos em uso, arquivos alterados após a análise e links.
-- **Prefetch:** somente arquivos .pf diretamente em Windows/Prefetch; preserva outras extensões e ReadyBoot. Um auxiliar limitado a esse destino solicita autorização de administrador ao limpar.
-- **Lixeira:** API do Windows para o conteúdo do usuário em todas as unidades. Só é esvaziada quando selecionada e confirmada.
+- **%temp%** inclui arquivos da pasta temporária do usuário e de suas subpastas. O filtro aceita 1, 7 ou 30 dias ou qualquer idade. A limpeza preserva pastas, links e arquivos em uso, modificados ou substituídos depois da análise.
+- **CrashDumps** inclui apenas arquivos .dmp diretamente na pasta padrão de dumps do usuário. Mantenha esses arquivos se estiver investigando uma falha.
+- **Prefetch** inclui apenas arquivos .pf diretamente em Windows/Prefetch. Quando necessário, o auxiliar solicita autorização separada para analisar e limpar, usando a prévia na limpeza.
+- **Lixeira** usa o esvaziamento do Windows para todas as unidades e só entra na limpeza quando selecionada e confirmada. O app refaz a consulta e pede uma nova análise se a contagem ou o volume mudar.
 
 Nada é limpo ao abrir o aplicativo. A instalação continua por usuário, sem exigir execução permanente como administrador.
 
@@ -77,6 +78,6 @@ O ativo principal é `ArthoAI-Setup.exe`. `ArthoControl-Setup.exe` e `Soneca-Set
 
 ## Desenvolvimento
 
-Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.9.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
+Requer .NET SDK 10 e Inno Setup 6/7. Gere o instalador com `./scripts/build.ps1 -Version 1.10.0 -InnoCompiler "C:\caminho\ISCC.exe"`. O script publica para Windows x64, executa o autoteste isolado e grava os hashes dos três instaladores equivalentes.
 
 O repositório e os identificadores técnicos ainda se chamam `soneca` para preservar atualizações existentes. A marca visível no produto é Artho AI.
