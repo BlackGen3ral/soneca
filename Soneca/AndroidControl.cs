@@ -190,7 +190,7 @@ internal sealed class AndroidControl(string folder)
     }
 
     public async Task MirrorWifiAsync(string name, Action waiting, Action<string> addressChanged,
-        Action onOpen, CancellationToken token)
+        Action<AndroidViewWindow> onOpen, CancellationToken token)
     {
         waiting();
         while (true)
@@ -220,7 +220,7 @@ internal sealed class AndroidControl(string folder)
         }
     }
 
-    public async Task MirrorAsync(string? endpoint, Action onOpen, CancellationToken token, string? onlineSerial = null)
+    public async Task MirrorAsync(string? endpoint, Action<AndroidViewWindow> onOpen, CancellationToken token, string? onlineSerial = null)
     {
         if (endpoint is not null && onlineSerial is null)
         {
@@ -229,9 +229,17 @@ internal sealed class AndroidControl(string folder)
                 throw new AndroidConnectionException("Não consegui conectar ao Android. Confira o endereço atual na tela de Depuração por Wi-Fi.");
         }
         token.ThrowIfCancellationRequested();
+        string? serial = onlineSerial ?? endpoint;
+        if (serial is null)
+        {
+            string selected = (await RunAdbAsync(["-d", "get-serialno"], null, token)).Split('\n', 2)[0].Trim();
+            if (Regex.IsMatch(selected, @"^[a-zA-Z0-9._-]{1,128}$") && selected != "unknown") serial = selected;
+        }
         using var viewer = Start("scrcpy.exe", [
-            endpoint is null ? "--select-usb" : "--serial=" + (onlineSerial ?? endpoint),
-            "--window-title=Artho AI · Tela do Android", "--max-size=1600", "--max-fps=60", "--no-audio"
+            serial is null ? "--select-usb" : "--serial=" + serial,
+            "--window-title=Artho AI · Tela do Android", "--max-size=1600", "--max-fps=60", "--no-audio",
+            "--window-borderless", "--window-x=-30000", "--window-y=-30000",
+            "--no-window-aspect-ratio-lock", "--render-fit=letterbox"
         ]);
         using var stopping = token.Register(() => Stop(viewer));
         var output = viewer.StandardOutput.ReadToEndAsync();
@@ -242,9 +250,9 @@ internal sealed class AndroidControl(string folder)
             while (!viewer.HasExited)
             {
                 viewer.Refresh();
-                if (viewer.MainWindowHandle != IntPtr.Zero)
+                if (viewer.MainWindowHandle is var handle && handle != IntPtr.Zero)
                 {
-                    onOpen();
+                    onOpen(new AndroidViewWindow(handle, viewer.Id, serial));
                     await viewer.WaitForExitAsync(token);
                     token.ThrowIfCancellationRequested();
                     if (viewer.ExitCode == 0) return;
@@ -272,7 +280,12 @@ internal sealed class AndroidControl(string folder)
         finally { Stop(viewer); }
     }
 
-    private async Task<string> RunAdbAsync(string[] args, string? input, CancellationToken token)
+    public async Task WakeScreenAsync(string serial, CancellationToken token)
+    {
+        await RunAdbAsync(["-s", serial, "shell", "input", "keyevent", "KEYCODE_WAKEUP"], null, token, requireSuccess: true);
+    }
+
+    private async Task<string> RunAdbAsync(string[] args, string? input, CancellationToken token, bool requireSuccess = false)
     {
         token.ThrowIfCancellationRequested();
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -290,7 +303,10 @@ internal sealed class AndroidControl(string folder)
             }
             await command.WaitForExitAsync(timeout.Token);
             timeout.Token.ThrowIfCancellationRequested();
-            return (await output) + (await errors);
+            string log = (await output) + (await errors);
+            if (requireSuccess && command.ExitCode != 0)
+                throw new AndroidConnectionException("Não consegui acender a tela. Confira se o Android ainda está conectado.");
+            return log;
         }
         catch (OperationCanceledException) when (!token.IsCancellationRequested)
         { throw new AndroidConnectionException("O Android demorou para responder. Confira a rede e a Depuração sem fio no celular."); }
@@ -323,6 +339,7 @@ internal sealed class AndroidControl(string folder)
 }
 
 internal sealed class AndroidConnectionException(string message) : IOException(message);
+internal sealed record AndroidViewWindow(IntPtr Handle, int ProcessId, string? Serial);
 
 internal sealed record AndroidPairingQr(string Name, string Secret)
 {

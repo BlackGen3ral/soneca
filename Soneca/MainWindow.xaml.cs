@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     {
         this.demo = demo; this.skipIntro = skipIntro; schedule = new Schedule(demo);
         InitializeComponent();
+        AndroidSurface.Content = androidScreen;
         mobileReconnectTimer.Tick += async (_, _) => await RestoreMobileAsync();
         remoteDesktopTimer.Tick += (_, _) => RefreshRemoteDesktop();
         CleanupPanel.Demo = demo;
@@ -132,7 +133,7 @@ public partial class MainWindow : Window
         CleanupPanel.Visibility = page == 1 ? Visibility.Visible : Visibility.Collapsed;
         NamesPanel.Visibility = page == 2 ? Visibility.Visible : Visibility.Collapsed;
         SettingsPanel.Visibility = page == 3 ? Visibility.Visible : Visibility.Collapsed;
-        MobilePanel.Visibility = page == 4 ? Visibility.Visible : Visibility.Collapsed;
+        ShowMobilePage(page == 4);
         DevicesPanel.Visibility = page == 5 ? Visibility.Visible : Visibility.Collapsed;
         UpdatesPanel.Visibility = page == 6 ? Visibility.Visible : Visibility.Collapsed;
         var nav = page switch

@@ -10,6 +10,11 @@ public partial class MainWindow
     private readonly AndroidControl androidControl = new(Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ArthoAI", "AndroidControl"));
     private CancellationTokenSource? androidOperation;
+    private readonly AndroidScreenHost androidScreen = new();
+    private AndroidViewWindow? androidView;
+    private bool showingAndroid;
+    private bool wakingAndroid;
+    private string? androidViewError;
 
     private async void AndroidUsb_Click(object sender, RoutedEventArgs e) => await OpenAndroidAsync(null);
 
@@ -33,6 +38,7 @@ public partial class MainWindow
             }
             finally { HideAndroidQr(); }
             androidControl.Remember(device);
+            EnterAndroidViewer();
             await MirrorPairedAndroidAsync(device, token);
         });
     }
@@ -41,6 +47,7 @@ public partial class MainWindow
     {
         await UseAndroidAsync("Localizando o Android pareado…", async token =>
         {
+            EnterAndroidViewer();
             var device = androidControl.RememberedDevice();
             while (device is null)
             {
@@ -80,6 +87,7 @@ public partial class MainWindow
                 androidControl.Remember(device);
                 AndroidPairAddress.Clear();
                 AndroidPairHelp.IsExpanded = false;
+                EnterAndroidViewer();
                 await MirrorPairedAndroidAsync(device, token);
             });
         }
@@ -91,6 +99,7 @@ public partial class MainWindow
         await UseAndroidAsync(wifiEndpoint is null ? "Procurando o Android conectado por USB…" : "Conectando ao Android por Wi-Fi…",
             async token =>
             {
+                EnterAndroidViewer();
                 var device = wifiEndpoint is null ? null : await androidControl.FindExistingDeviceAsync(wifiEndpoint, token);
                 if (device is not null)
                 {
@@ -110,14 +119,78 @@ public partial class MainWindow
     private async Task MirrorPairedAndroidAsync(string device, CancellationToken token)
     {
         await androidControl.MirrorWifiAsync(device,
-            () => AndroidStatus.Text = "Aguardando o Android na rede. A tela vai abrir quando a Depuração por Wi-Fi voltar a responder.",
+            () =>
+            {
+                ClearAndroidScreen();
+                AndroidStatus.Text = "Aguardando o Android na rede. A tela vai abrir quando a Depuração por Wi-Fi voltar a responder.";
+            },
             endpoint => AndroidConnectAddress.Text = endpoint,
             AndroidScreenOpened, token);
         AndroidStatus.Text = "Controle do Android encerrado.";
     }
 
-    private void AndroidScreenOpened() =>
-        AndroidStatus.Text = "Tela do Android aberta. Use o mouse e o teclado na janela de controle.";
+    private void EnterAndroidViewer()
+    {
+        showingAndroid = true;
+        ShowMobilePage(MobileNav.IsChecked == true);
+    }
+
+    private void ShowMobilePage(bool visible)
+    {
+        MobilePanel.Visibility = visible && !showingAndroid ? Visibility.Visible : Visibility.Collapsed;
+        AndroidViewerPanel.Visibility = visible && showingAndroid ? Visibility.Visible : Visibility.Collapsed;
+        try { AttachVisibleAndroidScreen(); }
+        catch (IOException ex)
+        {
+            androidViewError = ex.Message;
+            androidOperation?.Cancel();
+        }
+    }
+
+    private void AndroidScreenOpened(AndroidViewWindow view)
+    {
+        androidView = view;
+        AttachVisibleAndroidScreen();
+        AndroidStatus.Text = "Android conectado. Clique na tela abaixo para usar o mouse e o teclado.";
+    }
+
+    private void AttachVisibleAndroidScreen()
+    {
+        if (AndroidViewerPanel.Visibility != Visibility.Visible || androidView is not { } view || androidScreen.IsAttached(view))
+            return;
+        AndroidViewerPanel.UpdateLayout();
+        androidScreen.Attach(view);
+        AndroidWake.IsEnabled = !wakingAndroid && view.Serial is not null;
+    }
+
+    private void ClearAndroidScreen()
+    {
+        androidScreen.Clear();
+        androidView = null;
+        AndroidWake.IsEnabled = false;
+    }
+
+    private async void AndroidWake_Click(object sender, RoutedEventArgs e)
+    {
+        if (wakingAndroid || androidView is not { Serial: { } serial } active || androidOperation is null) return;
+        wakingAndroid = true;
+        AndroidWake.IsEnabled = false;
+        try
+        {
+            await androidControl.WakeScreenAsync(serial, androidOperation.Token);
+            if (androidView == active) AndroidStatus.Text = "Comando para acender a tela enviado ao Android.";
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) when (ex is IOException or Win32Exception)
+        {
+            if (androidView == active) AndroidStatus.Text = "Não consegui acender a tela. Confira a conexão com o Android.";
+        }
+        finally
+        {
+            wakingAndroid = false;
+            AndroidWake.IsEnabled = androidView?.Serial is not null;
+        }
+    }
 
     private async Task UseAndroidAsync(string message, Func<CancellationToken, Task> operation)
     {
@@ -129,6 +202,7 @@ public partial class MainWindow
         if (androidOperation is not null) return;
         using var cancellation = new CancellationTokenSource();
         androidOperation = cancellation;
+        androidViewError = null;
         AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = AndroidRemembered.IsEnabled = false;
         AndroidStop.IsEnabled = true;
         AndroidStatus.Text = message;
@@ -141,13 +215,16 @@ public partial class MainWindow
             await operation(cancellation.Token);
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-        { AndroidStatus.Text = "Controle do Android encerrado."; }
+        { AndroidStatus.Text = androidViewError ?? "Controle do Android encerrado."; }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException)
         { AndroidStatus.Text = "O download do scrcpy não terminou. Confira a internet e tente novamente."; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Win32Exception)
         { AndroidStatus.Text = ex is IOException ? ex.Message : "O Windows não conseguiu iniciar o scrcpy."; }
         finally
         {
+            ClearAndroidScreen();
+            showingAndroid = false;
+            if (IsLoaded) ShowMobilePage(MobileNav.IsChecked == true);
             androidOperation = null;
             AndroidUsb.IsEnabled = AndroidWifi.IsEnabled = AndroidPair.IsEnabled = AndroidPairQr.IsEnabled = AndroidRemembered.IsEnabled = true;
             AndroidStop.IsEnabled = false;

@@ -171,7 +171,7 @@
                     <Border Style="{StaticResource Panel}">
                         <StackPanel>
                             <TextBlock Text="Controlar Android pelo PC" Style="{StaticResource SectionTitle}"/>
-                            <TextBlock Text="Abra a tela do celular em uma janela e use o mouse e o teclado deste PC."
+                            <TextBlock Text="Abra a tela do celular dentro do Artho AI e use o mouse e o teclado deste PC."
                                        Style="{StaticResource BodyCopy}" Margin="0,6,0,12"/>
                             <WrapPanel>
                                 <Button x:Name="AndroidUsb" Content="Abrir por USB" Style="{StaticResource Primary}"
@@ -262,6 +262,21 @@
                     </Border>
                 </StackPanel>
             </ScrollViewer>
+
+            <Grid x:Name="AndroidViewerPanel" Grid.Column="1" Visibility="Collapsed" Margin="26,22,26,22">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <DockPanel Margin="0,0,0,10">
+                    <Button Content="Voltar e encerrar" Click="AndroidStop_Click" DockPanel.Dock="Right" Margin="10,0,0,0"/>
+                    <Button x:Name="AndroidWake" Content="Acender tela" Click="AndroidWake_Click" DockPanel.Dock="Right"
+                            IsEnabled="False" Margin="10,0,0,0"/>
+                    <TextBlock Text="Tela do Android" Style="{StaticResource PageTitle}" VerticalAlignment="Center"/>
+                </DockPanel>
+                <TextBlock x:Name="AndroidViewerStatus" Grid.Row="1" Text="{Binding ElementName=AndroidStatus, Path=Text}"
+                           Style="{StaticResource BodyCopy}" Margin="1,0,0,11" AutomationProperties.LiveSetting="Polite"/>
+                <Border Grid.Row="2" Background="#FF080B12" BorderBrush="{StaticResource GlassEdge}" BorderThickness="1">
+                    <ContentControl x:Name="AndroidSurface" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+                </Border>
+            </Grid>
 
             <ScrollViewer x:Name="EnergyPanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="30,25,30,25" MaxWidth="1080">
