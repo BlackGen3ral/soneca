@@ -86,6 +86,7 @@ public final class MainActivity extends Activity {
     private Button primary;
     private Button connectionOptions;
     private Button remoteDesktop;
+    private Button homeWake;
 
     @Override protected void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -382,6 +383,13 @@ public final class MainActivity extends Activity {
             else requestStatus();
         });
         panel.addView(primary, spaced(12));
+        homeWake = button("Ligar PC pela rede", true);
+        homeWake.setVisibility(WakeSchedules.target(this) == null ? View.GONE : View.VISIBLE);
+        homeWake.setOnClickListener(view -> {
+            showTab(2);
+            power.wake();
+        });
+        panel.addView(homeWake, spaced(6));
         remoteDesktop = button("Tela remota", false);
         remoteDesktop.setVisibility(View.GONE);
         remoteDesktop.setOnClickListener(view -> startActivity(new Intent(this, RemoteDesktopActivity.class)));
@@ -543,6 +551,7 @@ public final class MainActivity extends Activity {
                     pairing = fallback;
                     legacyLink = false;
                     online = false;
+                    if (target.durable && (fallback == null || !fallback.host.equals(target.host))) power.onPairingRevoked(target);
                     power.pairingChanged(null);
                     showEmpty("Pareamento indisponível", ALERT, "Se o vínculo foi removido, escaneie outro QR Code no PC.");
                     if (fallback != null && visible) requestStatus(true);
@@ -589,6 +598,10 @@ public final class MainActivity extends Activity {
         if (visible && pairing != null) connectionTimer.postDelayed(reconnect, delay);
     }
 
+    void retryAfterWake() {
+        if (visible && pairing != null) requestStatus(false);
+    }
+
     private void render(JSONObject result) {
         metrics.setVisibility(View.VISIBLE);
         double total = result.optDouble("totalMemoryGb", 0);
@@ -611,6 +624,7 @@ public final class MainActivity extends Activity {
                 + DateFormat.getTimeInstance(DateFormat.SHORT, BRAZIL).format(new Date()));
         setStatus(pairing.durable ? "Conectado · pareamento salvo" : "Conectado · sessão temporária", GREEN);
         power.pairingChanged(pairing);
+        power.peerResponded(pairing, result);
         restoreActions();
     }
 
@@ -657,6 +671,7 @@ public final class MainActivity extends Activity {
         connectionOptions.setEnabled(true);
         connectionOptions.setVisibility(pairing == null ? View.GONE : View.VISIBLE);
         remoteDesktop.setVisibility(online && pairing != null && pairing.durable ? View.VISIBLE : View.GONE);
+        homeWake.setVisibility(!online && WakeSchedules.target(this) != null ? View.VISIBLE : View.GONE);
         house.updatePairing(pairing, online);
         if (selectedTab == 1) updateDevices();
     }
@@ -749,6 +764,7 @@ public final class MainActivity extends Activity {
         house.close();
         connectionTimer.removeCallbacks(reconnect);
         if (updates != null) updates.close();
+        power.close();
         worker.shutdownNow();
         super.onDestroy();
     }

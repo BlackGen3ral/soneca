@@ -26,6 +26,7 @@ final class WakeSchedules {
 
     static synchronized void remember(Context context, WakeTarget value) {
         WakeTarget previous = target(context);
+        if (previous != null && previous.samePc(value) && previous.name.equals(value.name)) return;
         if (previous != null && !previous.samePc(value)) forget(context);
         prefs(context).edit().putString("address", value.address).putString("mac", value.mac)
                 .putInt("prefix", value.prefix).putString("name", value.name).commit();

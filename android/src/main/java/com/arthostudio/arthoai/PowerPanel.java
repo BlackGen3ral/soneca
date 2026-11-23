@@ -5,6 +5,8 @@ import android.app.TimePickerDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.text.InputType;
 import android.graphics.drawable.GradientDrawable;
@@ -21,6 +23,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.json.JSONObject;
 
 final class PowerPanel {
@@ -32,6 +36,10 @@ final class PowerPanel {
     private final TextView oneTime;
     private final TextView weekly;
     private final TextView wakeRule;
+    private final TextView wakeFeedback;
+    private final ExecutorService wakeWorker = Executors.newSingleThreadExecutor();
+    private final Handler wakeTimer = new Handler(Looper.getMainLooper());
+    private final Runnable wakeTimeout = this::wakeUnconfirmed;
     private final Button wakeNow;
     private final Button wakeSchedule;
     private final Button cancelWake;
@@ -44,6 +52,9 @@ final class PowerPanel {
     private StatusClient.Pairing pairing;
     private JSONObject lastState;
     private boolean busy;
+    private boolean sendingWake;
+    private WakeTarget waitingForWake;
+    private int wakeAttempt;
 
     PowerPanel(MainActivity owner, Executor worker) {
         this.owner = owner;
@@ -67,9 +78,12 @@ final class PowerPanel {
         LinearLayout quick = section("Ações imediatas");
         LinearLayout immediate = new LinearLayout(owner);
         quick.addView(immediate, owner.spaced(10));
-        wakeNow = inlineAction(immediate, "Ligar", "Ligar agora", this::wake, 0);
+        wakeNow = inlineAction(immediate, "Ligar PC", "Ligar o PC pela rede local", this::wake, 0);
         stopNow = inlineAction(immediate, "Desligar", "Desligar agora", () -> confirm("Desligar", "shutdown"), 6);
         restart = inlineAction(immediate, "Reiniciar", "Reiniciar agora", () -> confirm("Reiniciar", "restart"), 6);
+        wakeFeedback = label("", 13, MainActivity.MUTED);
+        wakeFeedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        quick.addView(wakeFeedback, owner.spaced(9));
 
         LinearLayout schedule = section("Agendamentos");
         wakeRule = label("", 14, MainActivity.MUTED);
@@ -115,8 +129,33 @@ final class PowerPanel {
 
     void forget() {
         WakeSchedules.forget(owner);
+        clearWakeAttempt();
         pairingChanged(null);
         render();
+    }
+
+    void onPairingRevoked(StatusClient.Pairing revoked) {
+        WakeTarget saved = WakeSchedules.target(owner);
+        if (saved != null && saved.address.equals(revoked.host)) {
+            WakeSchedules.forget(owner);
+            clearWakeAttempt();
+        }
+    }
+
+    void peerResponded(StatusClient.Pairing peer, JSONObject status) {
+        JSONObject wake = status.optJSONObject("wake");
+        if (peer.durable && wake != null) rememberWake(peer, wake);
+        if (waitingForWake != null && peer.durable && waitingForWake.address.equals(peer.host)) {
+            String name = waitingForWake.name;
+            clearWakeAttempt();
+            wakeFeedback.setText(name + " respondeu na rede.");
+        }
+        render();
+    }
+
+    void close() {
+        wakeTimer.removeCallbacks(wakeTimeout);
+        wakeWorker.shutdownNow();
     }
 
     void refreshLocal() { render(); }
@@ -129,26 +168,52 @@ final class PowerPanel {
         }
     }
 
-    private void wake() {
+    void wake() {
         WakeTarget target = WakeSchedules.target(owner);
-        if (target == null || busy) return;
-        busy = true;
+        if (target == null || sendingWake) return;
+        clearWakeAttempt();
+        int attempt = wakeAttempt;
+        sendingWake = true;
+        wakeFeedback.setText("Enviando sinal para " + target.name + "…");
         render();
-        worker.execute(() -> {
-            String result;
+        wakeWorker.execute(() -> {
+            String errorMessage = null;
             try {
+                WakeTarget current = WakeSchedules.target(owner);
+                if (current == null || !target.samePc(current))
+                    throw new java.io.IOException("Os dados do PC mudaram. Tente novamente.");
                 target.send(owner.getApplicationContext());
-                result = "Sinal enviado. Confira se " + target.name + " ligou.";
             } catch (Exception error) {
-                result = error.getMessage() == null ? "Não foi possível enviar o sinal para ligar." : error.getMessage();
+                errorMessage = error.getMessage() == null ? "Não foi possível enviar o sinal para ligar." : error.getMessage();
             }
-            String message = result;
+            String failure = errorMessage;
             owner.show(() -> {
-                busy = false;
-                notice.setText(message);
+                if (wakeAttempt != attempt) return;
+                sendingWake = false;
+                if (failure != null) wakeFeedback.setText(failure);
+                else {
+                    waitingForWake = target;
+                    wakeFeedback.setText("Sinal enviado. Aguardando " + target.name + " responder na rede…");
+                    wakeTimer.postDelayed(wakeTimeout, 90_000);
+                    owner.retryAfterWake();
+                }
                 render();
             });
         });
+    }
+
+    private void clearWakeAttempt() {
+        wakeAttempt++;
+        wakeTimer.removeCallbacks(wakeTimeout);
+        waitingForWake = null;
+        sendingWake = false;
+        wakeFeedback.setText("");
+    }
+
+    private void wakeUnconfirmed() {
+        waitingForWake = null;
+        wakeFeedback.setText("Sinal enviado. O PC ainda não respondeu no Artho AI.");
+        render();
     }
 
     private void chooseStopMode() {
@@ -320,8 +385,10 @@ final class PowerPanel {
     private void rememberWake(StatusClient.Pairing target, JSONObject data) {
         if (!target.host.equals(data.optString("address"))) return;
         try {
+            boolean first = WakeSchedules.target(owner) == null;
             WakeSchedules.remember(owner, new WakeTarget(target.host, data.optString("mac"),
                     data.optInt("prefix"), data.optString("name", "Meu PC")));
+            if (first) wakeFeedback.setText("");
         } catch (IllegalArgumentException ignored) { }
     }
 
@@ -339,7 +406,8 @@ final class PowerPanel {
         if (!report.isEmpty()) info += "\n" + report;
         if (!time.isEmpty() && !WakeSchedules.canSetExact(owner)) info += "\nRotina pausada. Permita alarmes exatos no Android.";
         wakeRule.setText(info);
-        wakeNow.setEnabled(!busy && target != null);
+        wakeNow.setEnabled(!sendingWake && target != null);
+        if (target == null && !sendingWake) wakeFeedback.setText("Conecte ao PC uma vez para salvar o acesso de ligar pela rede.");
         wakeSchedule.setEnabled(!busy && target != null);
         cancelWake.setVisibility(time.isEmpty() ? View.GONE : View.VISIBLE);
         forgetWake.setVisibility(target == null ? View.GONE : View.VISIBLE);
@@ -401,7 +469,7 @@ final class PowerPanel {
         button.setContentDescription(description);
         button.setTextSize(13);
         button.setPadding(owner.dp(4), owner.dp(8), owner.dp(4), owner.dp(8));
-        button.setOnClickListener(view -> { if (!busy) run.run(); });
+        button.setOnClickListener(view -> run.run());
         LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -2, 1);
         size.leftMargin = owner.dp(inset);
         where.addView(button, size);

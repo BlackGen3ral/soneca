@@ -52,12 +52,26 @@ final class WakeTarget {
                 try (DatagramSocket socket = new DatagramSocket()) {
                     network.bindSocket(socket);
                     socket.setBroadcast(true);
-                    socket.send(new DatagramPacket(payload, payload.length, destination, 9));
+                    sendPackets(socket, payload, destination,
+                            InetAddress.getByAddress(new byte[]{-1, -1, -1, -1}), 9);
                     return;
                 }
             }
         }
         throw new IOException("Conecte o celular ao Wi-Fi da mesma rede do PC.");
+    }
+
+    static void sendPackets(DatagramSocket socket, byte[] payload, InetAddress broadcast,
+                            InetAddress fallback, int port) throws IOException {
+        boolean sent = false;
+        IOException failure = null;
+        for (InetAddress destination : new InetAddress[]{broadcast, fallback, broadcast}) {
+            try {
+                socket.send(new DatagramPacket(payload, payload.length, destination, port));
+                sent = true;
+            } catch (IOException error) { failure = error; }
+        }
+        if (!sent && failure != null) throw failure;
     }
 
     static byte[] magicPacket(String mac) {
