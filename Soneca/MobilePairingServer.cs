@@ -116,13 +116,16 @@ internal sealed class MobilePairingServer(WebApplication app, X509Certificate2 c
             });
             app.MapGet("/v1/status", (HttpContext context) =>
             {
-                if (!Authorized(context, allowInvitation: true)) return Results.Unauthorized();
+                bool paired = Authorized(context);
+                if (!paired && !Authorized(context, allowInvitation: true)) return Results.Unauthorized();
                 context.Response.Headers.CacheControl = "no-store";
                 var pc = LocalComputerAgent.Read();
+                var wake = paired ? WakeProfile(adapter) : null;
                 return Results.Json(new
                 {
                     pc.Name, pc.WindowsVersion, pc.ProcessorCount, pc.MemoryInUseGb, pc.TotalMemoryGb,
-                    UptimeHours = Math.Floor(pc.Uptime.TotalHours), pc.NetworkAvailable
+                    UptimeHours = Math.Floor(pc.Uptime.TotalHours), pc.NetworkAvailable,
+                    wake
                 });
             });
             app.MapGet("/v1/house", (HttpContext context) =>
@@ -172,6 +175,14 @@ internal sealed class MobilePairingServer(WebApplication app, X509Certificate2 c
             if (app is not null) await app.DisposeAsync().ConfigureAwait(false);
             throw;
         }
+    }
+
+    private static object? WakeProfile(LanAdapter adapter)
+    {
+        if (adapter.Prefix is < 1 or > 30) return null;
+        try { PcLan.MagicPacket(adapter.Mac); }
+        catch (ArgumentException) { return null; }
+        return new { address = adapter.Address.ToString(), adapter.Mac, adapter.Prefix, name = Environment.MachineName };
     }
 
     private static byte[] CreateCertificate(IPAddress address)
