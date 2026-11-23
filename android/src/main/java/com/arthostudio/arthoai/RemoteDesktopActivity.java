@@ -110,7 +110,7 @@ public final class RemoteDesktopActivity extends Activity {
         workspace = new LinearLayout(this);
         page.addView(workspace, new LinearLayout.LayoutParams(-1, 0, 1));
         screen = new Screen();
-        screen.setBackground(round(0xff090d09, 12, MainActivity.BORDER));
+        screen.setBackground(round(0xff070c14, 12, MainActivity.BORDER));
         screen.setClipToOutline(true);
         screen.setContentDescription("Tela do Windows. Toque para clicar, segure para clique direito ou arraste.");
         workspace.addView(screen);
@@ -330,12 +330,12 @@ public final class RemoteDesktopActivity extends Activity {
         button.setText(label);
         button.setTextSize(13);
         button.setTextColor(new ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled}, new int[0]},
-                new int[]{0xff808b7b, TEXT}));
+                new int[]{0xff8191a4, TEXT}));
         button.setMinimumWidth(dp(44));
         button.setMinHeight(dp(44));
         button.setPadding(dp(6), 0, dp(6), 0);
-        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x35d8eeac),
-                round(0xff282f26, 9, 0xff475243), null));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x35a6e6d7),
+                round(0xff172438, 9, 0xff3d546f), null));
         return button;
     }
 
@@ -377,20 +377,20 @@ public final class RemoteDesktopActivity extends Activity {
         @Override protected void onDraw(Canvas canvas) {
             float x = getWidth() / 2f, y = centerY(), ring = radius();
             if (ring <= 0) return;
-            paint.setColor(0xff2c352a);
+            paint.setColor(0xff1c2c42);
             canvas.drawCircle(x, y, ring, paint);
-            paint.setColor(0xff161d16);
+            paint.setColor(0xff101a2a);
             canvas.drawCircle(x, y, ring - dp(2), paint);
-            paint.setColor(0xff4c5b48);
+            paint.setColor(0xff435d78);
             for (int dir = 0; dir < 4; dir++) {
                 double angle = dir * Math.PI / 2;
                 canvas.drawCircle(x + (float) Math.cos(angle) * (ring - dp(6)),
                         y + (float) Math.sin(angle) * (ring - dp(6)), dp(1), paint);
             }
             float knobX = x + axisX * ring * .55f, knobY = y + axisY * ring * .55f;
-            paint.setColor(finger != -1 ? MainActivity.ACCENT : 0xff5e7055);
+            paint.setColor(finger != -1 ? MainActivity.ACCENT : 0xff567a96);
             canvas.drawCircle(knobX, knobY, ring * .39f, paint);
-            paint.setColor(finger != -1 ? 0xffe8f3d1 : 0xff98ad8e);
+            paint.setColor(finger != -1 ? 0xffdef2f3 : 0xffa9c3d6);
             canvas.drawCircle(knobX, knobY, dp(3), paint);
             paint.setColor(MUTED);
             paint.setTextSize(dp(11));

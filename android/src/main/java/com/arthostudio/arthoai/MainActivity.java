@@ -40,14 +40,14 @@ import javax.net.ssl.SSLHandshakeException;
 import org.json.JSONObject;
 
 public final class MainActivity extends Activity {
-    static final int BACKGROUND = 0xff131713;
-    static final int SURFACE = 0xff222722;
-    static final int BORDER = 0xff3f4a3b;
-    static final int INK = 0xfff4f5eb;
-    static final int MUTED = 0xffb4beaf;
-    static final int ACCENT = 0xffd8eeac;
+    static final int BACKGROUND = 0xff090f1a;
+    static final int SURFACE = 0xff111d2e;
+    static final int BORDER = 0xff354b64;
+    static final int INK = 0xffeff5fc;
+    static final int MUTED = 0xffaabbd0;
+    static final int ACCENT = 0xffa6e6d7;
     private static final int GREEN = ACCENT;
-    private static final int ALERT = 0xffffc4ac;
+    private static final int ALERT = 0xffffc2b6;
     private static final Locale BRAZIL = new Locale("pt", "BR");
     private static final int SCAN_PAIRING = 17;
     private static final int HOUSE_TAB = 4;
@@ -57,6 +57,7 @@ public final class MainActivity extends Activity {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Handler connectionTimer = new Handler(Looper.getMainLooper());
     private final Runnable reconnect = () -> requestStatus(false);
+    private final GlassBackdrop backdrop = new GlassBackdrop();
     private ScrollView scroll;
     private final View[] pages = new View[4];
     private final Button[] tabs = new Button[NAV_ICONS.length];
@@ -93,7 +94,7 @@ public final class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
 
         LinearLayout shell = column();
-        shell.setBackground(new GlassBackdrop());
+        shell.setBackground(backdrop);
         if (Build.VERSION.SDK_INT >= 30) {
             shell.setOnApplyWindowInsetsListener((view, insets) -> {
                 Insets safe = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
@@ -156,11 +157,13 @@ public final class MainActivity extends Activity {
     @Override protected void onStart() {
         super.onStart();
         visible = true;
+        backdrop.setRunning(selectedTab != HOUSE_TAB);
         if (pairing != null) requestStatus(!online);
     }
 
     @Override protected void onStop() {
         visible = false;
+        backdrop.setRunning(false);
         connectionTimer.removeCallbacks(reconnect);
         super.onStop();
     }
@@ -222,9 +225,9 @@ public final class MainActivity extends Activity {
     private View houseCard() {
         FrameLayout card = new FrameLayout(this);
         GradientDrawable background = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{0xff39452e, 0xff2a3426, 0xff20291e});
+                new int[]{0xff233c57, 0xff192d43, 0xff142235});
         background.setCornerRadius(dp(19));
-        background.setStroke(dp(1), 0xff59684c);
+        background.setStroke(dp(1), 0xff425d79);
         card.setBackground(background);
 
         LinearLayout layout = row();
@@ -287,7 +290,7 @@ public final class MainActivity extends Activity {
 
     private View navigation() {
         LinearLayout nav = row();
-        nav.setBackground(surface(0xff1b201a, 17, BORDER));
+        nav.setBackground(surface(0xff101927, 17, BORDER));
         nav.setPadding(dp(4), dp(4), dp(4), dp(4));
         String[] labels = {"Início", "PCs", "Energia", "Atualizar", "Casa"};
         for (int index = 0; index < tabs.length; index++) {
@@ -321,6 +324,7 @@ public final class MainActivity extends Activity {
         if (selectedTab == 1) updateDevices();
         if (selectedTab == 2) power.refreshLocal();
         boolean showingHouse = selectedTab == HOUSE_TAB;
+        backdrop.setRunning(visible && !showingHouse);
         scroll.setVisibility(showingHouse ? View.GONE : View.VISIBLE);
         house.show(showingHouse);
         if (showingHouse) house.updatePairing(pairing, online);
@@ -338,8 +342,8 @@ public final class MainActivity extends Activity {
         icon.setTint(tint);
         tab.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
         tab.setTextColor(tint);
-        tab.setBackground(new RippleDrawable(ColorStateList.valueOf(0x32d8eeac),
-                surface(selected ? 0xff353f2b : Color.TRANSPARENT, 11, selected ? 0xff526047 : 0), null));
+        tab.setBackground(new RippleDrawable(ColorStateList.valueOf(0x32a6e6d7),
+                surface(selected ? 0xff21364a : Color.TRANSPARENT, 11, selected ? 0xff415b76 : 0), null));
     }
 
     private View header() {
@@ -365,7 +369,7 @@ public final class MainActivity extends Activity {
         status = label("Sem conexão", 13, MUTED, "sans-serif");
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         status.setPadding(dp(9), dp(3), dp(9), dp(3));
-        status.setBackground(surface(0xff2b3328, 9, BORDER));
+        status.setBackground(surface(0xff1b2b3e, 9, BORDER));
         panel.addView(status, new LinearLayout.LayoutParams(-2, -2));
         computer = label("Conecte seu PC", 24, INK, "sans-serif-medium");
         computer.setAccessibilityHeading(true);
@@ -698,9 +702,9 @@ public final class MainActivity extends Activity {
     private void decorateButton(Button button, boolean prominent) {
         int color = prominent ? BACKGROUND : INK;
         button.setTextColor(new ColorStateList(
-                new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{prominent ? 0xff687553 : MUTED, color}));
+                new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{prominent ? 0xff567380 : MUTED, color}));
         int fill = prominent ? ACCENT : SURFACE;
-        button.setBackground(new RippleDrawable(ColorStateList.valueOf(prominent ? 0x30141715 : 0x35d8eeac),
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(prominent ? 0x30141715 : 0x35a6e6d7),
                 surface(fill, 11, prominent ? 0 : BORDER), null));
     }
 

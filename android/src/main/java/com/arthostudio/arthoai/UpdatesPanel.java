@@ -49,7 +49,7 @@ final class UpdatesPanel {
         root.addView(card, owner.spaced(18));
         TextView installed = owner.label("Versão instalada  " + installedVersion, 12, MainActivity.MUTED, "sans-serif-medium");
         installed.setPadding(owner.dp(9), owner.dp(4), owner.dp(9), owner.dp(4));
-        installed.setBackground(owner.surface(0xff2b3328, 8, MainActivity.BORDER));
+        installed.setBackground(owner.surface(0xff1b2b3e, 8, MainActivity.BORDER));
         card.addView(installed, new LinearLayout.LayoutParams(-2, -2));
         heading = owner.label("Verificar nova versão", 23, MainActivity.INK, "sans-serif-medium");
         card.addView(heading, owner.spaced(8));
