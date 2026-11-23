@@ -528,8 +528,8 @@
                             <TextBox x:Name="PlanEmail" MaxLength="254" AutomationProperties.Name="E-mail da conta"/>
                             <WrapPanel Margin="0,10,0,0">
                                 <StackPanel Width="164" Margin="0,0,13,8">
-                                    <TextBlock Text="Data de renovação" Style="{StaticResource BodyCopy}" Margin="0,0,0,4"/>
-                                    <TextBox x:Name="PlanDate" MaxLength="10" AutomationProperties.Name="Data de renovação, dia, mês e ano" ToolTip="dd/MM/aaaa"/>
+                                    <TextBlock Text="Renovação (opcional)" Style="{StaticResource BodyCopy}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="PlanDate" MaxLength="10" AutomationProperties.Name="Data opcional de renovação, dia, mês e ano" ToolTip="dd/MM/aaaa"/>
                                     <TextBlock Text="Dia/mês/ano" Style="{StaticResource BodyCopy}" Margin="0,3,0,0"/>
                                 </StackPanel>
                                 <StackPanel Width="156" Margin="0,0,0,8">

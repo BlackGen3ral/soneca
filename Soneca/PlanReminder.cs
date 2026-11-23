@@ -4,25 +4,26 @@ using Microsoft.Win32;
 
 namespace Soneca;
 
-internal sealed record PlanReminder(Guid Id, string Email, DateOnly Renewal, int LeadDays,
+internal sealed record PlanReminder(Guid Id, string Email, DateOnly? Renewal, int LeadDays,
     bool WarnedBefore = false, bool WarnedOnDay = false)
 {
-    public int DaysLeft(DateOnly today) => Renewal.DayNumber - today.DayNumber;
+    public int? DaysLeft(DateOnly today) => Renewal?.DayNumber - today.DayNumber;
 
-    public static PlanReminder Create(string email, DateOnly renewal, int leadDays, PlanReminder? existing)
+    public static PlanReminder Create(string email, DateOnly? renewal, int leadDays, PlanReminder? existing)
     {
         email = email.Trim();
         if (email.Length > 254 || !MailAddress.TryCreate(email, out var address) ||
             !string.Equals(address.Address, email, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Digite um endereço de e-mail válido.");
         if (leadDays is < 1 or > 60) throw new ArgumentException("Escolha uma antecedência de 1 a 60 dias.");
-        bool sameDate = existing?.Renewal == renewal;
+        bool sameDate = renewal.HasValue && existing?.Renewal == renewal;
         return new PlanReminder(existing?.Id ?? Guid.NewGuid(), email, renewal, leadDays,
             sameDate && existing!.WarnedBefore, sameDate && existing!.WarnedOnDay);
     }
 
     public string Countdown(DateOnly today) => DaysLeft(today) switch
     {
+        null => "Sem data de renovação",
         0 => "Renova hoje",
         1 => "Falta 1 dia",
         -1 => "Data passou há 1 dia",
@@ -37,9 +38,12 @@ internal sealed record PlanReminder(Guid Id, string Email, DateOnly Renewal, int
         _ => false
     };
 
-    public PlanReminder AfterNotice(DateOnly today) => DaysLeft(today) == 0
-        ? this with { WarnedOnDay = true }
-        : this with { WarnedBefore = true };
+    public PlanReminder AfterNotice(DateOnly today) => DaysLeft(today) switch
+    {
+        0 => this with { WarnedOnDay = true },
+        > 0 => this with { WarnedBefore = true },
+        _ => this
+    };
 }
 
 internal static class ReminderStore

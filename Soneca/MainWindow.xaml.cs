@@ -40,6 +40,8 @@ public partial class MainWindow : Window
         StartupCheckBox.IsChecked = startWithWindows;
         if (!demo) StartupRegistration.SetEnabled(startWithWindows);
         ConfigureDashboard();
+        if (!demo) ConfigureTray();
+        StateChanged += (_, _) => TrayWindowStateChanged();
         ConfigureReminders();
         try { target = schedule.Read(); } catch (Exception ex) { ErrorLabel.Text = "Não foi possível consultar o agendamento: " + ex.Message; ScheduleButton.IsEnabled = false; }
         try { suspendTarget = suspendSchedule.Read(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
@@ -61,15 +63,11 @@ public partial class MainWindow : Window
             EndHouseSession();
             CloseUpdates();
             CloseReminders();
+            CloseTray();
             await StopPcAgentAsync();
             await StopMobileAsync();
         };
-        Closing += (_, args) =>
-        {
-            if (!CleanupPanel.Busy && !NamesPanel.Busy && downloadCancellation is null) return;
-            args.Cancel = true;
-            MessageBox.Show("Aguarde a operação terminar ou cancele o download antes de fechar.", "Artho AI");
-        };
+        Closing += (_, args) => HandleClose(args);
     }
 
     protected override void OnSourceInitialized(EventArgs e)

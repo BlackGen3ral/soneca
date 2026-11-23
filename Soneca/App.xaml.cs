@@ -5,6 +5,8 @@ namespace Soneca;
 public partial class App : Application
 {
     private Mutex? instance;
+    private EventWaitHandle? activateWindow;
+    private RegisteredWaitHandle? activation;
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -44,10 +46,23 @@ public partial class App : Application
             return;
         }
         bool demo = e.Args.Contains("--demo");
-        instance = new Mutex(true, demo ? "Local\\SonecaDemo" : "Local\\Soneca", out bool first);
-        if (!first) { MessageBox.Show("O Artho AI já está aberto.", "Artho AI"); Shutdown(); return; }
+        string name = demo ? "Local\\SonecaDemo" : "Local\\Soneca";
+        activateWindow = new EventWaitHandle(false, EventResetMode.AutoReset, name + "-Activate");
+        instance = new Mutex(true, name, out bool first);
+        if (!first) { activateWindow.Set(); Shutdown(); return; }
         DispatcherUnhandledException += (_, args) => { MessageBox.Show(args.Exception.Message, "Artho AI"); args.Handled = true; };
-        MainWindow = new MainWindow(demo, e.Args.Contains("--skip-intro")); MainWindow.Show();
+        var window = new MainWindow(demo, e.Args.Contains("--skip-intro"));
+        MainWindow = window;
+        activation = ThreadPool.RegisterWaitForSingleObject(activateWindow, (_, _) =>
+            Dispatcher.InvokeAsync(() => window.RestoreFromTray()), null, Timeout.Infinite, executeOnlyOnce: false);
+        SessionEnding += (_, _) => window.AllowSessionEnd();
+        window.Show();
     }
-    protected override void OnExit(ExitEventArgs e) { instance?.Dispose(); base.OnExit(e); }
+    protected override void OnExit(ExitEventArgs e)
+    {
+        activation?.Unregister(null);
+        activateWindow?.Dispose();
+        instance?.Dispose();
+        base.OnExit(e);
+    }
 }

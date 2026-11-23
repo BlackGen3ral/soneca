@@ -22,7 +22,7 @@ internal sealed class WindowsDesktopSurface : IDesktopSurface
         finally { CloseDesktop(input); }
     }
 
-    public DesktopFrame Capture(bool followMonitor)
+    public DesktopFrame Capture(bool followMonitor, DesktopFrameProfile profile)
     {
         IntPtr awareness = SetThreadDpiAwarenessContext(new IntPtr(-4));
         IntPtr screen = IntPtr.Zero, memory = IntPtr.Zero, bitmap = IntPtr.Zero, previous = IntPtr.Zero;
@@ -32,7 +32,7 @@ internal sealed class WindowsDesktopSurface : IDesktopSurface
             var monitors = GetMonitors(followMonitor);
             var monitor = ActiveMonitor(monitors);
             int width = monitor.Width, height = monitor.Height;
-            double scale = Math.Min(1d, 1280d / Math.Max(width, height));
+            double scale = Math.Min(1d, (double)profile.LongEdge / Math.Max(width, height));
             int resizedWidth = Math.Max(1, (int)(width * scale));
             int resizedHeight = Math.Max(1, (int)(height * scale));
             screen = GetDC(IntPtr.Zero);
@@ -42,14 +42,14 @@ internal sealed class WindowsDesktopSurface : IDesktopSurface
             if (memory == IntPtr.Zero || bitmap == IntPtr.Zero) throw new IOException("Imagem indisponível.");
             previous = SelectObject(memory, bitmap);
             if (previous == IntPtr.Zero || previous == new IntPtr(-1)) throw new IOException("Imagem indisponível.");
-            SetStretchBltMode(memory, 4);
+            SetStretchBltMode(memory, profile.FastScaling ? 3 : 4); // COLORONCOLOR or HALFTONE
             if (!StretchBlt(memory, 0, 0, resizedWidth, resizedHeight, screen, monitor.Left, monitor.Top, width, height, 0x40CC0020))
                 throw new IOException("Não foi possível ler a tela.");
             SelectObject(memory, previous);
             previous = IntPtr.Zero;
             var source = Imaging.CreateBitmapSourceFromHBitmap(bitmap, IntPtr.Zero, Int32Rect.Empty,
                 BitmapSizeOptions.FromEmptyOptions());
-            var encoder = new JpegBitmapEncoder { QualityLevel = 63 };
+            var encoder = new JpegBitmapEncoder { QualityLevel = profile.Quality };
             encoder.Frames.Add(BitmapFrame.Create(source));
             using var output = new MemoryStream();
             encoder.Save(output);

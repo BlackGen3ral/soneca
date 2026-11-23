@@ -30,6 +30,13 @@ internal static class RemoteDesktopTests
         Check(desktop.Read(lease) is not null && desktop.Read(lease) is not null && surface.Captures == 1);
         clock.Advance(0.2);
         Check(desktop.Read(lease) is not null && surface.Captures == 2);
+        var motion = DesktopFrameProfile.FromQuery("motion");
+        Check(motion.LongEdge == 960 && motion.FastScaling && motion.IntervalMs == 33);
+        Check(desktop.Read(lease, motion) is not null && surface.Captures == 3 && surface.Profile == motion);
+        Check(desktop.Read(lease, motion) is not null && surface.Captures == 3);
+        Check(desktop.Read(lease, DesktopFrameProfile.FromQuery("low")) is not null &&
+            surface.Captures == 4 && surface.Profile.LongEdge == 640);
+        Check(DesktopFrameProfile.FromQuery("invalid") == DesktopFrameProfile.Detail);
         Check(!desktop.Input(lease, new DesktopInput("move", -1, 0)) && surface.Inputs == 0);
         Check(!desktop.Input(lease, new DesktopInput("key", Value: "unknown")) && surface.Inputs == 0);
         Check(desktop.Input(lease, new DesktopInput("down", 4000, 5000)) && surface.Inputs == 1);
@@ -86,10 +93,17 @@ internal static class RemoteDesktopTests
     {
         public bool Available = true, FollowMonitor;
         public int Captures, Inputs, Releases, AvailabilityChecks;
+        public DesktopFrameProfile Profile;
         public Action? OnCapture;
         public bool IsAvailable() { AvailabilityChecks++; return Available; }
-        public DesktopFrame Capture(bool followMonitor)
-        { Captures++; FollowMonitor = followMonitor; OnCapture?.Invoke(); return new DesktopFrame([1], 0, 0); }
+        public DesktopFrame Capture(bool followMonitor, DesktopFrameProfile profile)
+        {
+            Captures++;
+            FollowMonitor = followMonitor;
+            Profile = profile;
+            OnCapture?.Invoke();
+            return new DesktopFrame([1], 0, 0);
+        }
         public void Apply(DesktopInput input, bool followMonitor) => Inputs++;
         public void Release() => Releases++;
     }

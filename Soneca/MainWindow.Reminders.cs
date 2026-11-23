@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-using NotifyIcon = System.Windows.Forms.NotifyIcon;
 
 namespace Soneca;
 
@@ -13,8 +12,6 @@ public partial class MainWindow
     private List<PlanReminder> reminders = [];
     private Guid? editingReminder;
     private DateOnly renderedOn;
-    private NotifyIcon? reminderIcon;
-    private System.Drawing.Icon? reminderDrawing;
 
     private void ConfigureReminders()
     {
@@ -48,10 +45,19 @@ public partial class MainWindow
     {
         try
         {
-            if (!DateOnly.TryParseExact(PlanDate.Text.Trim(), "dd/MM/yyyy", BrazilianPortuguese, DateTimeStyles.None, out var date))
-                throw new ArgumentException("Digite a data no formato dia/mês/ano.");
-            if (!int.TryParse(PlanLead.Text, out int lead)) throw new ArgumentException("Digite a antecedência em dias.");
-            var row = PlanReminder.Create(PlanEmail.Text, date, lead, reminders.Find(item => item.Id == editingReminder));
+            var existing = reminders.Find(item => item.Id == editingReminder);
+            DateOnly? renewal = null;
+            string dateText = PlanDate.Text.Trim();
+            if (dateText.Length != 0)
+            {
+                if (!DateOnly.TryParseExact(dateText, "dd/MM/yyyy", BrazilianPortuguese, DateTimeStyles.None, out var date))
+                    throw new ArgumentException("Digite a data no formato dia/mês/ano ou deixe em branco.");
+                renewal = date;
+            }
+            int lead = existing?.LeadDays ?? 7;
+            if (!string.IsNullOrWhiteSpace(PlanLead.Text) && !int.TryParse(PlanLead.Text, out lead))
+                throw new ArgumentException("Digite a antecedência em dias.");
+            var row = PlanReminder.Create(PlanEmail.Text, renewal, lead, existing);
             if (reminders.Any(item => item.Id != row.Id && string.Equals(item.Email, row.Email, StringComparison.OrdinalIgnoreCase)))
                 throw new ArgumentException("Esse e-mail já está na lista. Use Editar para mudar a data.");
             SaveReminders(reminders.Where(item => item.Id != row.Id).Append(row).ToList());
@@ -87,9 +93,9 @@ public partial class MainWindow
         renderedOn = today;
         PlanRows.Children.Clear();
         PlanEmpty.Visibility = reminders.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        int upcoming = reminders.Count(item => item.DaysLeft(today) >= 0 && item.DaysLeft(today) <= item.LeadDays);
+        int upcoming = reminders.Count(item => item.DaysLeft(today) is int days && days >= 0 && days <= item.LeadDays);
         PlanNav.Content = upcoming == 0 ? "Assinaturas" : $"Assinaturas ({upcoming})";
-        foreach (var item in reminders.OrderBy(entry => entry.Renewal).ThenBy(entry => entry.Email))
+        foreach (var item in reminders.OrderBy(entry => entry.Renewal is null).ThenBy(entry => entry.Renewal).ThenBy(entry => entry.Email))
         {
             var body = new StackPanel();
             PlanRows.Children.Add(new Border { Style = (Style)FindResource("Panel"), Child = body,
@@ -98,7 +104,8 @@ public partial class MainWindow
             body.Children.Add(new TextBlock { Text = item.Countdown(today), FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(0, 4, 0, 2),
                 Foreground = (System.Windows.Media.Brush)FindResource(item.DaysLeft(today) <= item.LeadDays ? "Accent" : "Ink") });
-            body.Children.Add(new TextBlock { Text = $"{item.Renewal:dd/MM/yyyy}  ·  Antecedência de {item.LeadDays} dia(s)", Style = (Style)FindResource("BodyCopy") });
+            if (item.Renewal is DateOnly renewal)
+                body.Children.Add(new TextBlock { Text = $"{renewal:dd/MM/yyyy}  ·  Antecedência de {item.LeadDays} dia(s)", Style = (Style)FindResource("BodyCopy") });
             var actions = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };
             body.Children.Add(actions);
             var edit = new Button { Content = "Editar", Margin = new Thickness(0, 0, 6, 0) };
@@ -106,7 +113,7 @@ public partial class MainWindow
             {
                 editingReminder = item.Id;
                 PlanEmail.Text = item.Email;
-                PlanDate.Text = item.Renewal.ToString("dd/MM/yyyy", BrazilianPortuguese);
+                PlanDate.Text = item.Renewal?.ToString("dd/MM/yyyy", BrazilianPortuguese) ?? "";
                 PlanLead.Text = item.LeadDays.ToString(BrazilianPortuguese);
                 PlanFormTitle.Text = "Editar conta";
                 PlanDate.Focus();
@@ -157,21 +164,7 @@ public partial class MainWindow
     {
         PlanBannerText.Text = text;
         PlanBanner.Visibility = Visibility.Visible;
-        if (demo) return;
-        if (reminderIcon is null)
-        {
-            using var resource = Application.GetResourceStream(new Uri("pack://application:,,,/Assets/ArthoAI.ico")).Stream;
-            using var icon = new System.Drawing.Icon(resource);
-            reminderDrawing = (System.Drawing.Icon)icon.Clone();
-            reminderIcon = new NotifyIcon { Icon = reminderDrawing, Text = "Artho AI · Assinaturas", Visible = true };
-            reminderIcon.BalloonTipClicked += (_, _) => Dispatcher.InvokeAsync(() =>
-            {
-                if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
-                Activate();
-                Navigate(8);
-            });
-        }
-        reminderIcon.ShowBalloonTip(8000, "Renovação do ChatGPT", text, System.Windows.Forms.ToolTipIcon.Info);
+        if (!demo) trayIcon?.ShowBalloonTip(8000, "Renovação do ChatGPT", text, System.Windows.Forms.ToolTipIcon.Info);
     }
 
     private void DismissPlanBanner_Click(object sender, RoutedEventArgs e) => PlanBanner.Visibility = Visibility.Collapsed;
@@ -182,10 +175,5 @@ public partial class MainWindow
         catch (Exception error) { PlanFeedback.Text = error.Message; }
     }
 
-    private void CloseReminders()
-    {
-        reminderTimer.Stop();
-        reminderIcon?.Dispose();
-        reminderDrawing?.Dispose();
-    }
+    private void CloseReminders() => reminderTimer.Stop();
 }

@@ -4,6 +4,19 @@ namespace Soneca;
 
 internal sealed record DesktopFrame(byte[] Image, int PointerX, int PointerY, string? Monitor = null,
     int MonitorNumber = 1, int MonitorCount = 1);
+
+internal readonly record struct DesktopFrameProfile(int LongEdge, int Quality, int IntervalMs, bool FastScaling)
+{
+    public static DesktopFrameProfile Detail => new(1280, 63, 50, false);
+
+    public static DesktopFrameProfile FromQuery(string value) => value switch
+    {
+        "motion" => new(960, 52, 33, true),
+        "light" => new(768, 46, 40, true),
+        "low" => new(640, 40, 50, true),
+        _ => Detail
+    };
+}
 internal sealed record DesktopInput(string? Action, int X = 0, int Y = 0, string? Value = null, int Delta = 0,
     string? Monitor = null, MonitorEdge Edge = MonitorEdge.None)
 {
@@ -22,7 +35,7 @@ internal sealed record DesktopInput(string? Action, int X = 0, int Y = 0, string
 internal interface IDesktopSurface
 {
     bool IsAvailable();
-    DesktopFrame Capture(bool followMonitor);
+    DesktopFrame Capture(bool followMonitor, DesktopFrameProfile profile);
     void Apply(DesktopInput input, bool followMonitor);
     void Release();
 }
@@ -30,7 +43,6 @@ internal interface IDesktopSurface
 internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider? time = null)
 {
     private static readonly TimeSpan ViewerTimeout = TimeSpan.FromSeconds(20);
-    private static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(50);
     private readonly TimeProvider clock = time ?? TimeProvider.System;
     private readonly object gate = new();
     private readonly object captureGate = new();
@@ -42,6 +54,7 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
     private bool held;
     private bool followMonitor;
     private DesktopFrame? frame;
+    private DesktopFrameProfile frameProfile;
     public event Action? ViewerChanged;
 
     public void Enable()
@@ -91,8 +104,9 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
             if (lease == client) ClearViewer();
     }
 
-    public DesktopFrame? Read(Guid client)
+    public DesktopFrame? Read(Guid client, DesktopFrameProfile? profile = null)
     {
+        var requested = profile ?? DesktopFrameProfile.Detail;
         // Encoding a frame cannot delay mouse and keyboard events.
         lock (captureGate)
         {
@@ -103,15 +117,17 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
                 Sweep();
                 if (lease != client) return null;
                 started = lastSeen = clock.GetUtcNow();
-                if (frame is not null && started - frameAt < FrameInterval) return frame;
+                if (frame is not null && frameProfile == requested &&
+                    started - frameAt < TimeSpan.FromMilliseconds(requested.IntervalMs)) return frame;
                 trackMonitor = followMonitor;
             }
-            var captured = surface.Capture(trackMonitor);
+            var captured = surface.Capture(trackMonitor, requested);
             lock (gate)
             {
                 Sweep();
                 if (lease != client) return null;
                 frame = captured;
+                frameProfile = requested;
                 frameAt = started;
                 return frame;
             }

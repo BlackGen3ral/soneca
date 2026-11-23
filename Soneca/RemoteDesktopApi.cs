@@ -24,7 +24,8 @@ internal static class RemoteDesktopApi
             context.Response.Headers.CacheControl = "no-store";
             try
             {
-                if (desktop.Read(session) is not { } frame) return Results.StatusCode(StatusCodes.Status410Gone);
+                var profile = DesktopFrameProfile.FromQuery(context.Request.Query["quality"].ToString());
+                if (desktop.Read(session, profile) is not { } frame) return Results.StatusCode(StatusCodes.Status410Gone);
                 context.Response.Headers["X-Artho-Pointer-X"] = frame.PointerX.ToString();
                 context.Response.Headers["X-Artho-Pointer-Y"] = frame.PointerY.ToString();
                 if (frame.Monitor is not null)
