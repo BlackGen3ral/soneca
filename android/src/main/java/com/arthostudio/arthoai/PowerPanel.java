@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.provider.Settings;
 import android.text.InputType;
+import android.graphics.drawable.GradientDrawable;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -48,42 +49,54 @@ final class PowerPanel {
         this.owner = owner;
         this.worker = worker;
         page = owner.column();
-        TextView title = label("Energia do PC", 31, MainActivity.INK);
+        TextView title = label("Energia", 31, MainActivity.INK);
         title.setAccessibilityHeading(true);
         page.addView(title);
-        notice = label("", 14, MainActivity.MUTED);
+        LinearLayout status = section("PC de controle");
+        GradientDrawable statusBackground = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{0xff233c57, 0xff142235});
+        statusBackground.setCornerRadius(owner.dp(17));
+        statusBackground.setStroke(owner.dp(1), MainActivity.BORDER);
+        status.setBackground(statusBackground);
+        notice = label("Conecte-se ao Windows para consultar o estado da energia.", 14, MainActivity.MUTED);
         notice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        page.addView(notice, owner.spaced(7));
-        connect = action(page, "Parear com Windows", true, owner::showPairing);
+        status.addView(notice, owner.spaced(6));
+        connect = action(status, "Parear com Windows", true, owner::showPairing);
+        action(status, "Atualizar estado", false, this::refresh);
 
-        LinearLayout wake = section("Ligar");
+        LinearLayout quick = section("Ações imediatas");
+        LinearLayout immediate = new LinearLayout(owner);
+        quick.addView(immediate, owner.spaced(10));
+        wakeNow = inlineAction(immediate, "Ligar", "Ligar agora", this::wake, 0);
+        stopNow = inlineAction(immediate, "Desligar", "Desligar agora", () -> confirm("Desligar", "shutdown"), 6);
+        restart = inlineAction(immediate, "Reiniciar", "Reiniciar agora", () -> confirm("Reiniciar", "restart"), 6);
+
+        LinearLayout schedule = section("Agendamentos");
         wakeRule = label("", 14, MainActivity.MUTED);
-        wake.addView(wakeRule, owner.spaced(6));
-        wakeNow = action(wake, "Ligar agora", false, this::wake);
-        wakeSchedule = action(wake, "Programar para ligar", false, this::chooseWakeMode);
-        cancelWake = action(wake, "Cancelar horário de ligar", false, () -> {
+        schedule.addView(label("Ligar", 15, MainActivity.INK), owner.spaced(10));
+        schedule.addView(wakeRule, owner.spaced(4));
+        wakeSchedule = action(schedule, "Programar para ligar", false, this::chooseWakeMode);
+        cancelWake = action(schedule, "Cancelar horário de ligar", false, () -> {
             WakeSchedules.clearRule(owner);
             notice.setText("Horário de ligar cancelado.");
             render();
         });
-        forgetWake = action(wake, "Esquecer este PC", false, () -> new AlertDialog.Builder(owner)
+        View divider = owner.divider();
+        LinearLayout.LayoutParams separator = new LinearLayout.LayoutParams(-1, owner.dp(1));
+        separator.topMargin = owner.dp(13);
+        schedule.addView(divider, separator);
+        schedule.addView(label("Desligar", 15, MainActivity.INK), owner.spaced(10));
+        oneTime = label("", 14, MainActivity.MUTED);
+        weekly = label("", 14, MainActivity.MUTED);
+        schedule.addView(oneTime, owner.spaced(4));
+        schedule.addView(weekly, owner.spaced(4));
+        stopSchedule = action(schedule, "Programar para desligar", false, this::chooseStopMode);
+        cancelStop = action(schedule, "Cancelar desligamento único", false,
+                () -> request("POST", "/v1/energy/shutdown/cancel", "Desligamento único cancelado.", false));
+        forgetWake = action(page, "Esquecer este PC", false, () -> new AlertDialog.Builder(owner)
                 .setTitle("Esquecer este PC?")
                 .setMessage("Isso remove o PC do celular e cancela o horário de ligar salvo aqui.")
                 .setNegativeButton("Voltar", null).setPositiveButton("Esquecer", (dialog, button) -> owner.disconnect()).show());
-
-        LinearLayout stop = section("Desligar e reiniciar");
-        oneTime = label("", 14, MainActivity.MUTED);
-        weekly = label("", 14, MainActivity.MUTED);
-        stop.addView(oneTime, owner.spaced(6));
-        stop.addView(weekly, owner.spaced(4));
-        LinearLayout immediate = new LinearLayout(owner);
-        stop.addView(immediate, owner.spaced(8));
-        stopNow = inlineAction(immediate, "Desligar agora", () -> confirm("Desligar", "shutdown"), 0);
-        restart = inlineAction(immediate, "Reiniciar agora", () -> confirm("Reiniciar", "restart"), 6);
-        stopSchedule = action(stop, "Programar para desligar", false, this::chooseStopMode);
-        cancelStop = action(stop, "Cancelar desligamento único", false,
-                () -> request("POST", "/v1/energy/shutdown/cancel", "Desligamento único cancelado.", false));
-        action(stop, "Atualizar estado", false, this::refresh);
         render();
     }
 
@@ -347,6 +360,7 @@ final class PowerPanel {
         }
         JSONObject rule = lastState == null ? null : lastState.optJSONObject("shutdownWeekly");
         weekly.setText(rule == null ? "" : "Desligamento semanal · " + describe(rule.optString("time"), rule.optInt("days")));
+        weekly.setVisibility(rule == null ? View.GONE : View.VISIBLE);
     }
 
     private static String describe(String clock, int days) {
@@ -363,9 +377,11 @@ final class PowerPanel {
     private LinearLayout section(String title) {
         LinearLayout group = owner.column();
         group.setPadding(owner.dp(15), owner.dp(13), owner.dp(15), owner.dp(13));
-        group.setBackground(owner.surface(MainActivity.SURFACE, 16, MainActivity.BORDER));
-        group.addView(label(title, 17, MainActivity.INK));
-        page.addView(group, owner.spaced(17));
+        group.setBackground(owner.surface(MainActivity.SURFACE, 17, MainActivity.BORDER));
+        TextView heading = label(title, 18, MainActivity.INK);
+        heading.setAccessibilityHeading(true);
+        group.addView(heading);
+        page.addView(group, owner.spaced(12));
         return group;
     }
     private LinearLayout form() {
@@ -380,8 +396,11 @@ final class PowerPanel {
         where.addView(button, owner.spaced(6));
         return button;
     }
-    private Button inlineAction(LinearLayout where, String text, Runnable run, int inset) {
+    private Button inlineAction(LinearLayout where, String text, String description, Runnable run, int inset) {
         Button button = owner.button(text, false);
+        button.setContentDescription(description);
+        button.setTextSize(13);
+        button.setPadding(owner.dp(4), owner.dp(8), owner.dp(4), owner.dp(8));
         button.setOnClickListener(view -> { if (!busy) run.run(); });
         LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -2, 1);
         size.leftMargin = owner.dp(inset);
