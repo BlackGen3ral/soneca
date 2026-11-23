@@ -26,10 +26,10 @@
                         <DockPanel>
                             <ComboBox x:Name="TempAge" DockPanel.Dock="Right" SelectedIndex="0" MinWidth="146" Margin="10,0,0,0"
                                       SelectionChanged="Scope_Changed" AutomationProperties.Name="Idade dos arquivos temporários">
-                                <ComboBoxItem Tag="1"><TextBlock Text="Mais de 1 dia" Foreground="#191A1C"/></ComboBoxItem>
-                                <ComboBoxItem Tag="7"><TextBlock Text="Mais de 7 dias" Foreground="#191A1C"/></ComboBoxItem>
-                                <ComboBoxItem Tag="30"><TextBlock Text="Mais de 30 dias" Foreground="#191A1C"/></ComboBoxItem>
-                                <ComboBoxItem Tag="0"><TextBlock Text="Qualquer idade" Foreground="#191A1C"/></ComboBoxItem>
+                                <ComboBoxItem Tag="1"><TextBlock Text="Mais de 1 dia"/></ComboBoxItem>
+                                <ComboBoxItem Tag="7"><TextBlock Text="Mais de 7 dias"/></ComboBoxItem>
+                                <ComboBoxItem Tag="30"><TextBlock Text="Mais de 30 dias"/></ComboBoxItem>
+                                <ComboBoxItem Tag="0"><TextBlock Text="Qualquer idade"/></ComboBoxItem>
                             </ComboBox>
                             <CheckBox x:Name="TempCheck" Content="Arquivos temporários do usuário" IsChecked="True" Click="Scope_Changed"/>
                         </DockPanel>

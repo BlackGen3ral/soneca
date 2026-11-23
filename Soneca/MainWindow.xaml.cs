@@ -3,6 +3,8 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 namespace Soneca;
 public partial class MainWindow : Window
@@ -78,8 +80,26 @@ public partial class MainWindow : Window
         UptimeValue.Text = local.Uptime.Days > 0
             ? $"{local.Uptime.Days} d {local.Uptime.Hours} h"
             : $"{local.Uptime.Hours} h {local.Uptime.Minutes} min";
-        NetworkStatusLabel.Text = local.NetworkAvailable ? "Interface ativa" : "Sem interface ativa";
+        NetworkStatusLabel.Text = local.NetworkAvailable ? "Rede disponível" : "Rede indisponível";
+        NetworkIndicator.Fill = (System.Windows.Media.Brush)FindResource(local.NetworkAvailable ? "Accent" : "Muted");
     }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000) || SystemParameters.HighContrast) return;
+        var handle = new WindowInteropHelper(this).Handle;
+        const int DarkCaption = 20, CaptionColor = 35, CaptionTextColor = 36;
+        var dark = 1;
+        var background = 0x151915;
+        var text = 0xebf5f4;
+        DwmSetWindowAttribute(handle, DarkCaption, in dark, sizeof(int));
+        DwmSetWindowAttribute(handle, CaptionColor, in background, sizeof(int));
+        DwmSetWindowAttribute(handle, CaptionTextColor, in text, sizeof(int));
+    }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(nint handle, int attribute, in int value, int size);
     private void Startup_Changed(object sender, RoutedEventArgs e)
     {
         if (!IsLoaded || demo) return;
