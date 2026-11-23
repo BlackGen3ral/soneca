@@ -58,6 +58,41 @@ final class PairingVault {
     static void clear(Context context) { store(context).edit().clear().commit(); }
     static void discardPending(Context context) { store(context).edit().remove(PENDING).commit(); }
 
+    static boolean hasHouseAccess(Context context, String slot) {
+        return store(context).contains(slot);
+    }
+
+    static boolean forgetHouseAccess(Context context, String slot) {
+        return store(context).edit().remove(slot).commit();
+    }
+
+    static boolean rememberHouseAccess(Context context, String slot, char[] password) {
+        byte[] plain = new String(password).getBytes(StandardCharsets.UTF_8);
+        try {
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, key());
+            cipher.updateAAD(slot.getBytes(StandardCharsets.US_ASCII));
+            String envelope = encode(cipher.getIV()) + "." + encode(cipher.doFinal(plain));
+            return store(context).edit().putString(slot, envelope).commit();
+        } catch (Exception unavailable) { return false; }
+        finally { Arrays.fill(plain, (byte) 0); }
+    }
+
+    static char[] readHouseAccess(Context context, String slot) {
+        String value = store(context).getString(slot, null);
+        if (value == null) return null;
+        byte[] plain = null;
+        try {
+            String[] parts = value.split("\\.", 2);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, key(), new GCMParameterSpec(128, decode(parts[0])));
+            cipher.updateAAD(slot.getBytes(StandardCharsets.US_ASCII));
+            plain = cipher.doFinal(decode(parts[1]));
+            return new String(plain, StandardCharsets.UTF_8).toCharArray();
+        } catch (Exception unavailable) { return null; }
+        finally { if (plain != null) Arrays.fill(plain, (byte) 0); }
+    }
+
     private static String encrypt(StatusClient.Pairing pairing) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, key());

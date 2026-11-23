@@ -60,12 +60,12 @@ final class HousePanel extends FrameLayout {
         password.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_GO);
         password.setOnEditorActionListener((view, action, event) -> {
             if (action != android.view.inputmethod.EditorInfo.IME_ACTION_GO) return false;
-            unlock();
+            unlock(false);
             return true;
         });
         lock.addView(password);
         unlock = activity.button("Abrir maquete", true);
-        unlock.setOnClickListener(view -> unlock());
+        unlock.setOnClickListener(view -> unlock(false));
         lock.addView(unlock);
         addView(lock, new LayoutParams(-1, -2, Gravity.CENTER));
         setVisibility(GONE);
@@ -74,11 +74,7 @@ final class HousePanel extends FrameLayout {
     void show(boolean visible) {
         setVisibility(visible ? VISIBLE : GONE);
         if (!visible) releaseViewer();
-        else if (browser == null) {
-            if (refreshOnOpen) clearUnlockedPage();
-            if (unlockedPage == null) showLocked(null);
-            else open(unlockedPage);
-        }
+        else if (browser == null) openOrUnlock();
     }
 
     void updatePairing(StatusClient.Pairing link, boolean online) {
@@ -90,7 +86,7 @@ final class HousePanel extends FrameLayout {
             paired = link;
             model = link == null ? null : new HousePackage(activity, link);
             syncing = false;
-            showLocked(null);
+            openOrUnlock();
         }
         if (!online || model == null || syncing) return;
         syncing = true;
@@ -105,7 +101,7 @@ final class HousePanel extends FrameLayout {
                 if (updated && unlockedPage != null) refreshOnOpen = true;
                 if (hadCache != target.exists()) {
                     if (!target.exists()) close();
-                    if (browser == null) showLocked(null);
+                    if (browser == null) openOrUnlock();
                 }
             });
         });
@@ -114,6 +110,16 @@ final class HousePanel extends FrameLayout {
     private boolean sync(HousePackage target, StatusClient.Pairing connected) {
         try { return target.sync(connected); }
         catch (Exception unavailable) { return false; }
+    }
+
+    private void openOrUnlock() {
+        if (refreshOnOpen) clearUnlockedPage();
+        if (unlockedPage != null) {
+            open(unlockedPage);
+            return;
+        }
+        showLocked(null);
+        if (getVisibility() == VISIBLE && model != null && model.exists() && model.hasSavedAccess()) unlock(true);
     }
 
     private void showLocked(String message) {
@@ -126,8 +132,8 @@ final class HousePanel extends FrameLayout {
                 : "A maquete aparecerá aqui quando este celular se conectar ao PC pareado.");
     }
 
-    private void unlock() {
-        if (!unlock.isEnabled() || model == null || password.length() == 0) return;
+    private void unlock(boolean remembered) {
+        if (!unlock.isEnabled() || model == null || (!remembered && password.length() == 0)) return;
         char[] code = new char[password.length()];
         password.getText().getChars(0, code.length, code, 0);
         password.setText("");
@@ -138,22 +144,28 @@ final class HousePanel extends FrameLayout {
         HousePackage target = model;
         int generation = ++viewGeneration;
         worker.execute(() -> {
+            char[] unlocking = remembered ? target.readSavedAccess() : code;
             try {
-                byte[] page = target.unlock(code);
+                if (unlocking == null || unlocking.length == 0) throw new IllegalStateException();
+                byte[] page = target.unlock(unlocking);
+                boolean saved = remembered || target.saveAccess(unlocking);
                 activity.show(() -> {
                     if (generation == viewGeneration) {
                         unlockedPage = page;
                         refreshOnOpen = false;
                         open(page);
+                        if (!saved) android.widget.Toast.makeText(activity,
+                                "O Android não conseguiu lembrar o acesso para a próxima vez.", android.widget.Toast.LENGTH_LONG).show();
                     }
                     else Arrays.fill(page, (byte) 0);
                 });
             } catch (Exception error) {
                 activity.show(() -> {
-                    if (generation == viewGeneration) showLocked("Senha incorreta ou arquivo da maquete inválido.");
+                    if (generation == viewGeneration) showLocked(remembered ? "Digite a senha atual da maquete."
+                            : "Senha incorreta ou arquivo da maquete inválido.");
                 });
             } finally {
-                Arrays.fill(code, '\0');
+                if (unlocking != null) Arrays.fill(unlocking, '\0');
             }
         });
     }

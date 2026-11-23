@@ -22,17 +22,24 @@ final class HousePackage {
     private static final int HEADER = 36;
     private static final byte[] MAGIC = "ARTHOC01".getBytes(StandardCharsets.US_ASCII);
     private final AtomicFile cache;
+    private final Context context;
+    private final String accessSlot;
     private String etag;
 
     HousePackage(Context context, StatusClient.Pairing pairing) {
-        cache = new AtomicFile(new File(context.getFilesDir(), "house-" +
-                hash(pairing.token.getBytes(StandardCharsets.US_ASCII)) + ".sealed"));
+        this.context = context.getApplicationContext();
+        accessSlot = "house-" + hash(pairing.token.getBytes(StandardCharsets.US_ASCII));
+        cache = new AtomicFile(new File(context.getFilesDir(), accessSlot + ".sealed"));
     }
 
     boolean exists() { return cache.getBaseFile().exists(); }
+    boolean hasSavedAccess() { return PairingVault.hasHouseAccess(context, accessSlot); }
+    char[] readSavedAccess() { return PairingVault.readHouseAccess(context, accessSlot); }
+    boolean saveAccess(char[] code) { return PairingVault.rememberHouseAccess(context, accessSlot, code); }
     void delete() {
         cache.delete();
         etag = null;
+        PairingVault.forgetHouseAccess(context, accessSlot);
     }
 
     boolean sync(StatusClient.Pairing pairing) throws Exception {
@@ -42,7 +49,7 @@ final class HousePackage {
                 if (etag == null) {
                     try (InputStream input = cache.openRead()) {
                         etag = "\"" + hash(read(input)) + "\"";
-                    } catch (IOException unreadable) { delete(); }
+                    } catch (IOException unreadable) { cache.delete(); }
                 }
                 if (etag != null) connection.setRequestProperty("If-None-Match", etag);
             }
