@@ -4,3 +4,4 @@ dist/
 .vs/
 .tools/
 *.user
+/android/src/main/assets/house/

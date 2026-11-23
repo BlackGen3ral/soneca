@@ -50,14 +50,17 @@ public final class MainActivity extends Activity {
     private static final int ALERT = 0xffffbcad;
     private static final Locale BRAZIL = new Locale("pt", "BR");
     private static final int SCAN_PAIRING = 17;
-    private static final int[] NAV_ICONS = {R.drawable.nav_home, R.drawable.nav_devices, R.drawable.nav_power, R.drawable.nav_update};
+    private static final int HOUSE_TAB = 4;
+    private static final int[] NAV_ICONS = {R.drawable.nav_home, R.drawable.nav_devices, R.drawable.nav_power,
+            R.drawable.nav_update, R.drawable.nav_house};
 
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Handler connectionTimer = new Handler(Looper.getMainLooper());
     private final Runnable reconnect = () -> requestStatus(false);
     private ScrollView scroll;
     private final View[] pages = new View[4];
-    private final Button[] tabs = new Button[4];
+    private final Button[] tabs = new Button[NAV_ICONS.length];
+    private HousePanel house;
     private int selectedTab;
     private UpdatesPanel updates;
     private PowerPanel power;
@@ -123,6 +126,8 @@ public final class MainActivity extends Activity {
         updates = new UpdatesPanel(this);
         pages[3] = updates.view();
         for (View page : pages) content.addView(page);
+        house = new HousePanel(this, worker);
+        shell.addView(house, new LinearLayout.LayoutParams(-1, 0, 1));
         LinearLayout.LayoutParams dock = new LinearLayout.LayoutParams(-1, -2);
         dock.setMargins(dp(12), dp(3), dp(12), dp(8));
         shell.addView(navigation(), dock);
@@ -137,11 +142,13 @@ public final class MainActivity extends Activity {
                 show(() -> {
                     if (stored == null || pairing != null) return;
                     pairing = stored;
+                    house.updatePairing(pairing, false);
                     if (visible) requestStatus(true);
                 });
             });
         }
         showTab(saved == null ? 0 : saved.getInt("tab", 0));
+        house.updatePairing(pairing, false);
         WakeSchedules.restore(this);
         updates.check();
     }
@@ -160,8 +167,14 @@ public final class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        house.resume();
         if (updates != null) updates.resumed();
         if (power != null) power.refreshLocal();
+    }
+
+    @Override protected void onPause() {
+        house.pause();
+        super.onPause();
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
@@ -238,7 +251,7 @@ public final class MainActivity extends Activity {
         LinearLayout nav = row();
         nav.setBackground(surface(SURFACE, 18, BORDER));
         nav.setPadding(dp(5), dp(4), dp(5), dp(4));
-        String[] labels = {"Início", "PCs", "Energia", "Atualizar"};
+        String[] labels = {"Início", "PCs", "Energia", "Atualizar", "Casa"};
         for (int index = 0; index < tabs.length; index++) {
             final int tab = index;
             Button button = button(labels[index], false);
@@ -248,11 +261,13 @@ public final class MainActivity extends Activity {
             button.setCompoundDrawablePadding(dp(3));
             button.setMaxLines(1);
             if (index == 1) button.setContentDescription("Dispositivos");
+            if (index == HOUSE_TAB) button.setContentDescription("Minha casa");
             button.setOnClickListener(view -> showTab(tab));
             tabs[index] = button;
             LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(0, -2, 1f);
             size.setMargins(dp(2), 0, dp(2), 0);
-            nav.addView(button, size);
+            if (index == HOUSE_TAB) nav.addView(button, 1, size);
+            else nav.addView(button, size);
         }
         return nav;
     }
@@ -261,12 +276,16 @@ public final class MainActivity extends Activity {
         selectedTab = requested >= 0 && requested < tabs.length ? requested : 0;
         for (int index = 0; index < tabs.length; index++) {
             boolean selected = index == selectedTab;
-            pages[index].setVisibility(selected ? View.VISIBLE : View.GONE);
+            if (index < pages.length) pages[index].setVisibility(selected ? View.VISIBLE : View.GONE);
             tabs[index].setSelected(selected);
             styleTab(tabs[index], index, selected);
         }
         if (selectedTab == 1) updateDevices();
         if (selectedTab == 2) power.refreshLocal();
+        boolean showingHouse = selectedTab == HOUSE_TAB;
+        scroll.setVisibility(showingHouse ? View.GONE : View.VISIBLE);
+        house.show(showingHouse);
+        if (showingHouse) house.updatePairing(pairing, online);
         scroll.scrollTo(0, 0);
     }
 
@@ -598,6 +617,7 @@ public final class MainActivity extends Activity {
         connectionOptions.setEnabled(true);
         connectionOptions.setVisibility(pairing == null ? View.GONE : View.VISIBLE);
         remoteDesktop.setVisibility(online && pairing != null && pairing.durable ? View.VISIBLE : View.GONE);
+        house.updatePairing(pairing, online);
         if (selectedTab == 1) updateDevices();
     }
 
@@ -689,6 +709,7 @@ public final class MainActivity extends Activity {
     @Override public Object onRetainNonConfigurationInstance() { return pairing; }
 
     @Override protected void onDestroy() {
+        house.close();
         connectionTimer.removeCallbacks(reconnect);
         if (updates != null) updates.close();
         worker.shutdownNow();
