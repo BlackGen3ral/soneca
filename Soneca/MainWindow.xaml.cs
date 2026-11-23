@@ -52,6 +52,7 @@ public partial class MainWindow : Window
             androidOperation?.Cancel();
             EndRemoteDesktop();
             timer.Stop(); dashboardTimer.Stop(); devicesTimer.Stop(); FinishIntro();
+            CloseHouse();
             CloseUpdates();
             await StopPcAgentAsync();
             await StopMobileAsync();
@@ -136,6 +137,7 @@ public partial class MainWindow : Window
         ShowMobilePage(page == 4);
         DevicesPanel.Visibility = page == 5 ? Visibility.Visible : Visibility.Collapsed;
         UpdatesPanel.Visibility = page == 6 ? Visibility.Visible : Visibility.Collapsed;
+        ShowHouse(page == 7);
         var nav = page switch
         {
             0 => EnergyNav,
@@ -145,6 +147,7 @@ public partial class MainWindow : Window
             4 => MobileNav,
             5 => DevicesNav,
             6 => UpdatesNav,
+            7 => HouseNav,
             _ => HomeNav
         };
         nav.IsChecked = true;

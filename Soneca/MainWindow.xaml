@@ -18,6 +18,7 @@
                             <TextBlock Text="Artho AI" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" Margin="8,0,0,0"/>
                         </StackPanel>
                         <RadioButton x:Name="HomeNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Início" Tag="&#xE80F;" Click="Home_Click" IsChecked="True"/>
+                        <RadioButton x:Name="HouseNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Minha casa" Tag="&#xEC06;" Click="House_Click"/>
                         <RadioButton x:Name="DevicesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Dispositivos" Tag="&#xE7F4;" Click="Devices_Click"/>
                         <RadioButton x:Name="MobileNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Celular" Tag="&#xE8EA;" Click="Mobile_Click"/>
                         <Border Style="{StaticResource Divider}" Margin="8,8,8,8"/>
@@ -123,6 +124,21 @@
             </ScrollViewer>
 
 
+            <Border x:Name="HousePage" Grid.Column="1" Margin="16,12,12,12" Visibility="Collapsed"
+                    Style="{StaticResource Panel}" Padding="0">
+                <Grid>
+                    <StackPanel x:Name="HouseLock" Width="325" Margin="20" VerticalAlignment="Center">
+                        <TextBlock Text="Minha casa" Style="{StaticResource SectionTitle}" FontSize="24" Margin="0,0,0,12"/>
+                        <TextBlock x:Name="HouseFeedback" Style="{StaticResource BodyCopy}" TextWrapping="Wrap"
+                                   Margin="0,0,0,10" AutomationProperties.LiveSetting="Polite"/>
+                        <PasswordBox x:Name="HousePassword" MaxLength="128" MinHeight="36" Padding="8"
+                                     AutomationProperties.Name="Senha da maquete" KeyDown="HousePassword_KeyDown"/>
+                        <Button x:Name="HouseUnlock" HorizontalAlignment="Left" Margin="0,10,0,0"
+                                Content="Abrir maquete" Click="HouseUnlock_Click"/>
+                    </StackPanel>
+                    <ContentControl x:Name="HouseSurface" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+                </Grid>
+            </Border>
             <ScrollViewer x:Name="DevicesPanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="30,25,30,25" MaxWidth="1080">
                     <DockPanel Margin="0,0,0,12">

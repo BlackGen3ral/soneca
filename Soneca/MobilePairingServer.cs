@@ -1,4 +1,5 @@
 using System.Net;
+using System.IO;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -123,6 +124,24 @@ internal sealed class MobilePairingServer(WebApplication app, X509Certificate2 c
                     pc.Name, pc.WindowsVersion, pc.ProcessorCount, pc.MemoryInUseGb, pc.TotalMemoryGb,
                     UptimeHours = Math.Floor(pc.Uptime.TotalHours), pc.NetworkAvailable
                 });
+            });
+            app.MapGet("/v1/house", (HttpContext context) =>
+            {
+                if (!Authorized(context)) return Results.Unauthorized();
+                context.Response.Headers.CacheControl = "no-store";
+                try
+                {
+                    byte[] package = HousePackage.Read();
+                    string etag = $"\"{Convert.ToHexString(SHA256.HashData(package))}\"";
+                    context.Response.Headers.ETag = etag;
+                    if (string.Equals(context.Request.Headers.IfNoneMatch, etag, StringComparison.Ordinal))
+                        return Results.StatusCode(StatusCodes.Status304NotModified);
+                    return Results.Bytes(package, "application/octet-stream");
+                }
+                catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
+                {
+                    return Results.NotFound();
+                }
             });
             if (restored?.AllowDevices ?? allowDevices) MobileDeviceApi.Map(app, context => Authorized(context), address);
             if (restored?.AllowPower ?? allowLocalPower)
