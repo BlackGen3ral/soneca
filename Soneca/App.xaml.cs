@@ -21,6 +21,11 @@ public partial class App : Application
             return;
         }
         if (e.Args.Contains("--self-test")) { Environment.Exit(SelfTests.Run()); return; }
+        if (e.Args is [WindowsSuspend.Argument])
+        {
+            Environment.Exit(WindowsSuspend.Run() ? 0 : 1);
+            return;
+        }
         if (e.Args.Length == 1 && e.Args[0] == "--run-pc-routines")
         {
             try
@@ -34,7 +39,7 @@ public partial class App : Application
         }
         if (e.Args.Contains("--cancel-schedule"))
         {
-            try { new Schedule().Cancel(); Environment.Exit(0); }
+            try { new Schedule().Cancel(); Schedule.ForSuspend().Cancel(); Environment.Exit(0); }
             catch { Environment.Exit(1); }
             return;
         }

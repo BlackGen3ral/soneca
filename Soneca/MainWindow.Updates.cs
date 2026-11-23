@@ -149,6 +149,11 @@ public partial class MainWindow
                 UpdateLabel.Text = "Existe um desligamento agendado neste PC. Instale depois que ele terminar ou for cancelado.";
                 return true;
             }
+            if (suspendSchedule.Read() > DateTimeOffset.Now)
+            {
+                UpdateLabel.Text = "Existe uma suspensão agendada neste PC. Instale depois que ela terminar ou for cancelada.";
+                return true;
+            }
         }
         catch (Exception)
         {

@@ -31,9 +31,12 @@ public static class TimeRules
 public sealed class Schedule
 {
     private readonly bool demo;
+    private readonly bool suspend;
     private DateTimeOffset? simulated;
-    private string Name => "Soneca-" + WindowsIdentity.GetCurrent().User!.Value;
-    public Schedule(bool demo = false) => this.demo = demo;
+    private string Name => "Soneca-" + WindowsIdentity.GetCurrent().User!.Value + (suspend ? "-Suspend" : "");
+    public Schedule(bool demo = false) : this(demo, false) { }
+    private Schedule(bool demo, bool suspend) { this.demo = demo; this.suspend = suspend; }
+    internal static Schedule ForSuspend(bool demo = false) => new(demo, true);
     private static dynamic Connect()
     {
         dynamic service = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!)!;
@@ -57,20 +60,23 @@ public sealed class Schedule
         if (demo) { simulated = target; return; }
         dynamic service = Connect();
         dynamic task = service.NewTask(0);
-        task.RegistrationInfo.Description = "Desligamento programado pelo Artho AI. Cancele pelo aplicativo.";
+        task.RegistrationInfo.Description = suspend
+            ? "Suspensão programada pelo Artho AI. Cancele pelo aplicativo."
+            : "Desligamento programado pelo Artho AI. Cancele pelo aplicativo.";
         task.Principal.LogonType = 3; task.Principal.RunLevel = 0;
         task.Settings.Enabled = true;
         task.Settings.StartWhenAvailable = false;
         task.Settings.DisallowStartIfOnBatteries = false;
         task.Settings.StopIfGoingOnBatteries = false;
-        task.Settings.WakeToRun = true;
+        task.Settings.WakeToRun = !suspend;
         task.Settings.ExecutionTimeLimit = "PT5M";
         dynamic trigger = task.Triggers.Create(1);
         trigger.StartBoundary = target.ToString("yyyy-MM-dd'T'HH:mm:sszzz", CultureInfo.InvariantCulture);
         trigger.EndBoundary = target.AddMinutes(2).ToString("yyyy-MM-dd'T'HH:mm:sszzz", CultureInfo.InvariantCulture);
         dynamic action = task.Actions.Create(0);
-        action.Path = System.IO.Path.Combine(Environment.SystemDirectory, harmlessTest ? "cmd.exe" : "shutdown.exe");
-        action.Arguments = harmlessTest ? "/c exit 0" : "/s /t 0";
+        action.Path = suspend && !harmlessTest ? System.IO.Path.Combine(AppContext.BaseDirectory, "Soneca.exe")
+            : System.IO.Path.Combine(Environment.SystemDirectory, harmlessTest ? "cmd.exe" : "shutdown.exe");
+        action.Arguments = harmlessTest ? "/c exit 0" : suspend ? WindowsSuspend.Argument : "/s /t 0";
         service.GetFolder("\\").RegisterTaskDefinition(harmlessTest ? Name + "-Test" : Name, task, 6, null, null, 3, null);
     }
     public void Cancel(bool harmlessTest = false)
@@ -79,9 +85,9 @@ public sealed class Schedule
         try { Connect().GetFolder("\\").DeleteTask(harmlessTest ? Name + "-Test" : Name, 0); }
         catch (Exception ex) when ((uint)ex.HResult == 0x80070002) { }
     }
-    public static void IntegrationTest()
+    public static void IntegrationTest(bool suspend = false)
     {
-        var schedule = new Schedule();
+        var schedule = new Schedule(demo: false, suspend: suspend);
         try
         {
             schedule.Cancel(true);
@@ -91,6 +97,7 @@ public sealed class Schedule
             if (Math.Abs((schedule.Read(true)!.Value - target).TotalSeconds) > 1) throw new Exception("Horário não foi persistido.");
             dynamic task = Connect().GetFolder("\\").GetTask(schedule.Name + "-Test");
             if ((string)task.Definition.Actions.Item(1).Arguments != "/c exit 0") throw new Exception("Ação de teste inválida.");
+            if ((bool)task.Definition.Settings.WakeToRun == suspend) throw new Exception("Regra de despertar inválida.");
         }
         finally { schedule.Cancel(true); }
         if (schedule.Read(true) is not null) throw new Exception("Tarefa não foi cancelada.");

@@ -142,7 +142,7 @@ public partial class MainWindow
 
     private void RefreshSchedule()
     {
-        try { target = schedule.Read(); Render(); }
+        try { target = schedule.Read(); suspendTarget = suspendSchedule.Read(); Render(); }
         catch (Exception ex) { ErrorLabel.Text = ex.Message; }
     }
 

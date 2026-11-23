@@ -10,9 +10,11 @@ namespace Soneca;
 public partial class MainWindow : Window
 {
     private readonly Schedule schedule;
+    private readonly Schedule suspendSchedule;
     private readonly bool demo;
     private readonly bool skipIntro;
     private DateTimeOffset? target;
+    private DateTimeOffset? suspendTarget;
     private bool clockMode;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly DispatcherTimer dashboardTimer = new() { Interval = TimeSpan.FromSeconds(5) };
@@ -20,6 +22,7 @@ public partial class MainWindow : Window
     public MainWindow(bool demo, bool skipIntro = false)
     {
         this.demo = demo; this.skipIntro = skipIntro; schedule = new Schedule(demo);
+        suspendSchedule = Schedule.ForSuspend(demo);
         InitializeComponent();
         Loaded += (_, _) => UpdateBackdropMotion();
         Activated += (_, _) => UpdateBackdropMotion();
@@ -38,6 +41,7 @@ public partial class MainWindow : Window
         if (!demo) StartupRegistration.SetEnabled(startWithWindows);
         LoadDashboard();
         try { target = schedule.Read(); } catch (Exception ex) { ErrorLabel.Text = "Não foi possível consultar o agendamento: " + ex.Message; ScheduleButton.IsEnabled = false; }
+        try { suspendTarget = suspendSchedule.Read(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
         timer.Tick += (_, _) => Render(); timer.Start(); Render();
         dashboardTimer.Tick += (_, _) =>
         {
@@ -130,6 +134,9 @@ public partial class MainWindow : Window
         }
         CancelButton.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
         ScheduleButton.Content = active ? "Alterar agendamento" : "Agendar desligamento";
+        bool suspensionPending = suspendTarget > DateTimeOffset.Now;
+        SuspendPlan.Visibility = suspensionPending ? Visibility.Visible : Visibility.Collapsed;
+        if (suspensionPending) SuspendPlanTime.Text = suspendTarget!.Value.ToLocalTime().ToString("dd/MM 'às' HH:mm");
     }
     private DateTimeOffset GetTarget() => clockMode ? TimeRules.At(TimeInput.Text, DateTimeOffset.Now) : TimeRules.After(TimeInput.Text, DateTimeOffset.Now);
     private void Schedule_Click(object sender, RoutedEventArgs e)
@@ -141,6 +148,11 @@ public partial class MainWindow : Window
     {
         try { schedule.Cancel(); target = null; ErrorLabel.Text = "Agendamento cancelado."; Render(); }
         catch (Exception ex) { ErrorLabel.Text = "Não foi possível cancelar: " + ex.Message; }
+    }
+    private void CancelSuspend_Click(object sender, RoutedEventArgs e)
+    {
+        try { suspendSchedule.Cancel(); suspendTarget = null; ErrorLabel.Text = "Suspensão cancelada."; Render(); }
+        catch (Exception ex) { ErrorLabel.Text = "Não foi possível cancelar a suspensão: " + ex.Message; }
     }
     private void SetMode(bool clock)
     {

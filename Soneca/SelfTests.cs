@@ -36,6 +36,7 @@ public static class SelfTests
             Assert(!StartupRegistration.ResolvePreference(false));
             try { Updater.ExpectedHash("bad  Soneca-Setup.exe"); throw new Exception("Hash inválido aceito"); } catch (Exception ex) when (ex.Message.StartsWith("Verificação")) { count++; }
             Schedule.IntegrationTest(); count++;
+            Schedule.IntegrationTest(suspend: true); count++;
             count += PcDeviceTests.Run();
             count += RemoteDesktopTests.Run();
             count += CleanerTests.Run();
