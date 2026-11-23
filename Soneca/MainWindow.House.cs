@@ -11,6 +11,8 @@ namespace Soneca;
 public partial class MainWindow
 {
     private WebView2? houseView;
+    private string? unlockedHouse;
+    private DateTime houseRevision;
     private int houseGeneration;
 
     private void House_Click(object sender, RoutedEventArgs e) => Navigate(7);
@@ -19,7 +21,19 @@ public partial class MainWindow
     {
         HousePage.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         if (!visible) CloseHouse();
-        else if (houseView is null) ShowLockedHouse();
+        else if (houseView is null) OpenOrUnlockHouse();
+    }
+
+    private void OpenOrUnlockHouse()
+    {
+        if (unlockedHouse is null || File.GetLastWriteTimeUtc(HousePackage.PathOnDisk) != houseRevision)
+        {
+            unlockedHouse = null;
+            ShowLockedHouse();
+            return;
+        }
+        HouseLock.Visibility = Visibility.Collapsed;
+        _ = OpenHouseAsync(unlockedHouse);
     }
 
     private void ShowLockedHouse(string? message = null)
@@ -50,8 +64,12 @@ public partial class MainWindow
         HouseFeedback.Text = "Abrindo maquete…";
         try
         {
+            var revision = File.GetLastWriteTimeUtc(HousePackage.PathOnDisk);
             string html = await Task.Run(() => HousePackage.Unlock(password));
-            if (opening == houseGeneration) await OpenHouseAsync(html);
+            if (opening != houseGeneration) return;
+            houseRevision = revision;
+            unlockedHouse = html;
+            await OpenHouseAsync(html);
         }
         catch (CryptographicException)
         {
@@ -121,6 +139,7 @@ public partial class MainWindow
     {
         if (houseView != view) return;
         CloseHouse();
+        unlockedHouse = null;
         ShowLockedHouse("Não foi possível abrir a maquete. Tente novamente.");
     });
 
@@ -132,5 +151,11 @@ public partial class MainWindow
         houseView = null;
         HouseSurface.Content = null;
         view?.Dispose();
+    }
+
+    private void EndHouseSession()
+    {
+        unlockedHouse = null;
+        CloseHouse();
     }
 }

@@ -52,7 +52,7 @@ public partial class MainWindow : Window
             androidOperation?.Cancel();
             EndRemoteDesktop();
             timer.Stop(); dashboardTimer.Stop(); devicesTimer.Stop(); FinishIntro();
-            CloseHouse();
+            EndHouseSession();
             CloseUpdates();
             await StopPcAgentAsync();
             await StopMobileAsync();
