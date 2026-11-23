@@ -23,12 +23,8 @@ final class RemoteDesktopClient {
     }
 
     static RemoteDesktopClient connect(StatusClient.Pairing pairing) throws Exception {
-        try {
-            JSONObject result = StatusClient.request(pairing, "POST", "/v1/desktop/open");
-            return new RemoteDesktopClient(pairing, UUID.fromString(result.getString("session")));
-        } catch (java.io.IOException error) {
-            throw new IOException("No PC, abra Celular → Tela remota e libere o acesso.", error);
-        }
+        JSONObject result = StatusClient.request(pairing, "POST", "/v1/desktop/open?monitors=1");
+        return new RemoteDesktopClient(pairing, UUID.fromString(result.getString("session")));
     }
 
     Frame frame() throws Exception {
@@ -59,13 +55,17 @@ final class RemoteDesktopClient {
             Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
             if (bitmap == null) throw new IOException("Imagem inválida.");
             return new Frame(bitmap, connection.getHeaderFieldInt("X-Artho-Pointer-X", -1),
-                    connection.getHeaderFieldInt("X-Artho-Pointer-Y", -1));
+                    connection.getHeaderFieldInt("X-Artho-Pointer-Y", -1),
+                    connection.getHeaderField("X-Artho-Monitor"),
+                    connection.getHeaderFieldInt("X-Artho-Monitor-Number", 1),
+                    connection.getHeaderFieldInt("X-Artho-Monitor-Count", 1));
         } finally { connection.disconnect(); }
     }
 
-    void input(String action, int x, int y, String value, int delta) throws Exception {
+    void input(String action, int x, int y, String value, int delta, String monitor, int edge) throws Exception {
         byte[] packet = new JSONObject().put("action", action).put("x", x).put("y", y)
-                .put("value", value).put("delta", delta).toString().getBytes(StandardCharsets.UTF_8);
+                .put("value", value).put("delta", delta).put("monitor", monitor).put("edge", edge)
+                .toString().getBytes(StandardCharsets.UTF_8);
         HttpsURLConnection connection = StatusClient.open(pairing, "POST", route + "/input");
         try {
             connection.setReadTimeout(2500);
@@ -89,18 +89,41 @@ final class RemoteDesktopClient {
 
     void disconnect() {
         if (!closed.compareAndSet(false, true)) return;
-        try { StatusClient.request(pairing, "POST", route + "/close"); }
-        catch (Exception ignored) { }
+        HttpsURLConnection connection = null;
+        try {
+            connection = StatusClient.open(pairing, "POST", route + "/close");
+            connection.setConnectTimeout(1000);
+            connection.setReadTimeout(1000);
+            connection.setDoOutput(true);
+            connection.setFixedLengthStreamingMode(0);
+            connection.getOutputStream().close();
+            connection.getResponseCode();
+        } catch (Exception ignored) {
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
     }
 
     private static void checkResponse(HttpsURLConnection connection) throws IOException {
-        if (connection.getResponseCode() != 200)
-            throw new IOException("Acesso encerrado. Confira a liberação no Windows.");
+        int status = connection.getResponseCode();
+        if (status == 401 || status == 403) throw new SecurityException("Vínculo removido. Pareie novamente.");
+        if (status == 410 || status == 400) throw new SessionExpired();
+        if (status != 200) throw new IOException("Tela indisponível no momento.");
     }
+
+    static final class SessionExpired extends IOException { }
 
     static final class Frame {
         final Bitmap image;
-        final int x, y;
-        Frame(Bitmap image, int x, int y) { this.image = image; this.x = x; this.y = y; }
+        final int x, y, monitorNumber, monitorCount;
+        final String monitor;
+        Frame(Bitmap image, int x, int y, String monitor, int monitorNumber, int monitorCount) {
+            this.image = image;
+            this.x = x;
+            this.y = y;
+            this.monitor = monitor;
+            this.monitorNumber = monitorNumber;
+            this.monitorCount = monitorCount;
+        }
     }
 }

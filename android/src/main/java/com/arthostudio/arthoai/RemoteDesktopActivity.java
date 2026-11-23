@@ -28,12 +28,15 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.net.ssl.SSLHandshakeException;
 
 public final class RemoteDesktopActivity extends Activity {
     private static final int PANEL = MainActivity.SURFACE;
@@ -46,7 +49,8 @@ public final class RemoteDesktopActivity extends Activity {
     private final List<Button> controls = new ArrayList<>();
     private volatile RemoteDesktopClient client;
     private volatile int generation;
-    private boolean visible;
+    private volatile int inputEpoch;
+    private boolean visible, streamRequested, interactive;
     private PointerMove queuedMove;
     private TextView status;
     private Button connection;
@@ -93,14 +97,14 @@ public final class RemoteDesktopActivity extends Activity {
         bar.addView(orientation, rotationButton);
         connection = button("Conectar");
         connection.setOnClickListener(view -> {
-            if (client == null) connect();
-            else disconnect("Tela remota encerrada.");
+            if (streamRequested) disconnect("Tela remota encerrada.");
+            else connect();
         });
         bar.addView(connection);
         page.addView(bar);
 
         status = new TextView(this);
-        status.setText("No Windows, abra Celular e libere o acesso à tela.");
+        status.setText("Conecte-se ao PC pareado.");
         status.setTextColor(MUTED);
         status.setTextSize(13);
         status.setPadding(dp(3), dp(4), dp(3), dp(7));
@@ -180,40 +184,55 @@ public final class RemoteDesktopActivity extends Activity {
     private void connect() {
         int attempt;
         synchronized (lifecycle) { attempt = ++generation; }
+        streamRequested = true;
+        connection.setText("Encerrar");
         ready(false);
-        connection.setEnabled(false);
         status.setText("Conectando ao PC…");
         stream.execute(() -> {
             RemoteDesktopClient session = null;
             try {
                 StatusClient.Pairing pairing = PairingVault.load(getApplicationContext());
                 if (pairing == null) throw new IllegalStateException("Volte ao início e pareie o celular com o PC.");
-                session = RemoteDesktopClient.connect(pairing);
-                synchronized (lifecycle) {
-                    if (generation != attempt) return;
-                    client = session;
-                }
+                int failures = 0;
                 while (attempt == generation && !Thread.currentThread().isInterrupted()) {
                     long started = SystemClock.elapsedRealtime();
-                    if (painting.compareAndSet(false, true)) {
-                        RemoteDesktopClient.Frame frame;
-                        try { frame = session.frame(); }
-                        catch (Exception error) { painting.set(false); throw error; }
-                        runOnUiThread(() -> {
-                            painting.set(false);
-                            if (attempt != generation || !visible) return;
-                            if (screen.frame == null) {
-                                ready(true);
-                                status.setText("Use o joystick para mover o mouse. Você também pode tocar na imagem.");
+                    try {
+                        if (session == null) {
+                            session = RemoteDesktopClient.connect(pairing);
+                            synchronized (lifecycle) {
+                                if (generation != attempt) return;
+                                client = session;
                             }
-                            screen.show(frame);
-                        });
+                        }
+                        if (painting.compareAndSet(false, true)) {
+                            RemoteDesktopClient.Frame frame;
+                            try { frame = session.frame(); }
+                            catch (Exception error) { painting.set(false); throw error; }
+                            failures = 0;
+                            runOnUiThread(() -> displayFrame(attempt, frame));
+                        }
+                        Thread.sleep(Math.max(1, 50 - (SystemClock.elapsedRealtime() - started)));
+                    } catch (SSLHandshakeException error) {
+                        throw new SecurityException("Confira o pareamento no Windows.", error);
+                    } catch (IOException error) {
+                        boolean expired = error instanceof RemoteDesktopClient.SessionExpired;
+                        boolean first = ++failures == 1;
+                        if (first || expired) runOnUiThread(() -> connectionInterrupted(attempt, expired));
+                        if (expired && session != null) {
+                            synchronized (lifecycle) {
+                                if (client == session) client = null;
+                            }
+                            session.disconnect();
+                            session = null;
+                        }
+                        Thread.sleep(Math.min(4000, 300L << Math.min(failures - 1, 4)));
                     }
-                    Thread.sleep(Math.max(1, 50 - (SystemClock.elapsedRealtime() - started)));
                 }
+            } catch (InterruptedException stopped) {
+                Thread.currentThread().interrupt();
             } catch (Exception error) {
-                String message = error instanceof SecurityException ? "Vínculo removido. Pareie novamente."
-                        : error.getMessage();
+                String message = error instanceof SecurityException && error.getMessage() == null
+                        ? "Vínculo removido. Pareie novamente." : error.getMessage();
                 runOnUiThread(() -> {
                     if (attempt == generation && visible)
                         disconnect(message == null ? "Não foi possível acessar a tela." : message);
@@ -224,13 +243,38 @@ public final class RemoteDesktopActivity extends Activity {
         });
     }
 
+    private void displayFrame(int attempt, RemoteDesktopClient.Frame frame) {
+        painting.set(false);
+        if (attempt != generation || !visible) return;
+        screen.show(frame);
+        if (!interactive) ready(true);
+        String detail = frame.monitorCount > 1
+                ? "Monitor " + frame.monitorNumber + " de " + frame.monitorCount + " · Mova o ponteiro até a borda para trocar."
+                : "Use o joystick ou toque na tela para controlar o PC.";
+        if (!detail.contentEquals(status.getText())) status.setText(detail);
+    }
+
+    private void connectionInterrupted(int attempt, boolean expired) {
+        if (attempt != generation || !visible) return;
+        inputEpoch++;
+        joystick.stop();
+        screen.cancelGesture();
+        if (expired) screen.clear();
+        ready(false);
+        status.setText("Reconectando… Confira a rede e se o Windows está desbloqueado.");
+    }
+
     private void disconnect(String message) {
         RemoteDesktopClient previous;
         synchronized (lifecycle) {
             generation++;
             previous = client;
             client = null;
+            queuedMove = null;
         }
+        streamRequested = false;
+        inputEpoch++;
+        connection.setText("Conectar");
         if (previous != null) input.execute(previous::disconnect);
         joystick.stop();
         screen.clear();
@@ -239,30 +283,36 @@ public final class RemoteDesktopActivity extends Activity {
     }
 
     private void ready(boolean active) {
-        connection.setEnabled(true);
-        connection.setText(active ? "Encerrar" : "Conectar");
+        interactive = active;
         joystick.setEnabled(active);
         joystick.invalidate();
         for (Button control : controls) control.setEnabled(active);
     }
 
     private void send(String action, int x, int y, String text, int delta) {
+        send(action, x, y, text, delta, null, 0);
+    }
+
+    private void send(String action, int x, int y, String text, int delta, String monitor, int edge) {
         RemoteDesktopClient current = client;
         if (current == null) return;
+        int epoch = inputEpoch;
         if (action.equals("move")) {
             synchronized (lifecycle) {
-                if (queuedMove != null && queuedMove.client == current) {
+                if (queuedMove != null && queuedMove.client == current && queuedMove.epoch == epoch &&
+                        Objects.equals(queuedMove.monitor, monitor)) {
                     queuedMove.x = x;
                     queuedMove.y = y;
+                    queuedMove.edge = edge;
                     return;
                 }
-                PointerMove move = new PointerMove(current, x, y);
+                PointerMove move = new PointerMove(current, x, y, monitor, edge, epoch);
                 queuedMove = move;
                 input.execute(() -> {
                     synchronized (lifecycle) {
                         if (queuedMove == move) queuedMove = null;
                     }
-                    transmit(move.client, "move", move.x, move.y, null, 0);
+                    transmit(move.client, "move", move.x, move.y, null, 0, move.monitor, move.edge, move.epoch);
                 });
             }
             return;
@@ -270,27 +320,29 @@ public final class RemoteDesktopActivity extends Activity {
         // Keep pointer updates on the correct side of button presses and releases.
         synchronized (lifecycle) { queuedMove = null; }
         try {
-            input.execute(() -> transmit(current, action, x, y, text, delta));
+            input.execute(() -> transmit(current, action, x, y, text, delta, monitor, edge, epoch));
         } catch (RejectedExecutionException stopped) { }
     }
 
-    private void transmit(RemoteDesktopClient target, String action, int x, int y, String text, int delta) {
+    private void transmit(RemoteDesktopClient target, String action, int x, int y, String text, int delta,
+                          String monitor, int edge, int epoch) {
         try {
-            if (client == target) target.input(action, x, y, text, delta);
-        } catch (Exception error) {
-            runOnUiThread(() -> {
-                if (client == target && visible) status.setText("O PC não aceitou o comando. Confira a sessão do Windows.");
-            });
-        }
+            if (client == target && inputEpoch == epoch) target.input(action, x, y, text, delta, monitor, edge);
+        } catch (Exception ignored) { } // A failed input is never replayed when the screen resumes.
     }
 
     private static final class PointerMove {
         final RemoteDesktopClient client;
-        int x, y;
-        PointerMove(RemoteDesktopClient client, int x, int y) {
+        final String monitor;
+        final int epoch;
+        int x, y, edge;
+        PointerMove(RemoteDesktopClient client, int x, int y, String monitor, int edge, int epoch) {
             this.client = client;
             this.x = x;
             this.y = y;
+            this.monitor = monitor;
+            this.edge = edge;
+            this.epoch = epoch;
         }
     }
 
@@ -460,9 +512,10 @@ public final class RemoteDesktopActivity extends Activity {
         private final int slop = ViewConfiguration.get(RemoteDesktopActivity.this).getScaledTouchSlop();
         RemoteDesktopClient.Frame frame;
         private RemotePointer pointer = new RemotePointer();
-        private float startX, startY;
-        private long touchAt;
-        private boolean down, dragging;
+        private float startX, startY, lastTouchX, lastTouchY;
+        private long touchAt, lastEdgeAt;
+        private int lastEdge;
+        private boolean down, dragging, relativeDrag;
 
         Screen() { super(RemoteDesktopActivity.this); setClickable(true); }
 
@@ -494,6 +547,12 @@ public final class RemoteDesktopActivity extends Activity {
         }
 
         void show(RemoteDesktopClient.Frame next) {
+            if (frame != null && !Objects.equals(frame.monitor, next.monitor)) {
+                pointer = new RemotePointer();
+                pointer.observe(next.x, next.y);
+                relativeDrag = dragging;
+                lastEdge = 0;
+            }
             frame = next;
             // Frames can arrive after newer mouse commands. Only use their cursor before local input.
             if (!down && joystick.finger == -1) pointer.observe(next.x, next.y);
@@ -503,7 +562,7 @@ public final class RemoteDesktopActivity extends Activity {
         void move(float x, float y) {
             if (frame == null || down) return;
             float aspect = (float) frame.image.getWidth() / frame.image.getHeight();
-            if (pointer.advance(x, y, aspect)) dispatch("move");
+            motion(pointer.advance(x, y, aspect), x, y);
         }
 
         void click(String action) {
@@ -512,15 +571,16 @@ public final class RemoteDesktopActivity extends Activity {
         }
 
         @Override public boolean onTouchEvent(MotionEvent event) {
-            if (frame == null || fit.isEmpty() || client == null) return false;
+            if (frame == null || fit.isEmpty() || !interactive) return false;
             float x = event.getX(), y = event.getY();
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     if (!fit.contains(x, y)) return false;
                     down = true;
                     dragging = false;
-                    startX = x;
-                    startY = y;
+                    relativeDrag = false;
+                    startX = lastTouchX = x;
+                    startY = lastTouchY = y;
                     touchAt = SystemClock.elapsedRealtime();
                     return true;
                 case MotionEvent.ACTION_MOVE:
@@ -529,11 +589,24 @@ public final class RemoteDesktopActivity extends Activity {
                         dragging = true;
                         point("down", startX, startY);
                     }
-                    if (dragging) point("move", x, y);
+                    float dx = x - lastTouchX, dy = y - lastTouchY;
+                    lastTouchX = x;
+                    lastTouchY = y;
+                    if (dragging && relativeDrag)
+                        motion(pointer.advance(dx / fit.width(), dy / fit.height(), 1), dx, dy);
+                    else if (dragging) {
+                        float edge = dp(4);
+                        float atX = dx < 0 && x <= fit.left + edge ? fit.left
+                                : dx > 0 && x >= fit.right - edge ? fit.right : x;
+                        float atY = dy < 0 && y <= fit.top + edge ? fit.top
+                                : dy > 0 && y >= fit.bottom - edge ? fit.bottom : y;
+                        pointer.set(normalized(atX, fit.left, fit.width()), normalized(atY, fit.top, fit.height()));
+                        motion(true, dx, dy);
+                    }
                     return true;
                 case MotionEvent.ACTION_UP:
                     if (!down) return false;
-                    if (dragging) point("up", x, y);
+                    if (dragging) dispatch("up");
                     else {
                         point(SystemClock.elapsedRealtime() - touchAt > 500 ? "right" : "click", x, y);
                         performClick();
@@ -556,8 +629,22 @@ public final class RemoteDesktopActivity extends Activity {
         }
 
         private void dispatch(String action) {
+            dispatch(action, 0);
+        }
+
+        private void motion(boolean moved, float dx, float dy) {
+            int edge = frame.monitorCount > 1 ? pointer.edge(dx, dy) : 0;
+            long now = SystemClock.uptimeMillis();
+            if (moved || (edge != 0 && (lastEdge != edge || now - lastEdgeAt >= 140))) {
+                lastEdge = edge;
+                lastEdgeAt = now;
+                dispatch("move", edge);
+            }
+        }
+
+        private void dispatch(String action, int edge) {
             invalidate();
-            send(action, pointer.x(), pointer.y(), null, 0);
+            if (frame != null) send(action, pointer.x(), pointer.y(), null, 0, frame.monitor, edge);
         }
 
         private int normalized(float value, float origin, float span) {
@@ -579,6 +666,7 @@ public final class RemoteDesktopActivity extends Activity {
             fit.setEmpty();
             down = dragging = false;
             pointer = new RemotePointer();
+            lastEdge = 0;
             invalidate();
         }
     }

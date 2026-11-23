@@ -32,5 +32,13 @@ final class RemotePointer {
         return true;
     }
 
+    int edge(float dx, float dy) {
+        int horizontal = dx < 0 && x() == 0 ? 1 : dx > 0 && x() == MAX ? 2 : 0;
+        int vertical = dy < 0 && y() == 0 ? 3 : dy > 0 && y() == MAX ? 4 : 0;
+        if (horizontal == 0) return vertical;
+        if (vertical == 0) return horizontal;
+        return Math.abs(dx) >= Math.abs(dy) ? horizontal : vertical;
+    }
+
     private static float clamp(float value) { return Math.max(0f, Math.min(MAX, value)); }
 }
