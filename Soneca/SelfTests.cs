@@ -41,12 +41,11 @@ public static class SelfTests
             count += RemoteDesktopTests.Run();
             Assert(new CpuTimes(20, 60, 30).UsageSince(new CpuTimes(10, 40, 10)) == 75);
             Assert(new CpuTimes(1, 1, 1).UsageSince(new CpuTimes(2, 2, 2)) is null);
-            var networkBefore = new Dictionary<string, NetworkBytes> { ["rede"] = new(1000, 1000) };
-            var networkAfter = new Dictionary<string, NetworkBytes> { ["rede"] = new(5000, 3000) };
-            Assert(PcPerformanceSampler.CompareNetwork(networkBefore, networkAfter, 2) == new NetworkRate(2000, 1000));
-            Assert(PcPerformanceSampler.CompareNetwork(networkAfter, networkBefore, 2) is null);
-            networkAfter.Add("nova", new(1, 1));
-            Assert(PcPerformanceSampler.CompareNetwork(networkBefore, networkAfter, 2) is null);
+            var networkBefore = new NetworkCounters("rede", 1000, 1000);
+            var networkAfter = new NetworkCounters("rede", 5000, 3000);
+            Assert(networkAfter.RateSince(networkBefore, 2) == new NetworkRate(2000, 1000));
+            Assert(networkBefore.RateSince(networkAfter, 2) is null);
+            Assert(networkAfter.RateSince(networkBefore with { InterfaceId = "outra" }, 2) is null);
             count += CleanerTests.Run();
             count += FolderNamesTests.Run();
             File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "self-test-result.txt"), $"PASS: {count} checks; harmless scheduled task created and removed; no shutdown executed.");

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
@@ -26,20 +27,22 @@ internal readonly record struct CpuTimes(ulong Idle, ulong Kernel, ulong User)
 }
 
 internal readonly record struct NetworkRate(double Received, double Sent);
-internal readonly record struct NetworkBytes(long Received, long Sent)
+internal readonly record struct NetworkCounters(string InterfaceId, long Received, long Sent)
 {
-    public NetworkRate? RateSince(NetworkBytes before, double seconds) =>
-        seconds > 0 && Received >= before.Received && Sent >= before.Sent
+    public NetworkRate? RateSince(NetworkCounters before, double seconds) =>
+        InterfaceId == before.InterfaceId && seconds > 0 && Received >= before.Received && Sent >= before.Sent
             ? new((Received - before.Received) / seconds, (Sent - before.Sent) / seconds)
             : null;
 }
 
 internal sealed class PcPerformanceSampler
 {
+    // Look up the outbound interface in the local routing table without sending a request.
+    private static readonly uint RouteLookupAddress = BitConverter.ToUInt32(IPAddress.Parse("192.0.2.1").GetAddressBytes());
     private static readonly Lazy<string?> ProcessorName = new(ReadProcessorName);
     private static readonly Lazy<int> ProcessorGroups = new(() => GetActiveProcessorGroupCount());
     private CpuTimes? lastCpu;
-    private Dictionary<string, NetworkBytes> lastNetwork = new();
+    private NetworkCounters? lastNetwork;
     private long lastSample;
     private long lastDiskSample;
     private DiskUsage? disk;
@@ -51,56 +54,39 @@ internal sealed class PcPerformanceSampler
         bool consecutive = seconds is > 0 and <= 10;
         CpuTimes? cpu = GetSystemTimes(out var idle, out var kernel, out var user) ? new(idle, kernel, user) : null;
         var computer = LocalComputerAgent.Read();
-        var (network, interfaces) = ReadNetwork();
+        var (network, traffic) = ReadNetwork();
         double? usage = consecutive && lastCpu is { } before ? cpu?.UsageSince(before) : null;
-        NetworkRate? rates = consecutive ? CompareNetwork(lastNetwork, interfaces, seconds) : null;
+        NetworkRate? rates = consecutive && lastNetwork is { } previousTraffic
+            ? traffic?.RateSince(previousTraffic, seconds) : null;
         if (lastDiskSample == 0 || Stopwatch.GetElapsedTime(lastDiskSample, now) >= TimeSpan.FromSeconds(30))
         {
             disk = ReadSystemDisk();
             lastDiskSample = now;
         }
         lastCpu = cpu;
-        lastNetwork = interfaces;
+        lastNetwork = traffic;
         lastSample = now;
         return new(computer, ProcessorName.Value, usage, ProcessorGroups.Value, disk, network, rates);
     }
 
-    internal static NetworkRate? CompareNetwork(IReadOnlyDictionary<string, NetworkBytes> before,
-        IReadOnlyDictionary<string, NetworkBytes> current, double seconds)
+    private static (string Label, NetworkCounters? Traffic) ReadNetwork()
     {
-        if (current.Count == 0 || current.Count != before.Count) return null;
-        double received = 0, sent = 0;
-        foreach (var (id, counters) in current)
-        {
-            if (!before.TryGetValue(id, out var old) || counters.RateSince(old, seconds) is not { } rate)
-                return null;
-            received += rate.Received;
-            sent += rate.Sent;
-        }
-        return new(received, sent);
-    }
-
-    private static (string Label, Dictionary<string, NetworkBytes> Counters) ReadNetwork()
-    {
-        var counters = new Dictionary<string, NetworkBytes>(StringComparer.Ordinal);
         try
         {
-            var active = NetworkInterface.GetAllNetworkInterfaces().Where(adapter =>
-                adapter.OperationalStatus == OperationalStatus.Up && adapter.NetworkInterfaceType is
-                NetworkInterfaceType.Wireless80211 or NetworkInterfaceType.Ethernet or NetworkInterfaceType.GigabitEthernet
-                or NetworkInterfaceType.FastEthernetFx or NetworkInterfaceType.FastEthernetT).ToArray();
-            if (active.Length == 0) return ("Ethernet e Wi-Fi desconectados", counters);
-            foreach (var adapter in active)
-            {
-                var stats = adapter.GetIPStatistics();
-                counters.Add(adapter.Id, new(stats.BytesReceived, stats.BytesSent));
-            }
-            string label = active.Length == 1
-                ? (active[0].NetworkInterfaceType == NetworkInterfaceType.Wireless80211 ? "Wi-Fi" : "Ethernet")
-                : $"{active.Length} interfaces Ethernet e Wi-Fi";
-            return (label, counters);
+            var active = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(adapter => adapter.OperationalStatus == OperationalStatus.Up &&
+                    adapter.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                .Select(adapter => (Adapter: adapter, Properties: adapter.GetIPProperties())).ToArray();
+            NetworkInterface? primary = GetBestInterface(RouteLookupAddress, out int index) == 0
+                ? active.FirstOrDefault(item => item.Adapter.Supports(NetworkInterfaceComponent.IPv4) &&
+                    item.Properties.GetIPv4Properties()?.Index == index).Adapter : null;
+            primary ??= active.FirstOrDefault(item => item.Properties.GatewayAddresses.Count > 0).Adapter;
+            primary ??= active.Length == 1 ? active[0].Adapter : null;
+            if (primary is null) return ("Sem interface principal", null);
+            var stats = primary.GetIPStatistics();
+            return (primary.Name, new(primary.Id, stats.BytesReceived, stats.BytesSent));
         }
-        catch (NetworkInformationException) { return ("Tráfego indisponível", new()); }
+        catch (NetworkInformationException) { return ("Tráfego indisponível", null); }
     }
 
     private static DiskUsage? ReadSystemDisk()
@@ -131,4 +117,6 @@ internal sealed class PcPerformanceSampler
     private static extern bool GetSystemTimes(out ulong idle, out ulong kernel, out ulong user);
     [DllImport("kernel32.dll")]
     private static extern ushort GetActiveProcessorGroupCount();
+    [DllImport("iphlpapi.dll")]
+    private static extern uint GetBestInterface(uint destination, out int interfaceIndex);
 }

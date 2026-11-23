@@ -118,6 +118,16 @@
                                 <Setter Property="Margin" Value="0,0,0,8"/>
                                 <Setter Property="Foreground" Value="{StaticResource Accent}"/>
                                 <Setter Property="Background" Value="{StaticResource Line}"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ProgressBar">
+                                            <Grid>
+                                                <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="2"/>
+                                                <Border x:Name="PART_Indicator" HorizontalAlignment="Left" Background="{TemplateBinding Foreground}" CornerRadius="2"/>
+                                            </Grid>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
                             </Style>
                         </UniformGrid.Resources>
                         <Border Style="{StaticResource PerformanceCard}">
