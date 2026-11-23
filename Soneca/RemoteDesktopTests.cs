@@ -39,8 +39,10 @@ internal static class RemoteDesktopTests
         Check(desktop.Input(lease, new DesktopInput("down", 6000, 5000)));
         desktop.Disconnect(lease);
         Check(surface.Releases == 2 && desktop.Read(lease) is null && !desktop.Status().Viewing && viewerChanges == 2);
-        lease = desktop.Connect()!.Value;
+        lease = desktop.Connect(multiMonitor: true)!.Value;
         clock.Advance(9);
+        Check(desktop.Read(lease) is not null && surface.FollowMonitor);
+        clock.Advance(21);
         Check(desktop.Read(lease) is null);
         lease = desktop.Connect()!.Value;
         surface.Available = false;
@@ -65,17 +67,30 @@ internal static class RemoteDesktopTests
         Check(WindowsDesktopSurface.Coordinate(65535, 3840) == 3839 &&
             WindowsDesktopSurface.Coordinate(0, 2160) == 0 &&
             WindowsDesktopSurface.Coordinate(32768, 1920) is >= 958 and <= 961);
+        var primary = new DesktopMonitor("principal", 0, 0, 1920, 1080, true);
+        var left = new DesktopMonitor("esquerda", -1280, 0, 0, 720, false);
+        var above = new DesktopMonitor("acima", 0, -1200, 1600, 0, false);
+        var right = new DesktopMonitor("direita", 1920, 0, 3520, 1080, false);
+        DesktopMonitor[] screens = [primary, left, above, right];
+        Check(primary.PointFor(new("move", 0, 32768, Edge: MonitorEdge.Left), screens) == new DesktopPoint(-1, 539));
+        Check(primary.PointFor(new("move", 65535, 65535, Edge: MonitorEdge.Right), screens) == new DesktopPoint(1920, 1079));
+        Check(primary.PointFor(new("move", 32768, 0, Edge: MonitorEdge.Top), screens) == new DesktopPoint(959, -1));
+        Check(primary.PointFor(new("move", 0, 65535, Edge: MonitorEdge.Left), screens) == new DesktopPoint(0, 1079));
+        Check(primary.PointFor(new("up", 0, 32768, Edge: MonitorEdge.Left), screens) == new DesktopPoint(0, 539));
+        Check(left.PointFor(new("move", 65535, 0, Edge: MonitorEdge.Right), screens) == new DesktopPoint(0, 0));
+        Check(!new DesktopInput("move", 0, 0, Edge: (MonitorEdge)5).Valid);
         return count;
     }
 
     private sealed class FakeSurface : IDesktopSurface
     {
-        public bool Available = true;
+        public bool Available = true, FollowMonitor;
         public int Captures, Inputs, Releases, AvailabilityChecks;
         public Action? OnCapture;
         public bool IsAvailable() { AvailabilityChecks++; return Available; }
-        public DesktopFrame Capture() { Captures++; OnCapture?.Invoke(); return new DesktopFrame([1], 0, 0); }
-        public void Apply(DesktopInput input) => Inputs++;
+        public DesktopFrame Capture(bool followMonitor)
+        { Captures++; FollowMonitor = followMonitor; OnCapture?.Invoke(); return new DesktopFrame([1], 0, 0); }
+        public void Apply(DesktopInput input, bool followMonitor) => Inputs++;
         public void Release() => Releases++;
     }
 

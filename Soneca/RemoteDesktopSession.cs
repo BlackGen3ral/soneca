@@ -2,10 +2,13 @@ using System.IO;
 
 namespace Soneca;
 
-internal sealed record DesktopFrame(byte[] Image, int PointerX, int PointerY);
-internal sealed record DesktopInput(string? Action, int X = 0, int Y = 0, string? Value = null, int Delta = 0)
+internal sealed record DesktopFrame(byte[] Image, int PointerX, int PointerY, string? Monitor = null,
+    int MonitorNumber = 1, int MonitorCount = 1);
+internal sealed record DesktopInput(string? Action, int X = 0, int Y = 0, string? Value = null, int Delta = 0,
+    string? Monitor = null, MonitorEdge Edge = MonitorEdge.None)
 {
-    public bool Valid => Action switch
+    public bool Valid => (Monitor is null or { Length: > 0 and <= 32 }) &&
+        Edge is >= MonitorEdge.None and <= MonitorEdge.Bottom && (Action switch
     {
         "move" or "click" or "right" or "double" or "down" or "up" =>
             X is >= 0 and <= 65535 && Y is >= 0 and <= 65535,
@@ -13,20 +16,20 @@ internal sealed record DesktopInput(string? Action, int X = 0, int Y = 0, string
         "key" => Value is "Enter" or "Backspace" or "Escape" or "Tab" or "Left" or "Right" or "Up" or "Down",
         "text" => Value is { Length: > 0 and <= 256 } && !Value.Any(char.IsControl),
         _ => false
-    };
+    });
 }
 
 internal interface IDesktopSurface
 {
     bool IsAvailable();
-    DesktopFrame Capture();
-    void Apply(DesktopInput input);
+    DesktopFrame Capture(bool followMonitor);
+    void Apply(DesktopInput input, bool followMonitor);
     void Release();
 }
 
 internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider? time = null)
 {
-    private static readonly TimeSpan ViewerTimeout = TimeSpan.FromSeconds(8);
+    private static readonly TimeSpan ViewerTimeout = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(50);
     private readonly TimeProvider clock = time ?? TimeProvider.System;
     private readonly object gate = new();
@@ -37,6 +40,7 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
     private DateTimeOffset lastDrag;
     private DateTimeOffset frameAt;
     private bool held;
+    private bool followMonitor;
     private DesktopFrame? frame;
     public event Action? ViewerChanged;
 
@@ -66,13 +70,14 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
         }
     }
 
-    public Guid? Connect()
+    public Guid? Connect(bool multiMonitor = false)
     {
         lock (gate)
         {
             Sweep();
             if (!enabled || !surface.IsAvailable()) return null;
             ClearViewer();
+            followMonitor = multiMonitor;
             lastSeen = clock.GetUtcNow();
             lease = Guid.NewGuid();
             ViewerChanged?.Invoke();
@@ -92,14 +97,16 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
         lock (captureGate)
         {
             DateTimeOffset started;
+            bool trackMonitor;
             lock (gate)
             {
                 Sweep();
                 if (lease != client) return null;
                 started = lastSeen = clock.GetUtcNow();
                 if (frame is not null && started - frameAt < FrameInterval) return frame;
+                trackMonitor = followMonitor;
             }
-            var captured = surface.Capture();
+            var captured = surface.Capture(trackMonitor);
             lock (gate)
             {
                 Sweep();
@@ -124,7 +131,7 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
             {
                 // Mark a press before enqueueing it so a partial native operation can be released.
                 if (input.Action == "down") held = true;
-                surface.Apply(input);
+                surface.Apply(input, followMonitor);
                 if (input.Action == "up") held = false;
             }
             catch (IOException) { Release(); throw; }

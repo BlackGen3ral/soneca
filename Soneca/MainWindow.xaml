@@ -84,74 +84,112 @@
                             <TextBlock x:Name="HomeUpdateText" Foreground="{StaticResource Accent}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                         </DockPanel>
                     </Border>
-                    <Grid Margin="0,23,0,0">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="17"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="Estado do PC" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
-                            <Border Style="{StaticResource Panel}" Padding="15,0">
-                                <StackPanel>
-                                    <StackPanel Margin="0,13,0,12">
-                                        <TextBlock x:Name="ComputerNameLabel" FontSize="20" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock x:Name="ComputerDetailsLabel" Style="{StaticResource BodyCopy}" Margin="0,2,0,0"/>
-                                    </StackPanel>
-                                    <Border Style="{StaticResource Divider}"/>
-                                    <StackPanel Margin="0,13,0,12">
-                                        <DockPanel>
-                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
-                                                <TextBlock x:Name="MemoryValue" Style="{StaticResource InfoValue}"/>
-                                                <TextBlock x:Name="MemoryTotal" Style="{StaticResource BodyCopy}" Margin="5,0,0,0"/>
-                                            </StackPanel>
-                                            <TextBlock Text="Memória em uso" Style="{StaticResource BodyCopy}"/>
-                                        </DockPanel>
-                                        <ProgressBar x:Name="MemoryGauge" Minimum="0" Maximum="100" Height="4" Margin="0,8,0,0"
-                                                     Foreground="{StaticResource Accent}" Background="{StaticResource Line}" AutomationProperties.Name="Percentual de memória em uso"/>
-                                    </StackPanel>
-                                    <Border Style="{StaticResource Divider}"/>
-                                    <DockPanel Margin="0,12">
-                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
-                                            <TextBlock x:Name="ProcessorValue" Style="{StaticResource InfoValue}"/>
-                                            <TextBlock Text="lógicos" Style="{StaticResource BodyCopy}" Margin="5,0,0,0"/>
-                                        </StackPanel>
-                                        <TextBlock Text="Processador" Style="{StaticResource BodyCopy}"/>
-                                    </DockPanel>
-                                    <Border Style="{StaticResource Divider}"/>
-                                    <DockPanel Margin="0,12">
-                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0">
-                                            <TextBlock x:Name="UptimeValue" Style="{StaticResource InfoValue}"/>
-                                        </StackPanel>
-                                        <TextBlock Text="Tempo ligado" Style="{StaticResource BodyCopy}"/>
-                                    </DockPanel>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="Acesso rápido" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
-                            <Border Style="{StaticResource Panel}" Padding="5,4">
-                                <StackPanel>
-                                    <Button Style="{StaticResource ActionRow}" Tag="&#xE7E8;" Click="Energy_Click" AutomationProperties.Name="Programar desligamento">
-                                        <StackPanel>
-                                            <TextBlock Text="Programar desligamento" Style="{StaticResource InfoValue}"/>
-                                            <TextBlock x:Name="HomeEnergySubtitle" Style="{StaticResource BodyCopy}"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Border Style="{StaticResource Divider}" Margin="12,0"/>
-                                    <Button Style="{StaticResource ActionRow}" Tag="&#xE7F4;" Click="Devices_Click" AutomationProperties.Name="Computadores pareados">
-                                        <StackPanel>
-                                            <TextBlock Text="Computadores pareados" Style="{StaticResource InfoValue}"/>
-                                            <TextBlock Text="Ver estado e editar horários" Style="{StaticResource BodyCopy}"/>
-                                        </StackPanel>
-                                    </Button>
-                                    <Border Style="{StaticResource Divider}" Margin="12,0"/>
-                                    <Button Style="{StaticResource ActionRow}" Tag="&#xE8EA;" Click="Mobile_Click" AutomationProperties.Name="Conectar celular">
-                                        <StackPanel>
-                                            <TextBlock Text="Conectar celular" Style="{StaticResource InfoValue}"/>
-                                            <TextBlock Text="Parear por QR Code" Style="{StaticResource BodyCopy}"/>
-                                        </StackPanel>
-                                    </Button>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
+                    <Grid Margin="0,23,0,9">
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="Estado do PC" Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Grid.Column="1" x:Name="PerformanceStatus" Text="Lendo o estado do PC…"
+                                   Style="{StaticResource BodyCopy}" VerticalAlignment="Center" Margin="12,0,0,0"/>
                     </Grid>
+                    <Border Style="{StaticResource Panel}" Padding="17,12" Margin="0,0,0,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock x:Name="ComputerNameLabel" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="ComputerDetailsLabel" Style="{StaticResource BodyCopy}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" x:Name="UptimeValue" Style="{StaticResource InfoValue}"
+                                       VerticalAlignment="Center" Margin="12,0,0,0"/>
+                        </Grid>
+                    </Border>
+                    <UniformGrid Columns="2" Margin="-5,0,-5,0">
+                        <UniformGrid.Resources>
+                            <Style x:Key="PerformanceCard" TargetType="Border" BasedOn="{StaticResource Panel}">
+                                <Setter Property="Margin" Value="5,0,5,10"/>
+                                <Setter Property="Padding" Value="16,13"/>
+                            </Style>
+                            <Style x:Key="PerformanceValue" TargetType="TextBlock" BasedOn="{StaticResource InfoValue}">
+                                <Setter Property="FontSize" Value="24"/>
+                                <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                <Setter Property="Margin" Value="0,3,0,6"/>
+                            </Style>
+                            <Style x:Key="PerformanceGauge" TargetType="ProgressBar">
+                                <Setter Property="Maximum" Value="100"/>
+                                <Setter Property="Height" Value="4"/>
+                                <Setter Property="Margin" Value="0,0,0,8"/>
+                                <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                <Setter Property="Background" Value="{StaticResource Line}"/>
+                            </Style>
+                        </UniformGrid.Resources>
+                        <Border Style="{StaticResource PerformanceCard}">
+                            <StackPanel>
+                                <TextBlock Text="Processador" Style="{StaticResource InfoValue}"/>
+                                <TextBlock x:Name="ProcessorValue" Text="—" Style="{StaticResource PerformanceValue}"/>
+                                <ProgressBar x:Name="ProcessorGauge" Style="{StaticResource PerformanceGauge}" AutomationProperties.Name="Uso do processador"/>
+                                <TextBlock x:Name="ProcessorDetails" Style="{StaticResource BodyCopy}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                                <TextBlock x:Name="ProcessorScope" Style="{StaticResource BodyCopy}" Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource PerformanceCard}">
+                            <StackPanel>
+                                <TextBlock Text="Memória RAM" Style="{StaticResource InfoValue}"/>
+                                <TextBlock x:Name="MemoryValue" Text="—" Style="{StaticResource PerformanceValue}"/>
+                                <ProgressBar x:Name="MemoryGauge" Style="{StaticResource PerformanceGauge}" AutomationProperties.Name="Memória RAM em uso"/>
+                                <TextBlock x:Name="MemoryDetails" Style="{StaticResource BodyCopy}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource PerformanceCard}">
+                            <StackPanel>
+                                <TextBlock x:Name="DiskLabel" Text="Disco do Windows" Style="{StaticResource InfoValue}"/>
+                                <TextBlock x:Name="DiskValue" Text="—" Style="{StaticResource PerformanceValue}"/>
+                                <ProgressBar x:Name="DiskGauge" Style="{StaticResource PerformanceGauge}" AutomationProperties.Name="Espaço ocupado no disco"/>
+                                <TextBlock x:Name="DiskDetails" Style="{StaticResource BodyCopy}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource PerformanceCard}">
+                            <StackPanel>
+                                <TextBlock Text="Tráfego de rede" Style="{StaticResource InfoValue}"/>
+                                <UniformGrid Columns="2" Margin="0,7,0,6">
+                                    <StackPanel Margin="0,0,5,0">
+                                        <TextBlock Text="Download" Style="{StaticResource BodyCopy}"/>
+                                        <TextBlock x:Name="NetworkReceived" Text="—" Style="{StaticResource InfoValue}" Foreground="{StaticResource Accent}"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Upload" Style="{StaticResource BodyCopy}"/>
+                                        <TextBlock x:Name="NetworkSent" Text="—" Style="{StaticResource InfoValue}" Foreground="{StaticResource Accent}"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                                <TextBlock x:Name="NetworkDetails" Style="{StaticResource BodyCopy}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+                    <StackPanel Margin="0,6,0,0">
+                        <TextBlock Text="Acesso rápido" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
+                        <Border Style="{StaticResource Panel}" Padding="5,4">
+                            <StackPanel>
+                                <Button Style="{StaticResource ActionRow}" Tag="&#xE7E8;" Click="Energy_Click" AutomationProperties.Name="Programar desligamento">
+                                    <StackPanel>
+                                        <TextBlock Text="Programar desligamento" Style="{StaticResource InfoValue}"/>
+                                        <TextBlock x:Name="HomeEnergySubtitle" Style="{StaticResource BodyCopy}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Border Style="{StaticResource Divider}" Margin="12,0"/>
+                                <Button Style="{StaticResource ActionRow}" Tag="&#xE7F4;" Click="Devices_Click" AutomationProperties.Name="Computadores pareados">
+                                    <StackPanel>
+                                        <TextBlock Text="Computadores pareados" Style="{StaticResource InfoValue}"/>
+                                        <TextBlock Text="Ver estado e editar horários" Style="{StaticResource BodyCopy}"/>
+                                    </StackPanel>
+                                </Button>
+                                <Border Style="{StaticResource Divider}" Margin="12,0"/>
+                                <Button Style="{StaticResource ActionRow}" Tag="&#xE8EA;" Click="Mobile_Click" AutomationProperties.Name="Conectar celular">
+                                    <StackPanel>
+                                        <TextBlock Text="Conectar celular" Style="{StaticResource InfoValue}"/>
+                                        <TextBlock Text="Parear por QR Code" Style="{StaticResource BodyCopy}"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
                 </StackPanel>
             </ScrollViewer>
 

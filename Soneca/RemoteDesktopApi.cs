@@ -14,7 +14,8 @@ internal static class RemoteDesktopApi
         {
             if (!authorized(context)) return Results.Unauthorized();
             context.Response.Headers.CacheControl = "no-store";
-            return desktop.Connect() is { } id ? Results.Json(new { session = id }) : Unavailable();
+            bool multiMonitor = context.Request.Query["monitors"] == "1";
+            return desktop.Connect(multiMonitor) is { } id ? Results.Json(new { session = id }) : Unavailable();
         });
 
         app.MapGet("/v1/desktop/{session:guid}/frame", (HttpContext context, Guid session) =>
@@ -23,12 +24,18 @@ internal static class RemoteDesktopApi
             context.Response.Headers.CacheControl = "no-store";
             try
             {
-                if (desktop.Read(session) is not { } frame) return Unavailable();
+                if (desktop.Read(session) is not { } frame) return Results.StatusCode(StatusCodes.Status410Gone);
                 context.Response.Headers["X-Artho-Pointer-X"] = frame.PointerX.ToString();
                 context.Response.Headers["X-Artho-Pointer-Y"] = frame.PointerY.ToString();
+                if (frame.Monitor is not null)
+                {
+                    context.Response.Headers["X-Artho-Monitor"] = frame.Monitor;
+                    context.Response.Headers["X-Artho-Monitor-Number"] = frame.MonitorNumber.ToString();
+                    context.Response.Headers["X-Artho-Monitor-Count"] = frame.MonitorCount.ToString();
+                }
                 return Results.Bytes(frame.Image, "image/jpeg");
             }
-            catch (IOException) { return Unavailable(); }
+            catch (IOException) { return Results.StatusCode(StatusCodes.Status503ServiceUnavailable); }
         });
 
         app.MapPost("/v1/desktop/{session:guid}/input", async (HttpContext context, Guid session) =>

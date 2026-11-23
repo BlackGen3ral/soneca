@@ -17,7 +17,6 @@ public partial class MainWindow : Window
     private DateTimeOffset? suspendTarget;
     private bool clockMode;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
-    private readonly DispatcherTimer dashboardTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     private static readonly CultureInfo BrazilianPortuguese = CultureInfo.GetCultureInfo("pt-BR");
     public MainWindow(bool demo, bool skipIntro = false)
     {
@@ -40,16 +39,10 @@ public partial class MainWindow : Window
         bool startWithWindows = !demo && StartupRegistration.ResolvePreference(StartupRegistration.Preference);
         StartupCheckBox.IsChecked = startWithWindows;
         if (!demo) StartupRegistration.SetEnabled(startWithWindows);
-        LoadDashboard();
+        ConfigureDashboard();
         try { target = schedule.Read(); } catch (Exception ex) { ErrorLabel.Text = "Não foi possível consultar o agendamento: " + ex.Message; ScheduleButton.IsEnabled = false; }
         try { suspendTarget = suspendSchedule.Read(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
         timer.Tick += (_, _) => Render(); timer.Start(); Render();
-        dashboardTimer.Tick += (_, _) =>
-        {
-            if (HomePanel.IsVisible && DashboardContent.IsEnabled && WindowState != WindowState.Minimized)
-                LoadDashboard();
-        };
-        dashboardTimer.Start();
         Loaded += async (_, _) =>
         {
             if (demo) return;
@@ -63,7 +56,7 @@ public partial class MainWindow : Window
         {
             androidOperation?.Cancel();
             EndRemoteDesktop();
-            timer.Stop(); dashboardTimer.Stop(); devicesTimer.Stop(); FinishIntro();
+            timer.Stop(); devicesTimer.Stop(); FinishIntro();
             EndHouseSession();
             CloseUpdates();
             await StopPcAgentAsync();
@@ -75,23 +68,6 @@ public partial class MainWindow : Window
             args.Cancel = true;
             MessageBox.Show("Aguarde a operação terminar ou cancele o download antes de fechar.", "Artho AI");
         };
-    }
-    private void LoadDashboard()
-    {
-        var local = LocalComputerAgent.Read();
-        ComputerNameLabel.Text = local.Name;
-        ComputerDetailsLabel.Text = "Windows · compilação " + Environment.OSVersion.Version.Build;
-        bool hasMemory = local.TotalMemoryGb > 0;
-        MemoryValue.Text = hasMemory ? local.MemoryInUseGb.ToString("0.0", BrazilianPortuguese) + " GB" : "Indisponível";
-        MemoryTotal.Text = hasMemory ? "de " + local.TotalMemoryGb.ToString("0.0", BrazilianPortuguese) + " GB" : "";
-        MemoryGauge.Visibility = hasMemory ? Visibility.Visible : Visibility.Collapsed;
-        MemoryGauge.Value = hasMemory ? 100 * local.MemoryInUseGb / local.TotalMemoryGb : 0;
-        ProcessorValue.Text = local.ProcessorCount.ToString(BrazilianPortuguese);
-        UptimeValue.Text = local.Uptime.Days > 0
-            ? $"{local.Uptime.Days} d {local.Uptime.Hours} h"
-            : $"{local.Uptime.Hours} h {local.Uptime.Minutes} min";
-        NetworkStatusLabel.Text = local.NetworkAvailable ? "Rede disponível" : "Rede indisponível";
-        NetworkIndicator.Fill = (System.Windows.Media.Brush)FindResource(local.NetworkAvailable ? "Accent" : "Muted");
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -191,7 +167,6 @@ public partial class MainWindow : Window
         };
         nav.IsChecked = true;
         nav.Focus();
-        if (page == -1) LoadDashboard();
     }
     private void Home_Click(object sender, RoutedEventArgs e) => Navigate(-1);
     private void Energy_Click(object sender, RoutedEventArgs e) => Navigate(0);
