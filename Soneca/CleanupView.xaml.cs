@@ -38,7 +38,7 @@ public partial class CleanupView : UserControl
         PreviewList.ItemsSource = null;
         Preview.Visibility = Visibility.Collapsed;
         Preview.IsExpanded = false;
-        TotalCaption.Text = "Volume estimado";
+        TotalCaption.Text = "Espaço recuperável";
         TotalLabel.Text = "—";
         SummaryDetail.Text = "";
         TempLabel.Text = Waiting(TempCheck);
@@ -60,6 +60,8 @@ public partial class CleanupView : UserControl
     private CancellationTokenSource Begin()
     {
         operation = new CancellationTokenSource();
+        ScanProgress.IsIndeterminate = true;
+        ScanProgress.Visibility = Visibility.Visible;
         UpdateButtons();
         AllowCancel(true);
         return operation;
@@ -68,6 +70,8 @@ public partial class CleanupView : UserControl
     private void End()
     {
         operation = null;
+        ScanProgress.IsIndeterminate = false;
+        ScanProgress.Visibility = Visibility.Collapsed;
         AllowCancel(false);
         UpdateButtons();
     }
@@ -166,7 +170,8 @@ public partial class CleanupView : UserControl
         bool incomplete = new[] { report.Temp, report.Dumps, report.Prefetch }.Any(plan => plan?.Error is not null || plan?.Protected == true)
             || report.Bin?.Error is not null;
         SummaryLabel.Text = count > 0 ? $"{CountLabel(count, "item", "itens")} na prévia" : "Nenhum item elegível";
-        SummaryDetail.Text = incomplete ? "A prévia inclui apenas as categorias analisadas com sucesso." : "";
+        SummaryDetail.Text = incomplete ? "A prévia inclui apenas as categorias analisadas com sucesso."
+            : count > 0 ? "Revise a prévia antes de confirmar." : "";
         TotalLabel.Text = Cleaner.Size(size);
         var entries = files.SelectMany(plan => plan.Files.Select(file => (Plan: plan, File: file)))
             .OrderByDescending(item => item.File.Length).Take(15)

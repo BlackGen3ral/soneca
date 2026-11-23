@@ -4,8 +4,14 @@
         Background="{StaticResource Canvas}" Foreground="{StaticResource Ink}"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True">
     <Grid Background="{StaticResource Backdrop}">
-        <Rectangle Fill="{StaticResource BackdropLight}" IsHitTestVisible="False"/>
-        <Rectangle Fill="{StaticResource BackdropTint}" IsHitTestVisible="False"/>
+        <Grid ClipToBounds="True" IsHitTestVisible="False">
+            <Rectangle Fill="{StaticResource BackdropLight}" Margin="-125">
+                <Rectangle.RenderTransform><TranslateTransform x:Name="BackdropGlow"/></Rectangle.RenderTransform>
+            </Rectangle>
+            <Rectangle Fill="{StaticResource BackdropTint}" Margin="-110">
+                <Rectangle.RenderTransform><TranslateTransform x:Name="BackdropWash"/></Rectangle.RenderTransform>
+            </Rectangle>
+        </Grid>
         <Grid x:Name="DashboardContent">
             <Grid.ColumnDefinitions><ColumnDefinition Width="205"/><ColumnDefinition/></Grid.ColumnDefinitions>
             <Border Background="{StaticResource Sidebar}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0"
@@ -54,15 +60,15 @@
                             <Viewbox Grid.Column="1" HorizontalAlignment="Right" Stretch="Uniform" IsHitTestVisible="False"
                                      MaxHeight="157" Margin="10,0,1,0">
                                 <Canvas Width="300" Height="164">
-                                    <Path Stroke="#485A40" StrokeThickness="1"
+                                    <Path Stroke="#435F74" StrokeThickness="1"
                                           Data="M9,128 L120,68 289,100 181,158 Z M36,134 L148,74 M66,141 L177,80 M94,146 L208,85 M123,153 L237,90 M154,158 L265,95 M39,112 L209,144 M65,97 L235,131 M91,83 L262,115"/>
-                                    <Path Data="M39,111 L114,65 239,88 164,135 Z" Fill="#222E22" Stroke="#788C69" StrokeThickness="1.4"/>
-                                    <Path Data="M61,108 L61,74 160,95 160,127 Z" Fill="#3C5340" Stroke="#A3BC88" StrokeThickness="1.6"/>
-                                    <Path Data="M160,95 L212,62 212,96 160,127 Z" Fill="#293B31" Stroke="#8DA783" StrokeThickness="1.6"/>
-                                    <Path Data="M56,75 L112,32 219,58 165,98 Z" Fill="#506C4E" Stroke="#D8EEAC" StrokeThickness="2"/>
-                                    <Path Stroke="#AEC69C" StrokeThickness="1.3" Data="M112,32 L141,54 165,98 M88,50 L194,76 M141,54 L187,65 M86,114 L86,88 112,94 112,120 M170,101 L200,82 200,94 170,112 Z"/>
-                                    <Path Stroke="#C1DFA3" StrokeThickness="2" Data="M227,97 L252,101 229,115 204,111 Z M242,105 L242,115 228,123"/>
-                                    <Ellipse Canvas.Left="70" Canvas.Top="74" Width="5" Height="5" Fill="#D8EEAC"/>
+                                    <Path Data="M39,111 L114,65 239,88 164,135 Z" Fill="#1B2C40" Stroke="#6F8DA4" StrokeThickness="1.4"/>
+                                    <Path Data="M61,108 L61,74 160,95 160,127 Z" Fill="#304D66" Stroke="#A3BED2" StrokeThickness="1.6"/>
+                                    <Path Data="M160,95 L212,62 212,96 160,127 Z" Fill="#243B54" Stroke="#789AB1" StrokeThickness="1.6"/>
+                                    <Path Data="M56,75 L112,32 219,58 165,98 Z" Fill="#416581" Stroke="#A6E6D7" StrokeThickness="2"/>
+                                    <Path Stroke="#ADC8D8" StrokeThickness="1.3" Data="M112,32 L141,54 165,98 M88,50 L194,76 M141,54 L187,65 M86,114 L86,88 112,94 112,120 M170,101 L200,82 200,94 170,112 Z"/>
+                                    <Path Stroke="#A6E6D7" StrokeThickness="2" Data="M227,97 L252,101 229,115 204,111 Z M242,105 L242,115 228,123"/>
+                                    <Ellipse Canvas.Left="70" Canvas.Top="74" Width="5" Height="5" Fill="#A6E6D7"/>
                                 </Canvas>
                             </Viewbox>
                             <StackPanel VerticalAlignment="Center">
@@ -220,7 +226,7 @@
                             <StackPanel>
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
-                                    <Border Width="48" Height="48" CornerRadius="12" Background="#5E48583A" BorderBrush="{StaticResource GlassEdge}"
+                                    <Border Width="48" Height="48" CornerRadius="12" Background="#65314D64" BorderBrush="{StaticResource GlassEdge}"
                                             BorderThickness="1" VerticalAlignment="Top">
                                         <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="{StaticResource Accent}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>

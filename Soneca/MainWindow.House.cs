@@ -113,7 +113,7 @@ public partial class MainWindow
 
     private async Task OpenHouseAsync(string page)
     {
-        var view = new WebView2 { DefaultBackgroundColor = System.Drawing.Color.FromArgb(19, 23, 19) };
+        var view = new WebView2 { DefaultBackgroundColor = System.Drawing.Color.FromArgb(9, 15, 26) };
         houseView = view;
         try
         {

@@ -1,47 +1,47 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="Canvas" Color="#121512"/>
+    <SolidColorBrush x:Key="Canvas" Color="#080D17"/>
     <LinearGradientBrush x:Key="Backdrop" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#151915"/>
-        <GradientStop Offset=".53" Color="#131713"/>
-        <GradientStop Offset="1" Color="#191B16"/>
+        <GradientStop Offset="0" Color="#0A111E"/>
+        <GradientStop Offset=".53" Color="#090F1A"/>
+        <GradientStop Offset="1" Color="#111424"/>
     </LinearGradientBrush>
     <RadialGradientBrush x:Key="BackdropLight" Center=".77,.12" GradientOrigin=".77,.12" RadiusX=".68" RadiusY=".95">
-        <GradientStop Offset="0" Color="#39384528"/>
-        <GradientStop Offset=".58" Color="#142E381F"/>
-        <GradientStop Offset="1" Color="#002E381F"/>
+        <GradientStop Offset="0" Color="#3A264A6D"/>
+        <GradientStop Offset=".58" Color="#1C223D5D"/>
+        <GradientStop Offset="1" Color="#00223D5D"/>
     </RadialGradientBrush>
     <RadialGradientBrush x:Key="BackdropTint" Center=".29,1" GradientOrigin=".29,1" RadiusX=".55" RadiusY=".78">
-        <GradientStop Offset="0" Color="#15333525"/>
-        <GradientStop Offset="1" Color="#00333525"/>
+        <GradientStop Offset="0" Color="#182C3152"/>
+        <GradientStop Offset="1" Color="#002C3152"/>
     </RadialGradientBrush>
     <LinearGradientBrush x:Key="Sidebar" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#F01A1E1A"/>
-        <GradientStop Offset="1" Color="#F0161916"/>
+        <GradientStop Offset="0" Color="#F0101928"/>
+        <GradientStop Offset="1" Color="#F00D1522"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="Surface" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#E0262C26"/>
-        <GradientStop Offset=".5" Color="#F0212621"/>
-        <GradientStop Offset="1" Color="#F01E221E"/>
+        <GradientStop Offset="0" Color="#ED172438"/>
+        <GradientStop Offset=".5" Color="#F0111D2E"/>
+        <GradientStop Offset="1" Color="#F00F1929"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="GlassHero" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#F039452E"/>
-        <GradientStop Offset=".48" Color="#ED293424"/>
-        <GradientStop Offset="1" Color="#EF1E281D"/>
+        <GradientStop Offset="0" Color="#F0233C57"/>
+        <GradientStop Offset=".48" Color="#ED192D43"/>
+        <GradientStop Offset="1" Color="#EF142235"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="GlassEdge" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Offset="0" Color="#806B785D"/>
-        <GradientStop Offset=".48" Color="#4A54624A"/>
-        <GradientStop Offset="1" Color="#3D48533F"/>
+        <GradientStop Offset="0" Color="#80547294"/>
+        <GradientStop Offset=".48" Color="#4D47617F"/>
+        <GradientStop Offset="1" Color="#3C344B6A"/>
     </LinearGradientBrush>
-    <SolidColorBrush x:Key="Field" Color="#ED171B17"/>
-    <SolidColorBrush x:Key="Line" Color="#695B6855"/>
-    <SolidColorBrush x:Key="Ink" Color="#F4F5EB"/>
-    <SolidColorBrush x:Key="Muted" Color="#B4BEAF"/>
-    <SolidColorBrush x:Key="Accent" Color="#D8EEAC"/>
-    <SolidColorBrush x:Key="AccentInk" Color="#222A19"/>
-    <SolidColorBrush x:Key="Focus" Color="#EFF8D9"/>
-    <SolidColorBrush x:Key="Warning" Color="#FFC4AC"/>
+    <SolidColorBrush x:Key="Field" Color="#EE0A1422"/>
+    <SolidColorBrush x:Key="Line" Color="#69516B89"/>
+    <SolidColorBrush x:Key="Ink" Color="#EFF5FC"/>
+    <SolidColorBrush x:Key="Muted" Color="#AABBD0"/>
+    <SolidColorBrush x:Key="Accent" Color="#A6E6D7"/>
+    <SolidColorBrush x:Key="AccentInk" Color="#102B29"/>
+    <SolidColorBrush x:Key="Focus" Color="#DDF5F5"/>
+    <SolidColorBrush x:Key="Warning" Color="#FFC2B6"/>
     <Style TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource Ink}"/>
         <Setter Property="FontFamily" Value="Segoe UI"/>
@@ -126,9 +126,9 @@
                         </DockPanel>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="RowBackground" Property="Background" Value="#53626F50"/></Trigger>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="RowBackground" Property="Background" Value="#53435770"/></Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="RowBackground" Property="BorderBrush" Value="{StaticResource Focus}"/></Trigger>
-                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="RowBackground" Property="Background" Value="#69617253"/></Trigger>
+                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="RowBackground" Property="Background" Value="#69527394"/></Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -174,7 +174,7 @@
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter Property="Foreground" Value="{StaticResource Accent}"/>
-                            <Setter TargetName="NavSurface" Property="Background" Value="#70546542"/>
+                            <Setter TargetName="NavSurface" Property="Background" Value="#70506C90"/>
                             <Setter TargetName="NavSurface" Property="BorderBrush" Value="{StaticResource GlassEdge}"/>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
@@ -229,10 +229,10 @@
                                 <Thumb>
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
-                                            <Border x:Name="Grip" CornerRadius="4" Background="#546252"/>
+                                            <Border x:Name="Grip" CornerRadius="4" Background="#465C76"/>
                                             <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Grip" Property="Background" Value="#839477"/></Trigger>
-                                                <Trigger Property="IsDragging" Value="True"><Setter TargetName="Grip" Property="Background" Value="#A5B691"/></Trigger>
+                                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Grip" Property="Background" Value="#6D8AA8"/></Trigger>
+                                                <Trigger Property="IsDragging" Value="True"><Setter TargetName="Grip" Property="Background" Value="#9BBBD8"/></Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Thumb.Template>
@@ -268,7 +268,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
-                            <Setter TargetName="ItemBackground" Property="Background" Value="#46523A"/>
+                            <Setter TargetName="ItemBackground" Property="Background" Value="#2B415A"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -305,7 +305,7 @@
                                           ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                           ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"/>
                         <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True">
-                            <Border Background="#232922" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                            <Border Background="#132033" BorderBrush="{StaticResource Line}" BorderThickness="1"
                                     CornerRadius="8" Padding="3" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
                                 <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}">
                                     <ItemsPresenter/>

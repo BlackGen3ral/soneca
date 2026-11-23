@@ -21,6 +21,11 @@ public partial class MainWindow : Window
     {
         this.demo = demo; this.skipIntro = skipIntro; schedule = new Schedule(demo);
         InitializeComponent();
+        Loaded += (_, _) => UpdateBackdropMotion();
+        Activated += (_, _) => UpdateBackdropMotion();
+        Deactivated += (_, _) => UpdateBackdropMotion();
+        StateChanged += (_, _) => UpdateBackdropMotion();
+        IntroOverlay.IsVisibleChanged += (_, _) => UpdateBackdropMotion();
         AndroidSurface.Content = androidScreen;
         mobileReconnectTimer.Tick += async (_, _) => await RestoreMobileAsync();
         remoteDesktopTimer.Tick += (_, _) => RefreshRemoteDesktop();
@@ -91,8 +96,8 @@ public partial class MainWindow : Window
         var handle = new WindowInteropHelper(this).Handle;
         const int DarkCaption = 20, CaptionColor = 35, CaptionTextColor = 36;
         var dark = 1;
-        var background = 0x151915;
-        var text = 0xebf5f4;
+        var background = 0x1e110a;
+        var text = 0xfcf5ef;
         DwmSetWindowAttribute(handle, DarkCaption, in dark, sizeof(int));
         DwmSetWindowAttribute(handle, CaptionColor, in background, sizeof(int));
         DwmSetWindowAttribute(handle, CaptionTextColor, in text, sizeof(int));
