@@ -373,37 +373,79 @@
             </Grid>
 
             <ScrollViewer x:Name="EnergyPanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
-                <StackPanel Margin="30,25,30,25" MaxWidth="1080">
+                <StackPanel Margin="30,26,30,22" MaxWidth="990">
                     <TextBlock Text="Energia" Style="{StaticResource PageTitle}"/>
-                    <TextBlock Text="Agende quando este PC deve desligar." Style="{StaticResource BodyCopy}" Margin="0,5,0,18"/>
-                    <Border Style="{StaticResource Panel}" Padding="17,13">
+                    <TextBlock Text="Programe o desligamento deste computador." Style="{StaticResource BodyCopy}" Margin="0,5,0,17"/>
+                    <Border Style="{StaticResource Panel}" Background="{StaticResource GlassHero}" Padding="18,17">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                                <Border Width="36" Height="36" HorizontalAlignment="Left" Background="#69264563"
+                                        BorderBrush="{StaticResource GlassEdge}" BorderThickness="1" CornerRadius="10">
+                                    <TextBlock Text="&#xE7E8;" FontFamily="Segoe MDL2 Assets" FontSize="16"
+                                               Foreground="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <TextBlock x:Name="StatusLabel" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            </StackPanel>
+                            <Border Grid.Column="1" CornerRadius="12" Background="#A10C192B" BorderBrush="{StaticResource GlassEdge}"
+                                    BorderThickness="1" Padding="12,9">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="EnergyTimeCaption" Text="Prévia da contagem" Style="{StaticResource Overline}" HorizontalAlignment="Right" TextWrapping="Wrap"/>
+                                    <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Right">
+                                        <TextBlock x:Name="CountdownLabel" FontFamily="Cascadia Mono, Consolas" FontSize="39"
+                                                   FontWeight="SemiBold" Margin="0,3,0,1"/>
+                                    </Viewbox>
+                                    <TextBlock x:Name="TargetLabel" Style="{StaticResource BodyCopy}" FontSize="12" TextAlignment="Right"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+                    <Border Style="{StaticResource Panel}" Margin="0,13,0,0" Padding="17,14">
                         <StackPanel>
-                            <TextBlock x:Name="StatusLabel" Style="{StaticResource BodyCopy}"/>
-                            <TextBlock x:Name="CountdownLabel" FontFamily="Cascadia Mono, Consolas" FontSize="37" FontWeight="SemiBold" Margin="0,5,0,3"/>
-                            <TextBlock x:Name="TargetLabel" Style="{StaticResource BodyCopy}"/>
+                            <TextBlock Text="Quando desligar" Style="{StaticResource SectionTitle}" Margin="0,0,0,9"/>
+                            <Border Background="{StaticResource Field}" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                                    CornerRadius="10" Padding="4">
+                                <UniformGrid Columns="2">
+                                    <RadioButton x:Name="DelayMode" Style="{StaticResource Navigation}" Content="Após um tempo"
+                                                 Tag="&#xE823;" GroupName="TimeMode" Click="Delay_Click" IsChecked="True" Margin="0,0,3,0"/>
+                                    <RadioButton x:Name="ClockMode" Style="{StaticResource Navigation}" Content="Em um horário"
+                                                 Tag="&#xE121;" GroupName="TimeMode" Click="Clock_Click" Margin="3,0,0,0"/>
+                                </UniformGrid>
+                            </Border>
+                            <StackPanel x:Name="Presets" Margin="0,12,0,0">
+                                <TextBlock Text="Tempos rápidos" Style="{StaticResource BodyCopy}" FontSize="12" Margin="0,0,0,6"/>
+                                <UniformGrid Columns="4">
+                                    <Button Content="15 min" Tag="15" Click="Preset_Click" Margin="0,0,6,0"/>
+                                    <Button Content="30 min" Tag="30" Click="Preset_Click" Margin="0,0,6,0"/>
+                                    <Button Content="1 hora" Tag="60" Click="Preset_Click" Margin="0,0,6,0"/>
+                                    <Button Content="2 horas" Tag="120" Click="Preset_Click"/>
+                                </UniformGrid>
+                            </StackPanel>
+                            <StackPanel Margin="0,12,0,0">
+                                <TextBlock x:Name="InputLabel" Text="Tempo personalizado (minutos)" Style="{StaticResource BodyCopy}" FontSize="13" Margin="0,0,0,5"/>
+                                <TextBox x:Name="TimeInput" Text="30" TextChanged="Input_Changed" MaxLength="5"
+                                         HorizontalAlignment="Left" Width="164" AutomationProperties.LabeledBy="{Binding ElementName=InputLabel}"/>
+                            </StackPanel>
+                            <TextBlock x:Name="ErrorLabel" TextWrapping="Wrap" Margin="0,7,0,0" AutomationProperties.LiveSetting="Polite">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource BodyCopy}">
+                                        <Setter Property="Foreground" Value="{StaticResource Warning}"/>
+                                        <Style.Triggers><Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger></Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <WrapPanel Margin="0,13,0,0" HorizontalAlignment="Right">
+                                <Button x:Name="CancelButton" Content="Cancelar desligamento" Click="Cancel_Click"
+                                        Visibility="Collapsed" Margin="0,0,8,5"/>
+                                <Button x:Name="ScheduleButton" Content="Agendar desligamento" Style="{StaticResource Primary}"
+                                        Click="Schedule_Click" Margin="0,0,0,5"/>
+                            </WrapPanel>
                         </StackPanel>
                     </Border>
-                    <Border Style="{StaticResource Panel}" Margin="0,13,0,0">
-                        <StackPanel>
-                            <TextBlock Text="Quando desligar" Style="{StaticResource SectionTitle}" Margin="0,0,0,11"/>
-                            <UniformGrid Columns="2">
-                                <RadioButton x:Name="DelayMode" Style="{StaticResource Navigation}" Content="Daqui a um tempo" Tag="&#xE823;" GroupName="TimeMode" Click="Delay_Click" IsChecked="True" Margin="0,0,5,0"/>
-                                <RadioButton x:Name="ClockMode" Style="{StaticResource Navigation}" Content="Em um horário" Tag="&#xE121;" GroupName="TimeMode" Click="Clock_Click" Margin="5,0,0,0"/>
-                            </UniformGrid>
-                            <UniformGrid x:Name="Presets" Columns="4" Margin="0,11,0,0">
-                                <Button Content="15 min" Tag="15" Click="Preset_Click" Margin="0,0,6,0"/>
-                                <Button Content="30 min" Tag="30" Click="Preset_Click" Margin="0,0,6,0"/>
-                                <Button Content="1 hora" Tag="60" Click="Preset_Click" Margin="0,0,6,0"/>
-                                <Button Content="2 horas" Tag="120" Click="Preset_Click"/>
-                            </UniformGrid>
-                            <TextBlock x:Name="InputLabel" Text="Tempo personalizado (minutos)" Style="{StaticResource BodyCopy}" Margin="0,13,0,6"/>
-                            <TextBox x:Name="TimeInput" Text="30" TextChanged="Input_Changed" MaxLength="5" AutomationProperties.LabeledBy="{Binding ElementName=InputLabel}"/>
-                            <TextBlock x:Name="ErrorLabel" Foreground="{StaticResource Warning}" TextWrapping="Wrap" Margin="0,6" AutomationProperties.LiveSetting="Polite"/>
-                            <Button x:Name="ScheduleButton" Content="Agendar desligamento" Style="{StaticResource Primary}" Click="Schedule_Click"/>
-                            <Button x:Name="CancelButton" Content="Cancelar desligamento" Click="Cancel_Click" Visibility="Collapsed" Margin="0,8,0,0"/>
-                        </StackPanel>
-                    </Border>
-                    <TextBlock Text="Pode fechar o app após agendar. Mantenha a sessão conectada e salve seus arquivos. Apps abertos podem impedir o desligamento. O despertar da suspensão depende das configurações do Windows." Style="{StaticResource BodyCopy}" FontSize="12" Margin="0,13,0,0"/>
+                    <Expander Header="Antes de agendar" Foreground="{StaticResource Muted}" Margin="2,12,0,0">
+                        <TextBlock Text="Pode fechar o app após agendar. Mantenha a sessão conectada e salve seus arquivos. Apps abertos podem impedir o desligamento. O despertar da suspensão depende das configurações do Windows."
+                                   Style="{StaticResource BodyCopy}" FontSize="12" Margin="0,6,0,0"/>
+                    </Expander>
                 </StackPanel>
             </ScrollViewer>
             <local:CleanupView x:Name="CleanupPanel" Grid.Column="1" Visibility="Collapsed"/>

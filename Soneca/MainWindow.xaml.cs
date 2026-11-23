@@ -115,6 +115,7 @@ public partial class MainWindow : Window
     {
         bool active = target.HasValue && target > DateTimeOffset.Now;
         StatusLabel.Text = active ? "Desligamento agendado" : "Nenhum desligamento agendado";
+        EnergyTimeCaption.Text = active ? "Tempo restante" : "Prévia da contagem";
         HomeEnergySubtitle.Text = active ? $"Agendado para {target!.Value.LocalDateTime:dd/MM 'às' HH:mm}" : "Definir horário ou contagem regressiva";
         if (active)
         {
