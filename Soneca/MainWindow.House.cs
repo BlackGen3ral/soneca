@@ -14,6 +14,7 @@ public partial class MainWindow
     private string? unlockedHouse;
     private DateTime houseRevision;
     private int houseGeneration;
+    private bool attemptedSavedHouseUnlock;
 
     private void House_Click(object sender, RoutedEventArgs e) => Navigate(7);
 
@@ -30,6 +31,8 @@ public partial class MainWindow
         {
             unlockedHouse = null;
             ShowLockedHouse();
+            if (!attemptedSavedHouseUnlock && File.Exists(HousePackage.PathOnDisk) && HouseCredential.Exists(demo))
+                _ = UnlockHouseAsync(remembered: true);
             return;
         }
         HouseLock.Visibility = Visibility.Collapsed;
@@ -54,26 +57,53 @@ public partial class MainWindow
         _ = UnlockHouseAsync();
     }
 
-    private async Task UnlockHouseAsync()
+    private async Task UnlockHouseAsync(bool remembered = false)
     {
-        if (!HouseUnlock.IsEnabled || houseView is not null || HousePassword.Password.Length == 0) return;
+        if (!HouseUnlock.IsEnabled || houseView is not null || (!remembered && HousePassword.Password.Length == 0)) return;
         HouseUnlock.IsEnabled = false;
-        string password = HousePassword.Password;
+        attemptedSavedHouseUnlock = true;
+        string entered = HousePassword.Password;
         HousePassword.Clear();
         int opening = ++houseGeneration;
         HouseFeedback.Text = "Abrindo maquete…";
         try
         {
             var revision = File.GetLastWriteTimeUtc(HousePackage.PathOnDisk);
-            string html = await Task.Run(() => HousePackage.Unlock(password));
+            var result = await Task.Run(() =>
+            {
+                string? password = remembered ? HouseCredential.Read(demo) : entered;
+                if (string.IsNullOrEmpty(password)) return (Html: (string?)null, Saved: false);
+                string html = HousePackage.Unlock(password);
+                if (remembered) return (Html: (string?)html, Saved: true);
+                try
+                {
+                    HouseCredential.Save(password, demo);
+                    return (Html: (string?)html, Saved: true);
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException or CryptographicException)
+                {
+                    return (Html: (string?)html, Saved: false);
+                }
+            });
             if (opening != houseGeneration) return;
+            if (result.Html is null)
+            {
+                ShowLockedHouse("Digite a senha para recuperar o acesso neste aparelho.");
+                return;
+            }
+            if (!result.Saved)
+            {
+                MessageBox.Show(this, "A maquete abriu, mas o Windows não conseguiu lembrar o acesso para a próxima vez.",
+                    "Minha casa", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
             houseRevision = revision;
-            unlockedHouse = html;
-            await OpenHouseAsync(html);
+            unlockedHouse = result.Html;
+            await OpenHouseAsync(result.Html);
         }
         catch (CryptographicException)
         {
-            if (opening == houseGeneration) ShowLockedHouse("Senha incorreta ou arquivo da maquete inválido.");
+            if (opening == houseGeneration) ShowLockedHouse(remembered ? "Digite a senha atual da maquete."
+                : "Senha incorreta ou arquivo da maquete inválido.");
         }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
         {
@@ -147,6 +177,7 @@ public partial class MainWindow
     {
         var view = houseView;
         houseGeneration++;
+        attemptedSavedHouseUnlock = false;
         HousePassword.Clear();
         houseView = null;
         HouseSurface.Content = null;
@@ -156,6 +187,7 @@ public partial class MainWindow
     private void EndHouseSession()
     {
         unlockedHouse = null;
+        attemptedSavedHouseUnlock = false;
         CloseHouse();
     }
 }
