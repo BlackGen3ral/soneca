@@ -17,6 +17,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -55,6 +56,7 @@ public final class MainActivity extends Activity {
             R.drawable.nav_update, R.drawable.nav_house};
 
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    private final ExecutorService statusWorker = Executors.newSingleThreadExecutor();
     private final Handler connectionTimer = new Handler(Looper.getMainLooper());
     private final Runnable reconnect = () -> requestStatus(false);
     private final GlassBackdrop backdrop = new GlassBackdrop();
@@ -69,12 +71,16 @@ public final class MainActivity extends Activity {
     private StatusClient.Pairing shownPairing;
     private boolean deviceInitialized;
     private boolean deviceOnline;
+    private DevicesPanel devices;
     private LinearLayout metrics;
-    private StatusClient.Pairing pairing;
-    private boolean connecting;
+    private volatile StatusClient.Pairing pairing;
+    private StatusClient.Pairing confirmedPairing, pendingStatus, presenceTarget;
     private boolean visible;
     private boolean legacyLink;
     private boolean online;
+    private int missedStatus;
+    private long lastPcReply;
+    private TextView presenceLabel, presenceBadge, lastContact;
     private TextView status;
     private TextView computer;
     private TextView detail;
@@ -159,7 +165,10 @@ public final class MainActivity extends Activity {
         super.onStart();
         visible = true;
         backdrop.setRunning(selectedTab != HOUSE_TAB);
-        if (pairing != null) requestStatus(!online);
+        if (pairing != null) {
+            requestStatus(!online || lastPcReply == 0 ||
+                    System.currentTimeMillis() - lastPcReply > 6000);
+        }
     }
 
     @Override protected void onStop() {
@@ -191,12 +200,13 @@ public final class MainActivity extends Activity {
         TextView title = label("Visão geral", 31, INK, "sans-serif-medium");
         title.setAccessibilityHeading(true);
         page.addView(title);
+        page.addView(presenceCard(), spaced(13));
         page.addView(houseCard(), spaced(13));
         page.addView(connectionPanel(), spaced(12));
 
         metrics = column();
         metrics.setVisibility(View.GONE);
-        TextView section = label("Estado do PC", 17, INK, "sans-serif-medium");
+        TextView section = label("Dados do PC", 17, INK, "sans-serif-medium");
         section.setAccessibilityHeading(true);
         metrics.addView(section);
         LinearLayout readings = column();
@@ -272,6 +282,7 @@ public final class MainActivity extends Activity {
         deviceInitialized = true;
         deviceOnline = online;
         shownPairing = pairing;
+        devices = null;
         deviceContent.removeAllViews();
         if (pairing == null) {
             deviceContent.addView(label("Conecte o celular ao PC de controle para ver os dispositivos.", 15, MUTED, "sans-serif"));
@@ -284,9 +295,9 @@ public final class MainActivity extends Activity {
             deviceContent.addView(label("Aguardando o PC de controle voltar à rede.", 15, MUTED, "sans-serif"));
             return;
         }
-        DevicesPanel panel = new DevicesPanel(this, pairing, worker);
-        deviceContent.addView(panel.view());
-        panel.load();
+        devices = new DevicesPanel(this, pairing, worker);
+        deviceContent.addView(devices.view());
+        devices.load();
     }
 
     private View navigation() {
@@ -360,7 +371,46 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams brandSize = new LinearLayout.LayoutParams(0, -2, 1f);
         brandSize.leftMargin = dp(10);
         header.addView(brand, brandSize);
+        presenceBadge = label("PC não conectado", 12, MUTED, "sans-serif-medium");
+        presenceBadge.setPadding(dp(9), dp(5), dp(9), dp(5));
+        presenceBadge.setBackground(surface(SURFACE, 14, BORDER));
+        presenceBadge.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        header.addView(presenceBadge);
         return header;
+    }
+
+    private View presenceCard() {
+        LinearLayout panel = row();
+        panel.setGravity(Gravity.CENTER_VERTICAL);
+        panel.setPadding(dp(16), dp(13), dp(16), dp(13));
+        panel.setBackground(surface(0xff14233a, 18, BORDER));
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.drawable.nav_devices);
+        icon.setColorFilter(ACCENT);
+        icon.setPadding(dp(9), dp(9), dp(9), dp(9));
+        icon.setBackground(surface(0xff203650, 12, 0xff314e6d));
+        icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        panel.addView(icon, new LinearLayout.LayoutParams(dp(41), dp(41)));
+        LinearLayout readings = column();
+        LinearLayout.LayoutParams readingSize = new LinearLayout.LayoutParams(0, -2, 1f);
+        readingSize.leftMargin = dp(12);
+        panel.addView(readings, readingSize);
+        presenceLabel = label("PC não conectado", 17, INK, "sans-serif-medium");
+        readings.addView(presenceLabel);
+        lastContact = label("Último contato —", 13, MUTED, "sans-serif");
+        readings.addView(lastContact, spaced(3));
+        return panel;
+    }
+
+    private void showPresence(String badge, String title, int color) {
+        if (!badge.contentEquals(presenceBadge.getText())) {
+            presenceBadge.setText(badge);
+            presenceBadge.setTextColor(color);
+        }
+        presenceLabel.setText(title);
+        lastContact.setText(lastPcReply == 0 ? "Último contato —"
+                : "Último contato · " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM, BRAZIL)
+                        .format(new Date(lastPcReply)));
     }
 
     private View connectionPanel() {
@@ -402,7 +452,7 @@ public final class MainActivity extends Activity {
     }
 
     void showPairing() {
-        if (connecting) return;
+        if (pendingStatus != null && confirmedPairing != pendingStatus) return;
         Dialog dialog = new Dialog(this);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         ScrollView scroll = new ScrollView(this);
@@ -516,34 +566,51 @@ public final class MainActivity extends Activity {
     private void requestStatus() { requestStatus(true); }
 
     private void requestStatus(boolean showProgress) {
-        if (pairing == null || connecting) return;
+        if (pairing == null || pendingStatus == pairing) return;
         StatusClient.Pairing target = pairing;
         boolean useLegacy = legacyLink;
-        connecting = true;
+        boolean needsConfirmation = confirmedPairing != target;
+        if (presenceTarget != target) {
+            presenceTarget = target;
+            lastPcReply = 0;
+            missedStatus = 0;
+            online = false;
+            showProgress = true;
+        }
+        pendingStatus = target;
         connectionTimer.removeCallbacks(reconnect);
         if (showProgress) {
+            if (!online || lastPcReply == 0 || System.currentTimeMillis() - lastPcReply > 6000)
+                showPresence("Verificando PC", "Consultando o PC…", MUTED);
             setStatus("Consultando o PC", ACCENT);
             detail.setText("Aguardando a resposta do Windows…");
             primary.setEnabled(false);
             primary.setText("Consultando…");
         }
-        connectionOptions.setEnabled(false);
-        worker.execute(() -> {
+        if (showProgress) connectionOptions.setEnabled(false);
+        (needsConfirmation ? worker : statusWorker).execute(() -> {
+            if (pairing != target) return;
             try {
                 StatusClient.Pairing link = target;
                 if (!target.durable && !useLegacy) link = establishLink(target);
                 JSONObject result = StatusClient.readStatus(link);
-                if (link.durable) PairingVault.accept(getApplicationContext(), link);
+                if (needsConfirmation && link.durable && pairing == target)
+                    PairingVault.accept(getApplicationContext(), link);
                 StatusClient.Pairing connected = link;
                 show(() -> {
                     if (pairing != target) return;
-                    pairing = connected;
+                    pairing = confirmedPairing = presenceTarget = connected;
                     legacyLink = !connected.durable;
                     online = true;
+                    missedStatus = 0;
+                    lastPcReply = System.currentTimeMillis();
+                    showPresence("●  PC ligado", "PC ligado", GREEN);
                     render(result);
-                    reconnectAfter(12000);
+                    if (selectedTab == 1 && devices != null) devices.refreshIfDue(SystemClock.elapsedRealtime());
+                    reconnectAfter(2500);
                 });
             } catch (SecurityException error) {
+                if (pairing != target) return;
                 if (!target.durable) PairingVault.discardPending(getApplicationContext());
                 StatusClient.Pairing fallback = PairingVault.invalidate(getApplicationContext(), target);
                 show(() -> {
@@ -551,6 +618,8 @@ public final class MainActivity extends Activity {
                     pairing = fallback;
                     legacyLink = false;
                     online = false;
+                    lastPcReply = 0;
+                    showPresence("Pareie o PC", "Pareamento indisponível", ALERT);
                     if (target.durable && (fallback == null || !fallback.host.equals(target.host))) power.onPairingRevoked(target);
                     power.pairingChanged(null);
                     showEmpty("Pareamento indisponível", ALERT, "Se o vínculo foi removido, escaneie outro QR Code no PC.");
@@ -560,6 +629,7 @@ public final class MainActivity extends Activity {
                 show(() -> {
                     if (pairing != target) return;
                     online = false;
+                    showPresence("Verifique o PC", "PC diferente do pareamento", ALERT);
                     power.pairingChanged(null);
                     showEmpty("PC diferente do pareamento", ALERT, "Confira se o endereço de rede do Windows mudou.");
                     if (target.durable) reconnectAfter(15000);
@@ -567,10 +637,18 @@ public final class MainActivity extends Activity {
             } catch (Exception error) {
                 show(() -> {
                     if (pairing != target) return;
+                    missedStatus++;
+                    if (online && missedStatus < 2 && lastPcReply != 0 &&
+                            System.currentTimeMillis() - lastPcReply < 7000) {
+                        restoreActions();
+                        reconnectAfter(800);
+                        return;
+                    }
                     online = false;
+                    showPresence("●  PC sem resposta", "PC desligado ou sem conexão", ALERT);
                     power.pairingChanged(null);
-                    showEmpty("Aguardando o PC", MUTED, "O app tenta reconectar quando o Artho AI voltar à rede.");
-                    reconnectAfter(7000);
+                    showEmpty("Aguardando o PC", MUTED, "O app reconecta automaticamente quando o Windows voltar a responder.");
+                    reconnectAfter(2000);
                 });
             }
         });
@@ -632,6 +710,8 @@ public final class MainActivity extends Activity {
         StatusClient.Pairing old = pairing;
         pairing = null;
         online = false;
+        lastPcReply = 0;
+        showPresence("PC não conectado", "PC não conectado", MUTED);
         legacyLink = false;
         connectionTimer.removeCallbacks(reconnect);
         power.forget();
@@ -665,7 +745,7 @@ public final class MainActivity extends Activity {
     }
 
     private void restoreActions() {
-        connecting = false;
+        pendingStatus = null;
         primary.setText(pairing == null ? "Conectar ao PC" : "Atualizar dados");
         primary.setEnabled(true);
         connectionOptions.setEnabled(true);
@@ -766,6 +846,7 @@ public final class MainActivity extends Activity {
         if (updates != null) updates.close();
         power.close();
         worker.shutdownNow();
+        statusWorker.shutdownNow();
         super.onDestroy();
     }
 }

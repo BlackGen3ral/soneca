@@ -1,6 +1,7 @@
 package com.arthostudio.arthoai;
 
 import android.app.AlertDialog;
+import android.os.SystemClock;
 import android.text.InputType;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -26,7 +27,8 @@ final class DevicesPanel {
     private final LinearLayout panel;
     private LinearLayout cards;
     private TextView notice;
-    private boolean busy;
+    private boolean busy, editing;
+    private long lastQuery;
 
     DevicesPanel(MainActivity owner, StatusClient.Pairing pairing, Executor worker) {
         this.owner = owner;
@@ -48,11 +50,21 @@ final class DevicesPanel {
     ViewGroup view() { return panel; }
 
     void load() {
-        request("GET", "/v1/devices", "Consultando os PCs na rede…", result -> {
+        load(false);
+    }
+
+    void refreshIfDue(long now) {
+        if (!busy && !editing && now - lastQuery >= 7500) load(true);
+    }
+
+    private void load(boolean silent) {
+        lastQuery = SystemClock.elapsedRealtime();
+        request("GET", "/v1/devices", silent ? null : "Consultando os PCs na rede…", result -> {
             JSONArray list = result.getJSONArray("devices");
             cards.removeAllViews();
             cards.setVisibility(list.length() == 0 ? android.view.View.GONE : android.view.View.VISIBLE);
-            notice.setText(list.length() == 0 ? "Pareie os PCs na aba Dispositivos do Windows." : "");
+            if (list.length() == 0) notice.setText("Pareie os PCs na aba Dispositivos do Windows.");
+            else if (!silent) notice.setText("");
             for (int index = 0; index < list.length(); index++) {
                 if (index > 0) cards.addView(owner.divider());
                 addCard(list.getJSONObject(index));
@@ -76,8 +88,17 @@ final class DevicesPanel {
             last = OffsetDateTime.parse(pc.optString("lastContact")).atZoneSameInstant(ZoneId.systemDefault())
                     .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
         }
-        TextView connection = text((pc.optBoolean("online") ? "Online" : "Sem resposta") + " · Último contato: " + last);
-        connection.setTextColor(pc.optBoolean("online") ? MainActivity.ACCENT : MainActivity.MUTED);
+        boolean online = pc.optBoolean("online");
+        String power;
+        switch (pc.optString("powerStatus")) {
+            case "on": power = "PC ligado"; break;
+            case "outside_network": power = "Fora da rede local"; break;
+            case "address_only": power = "Rede ativa · Artho AI indisponível"; break;
+            case "checking": power = "Verificando o PC…"; break;
+            default: power = online ? "PC ligado" : "PC desligado ou sem conexão";
+        }
+        TextView connection = text(power + "\nÚltimo contato · " + last);
+        connection.setTextColor(online ? MainActivity.ACCENT : MainActivity.MUTED);
         card.addView(connection);
         card.addView(text("Ligar " + describe(pc.optJSONObject("wake"))
                 + "\nDesligar " + describe(pc.optJSONObject("shutdown"))), owner.spaced(8));
@@ -116,6 +137,8 @@ final class DevicesPanel {
         fields.addView(message);
         AlertDialog editor = new AlertDialog.Builder(owner).setTitle(name).setView(scroll(fields))
                 .setNegativeButton("Cancelar", null).setPositiveButton("Salvar", null).create();
+        editing = true;
+        editor.setOnDismissListener(dialog -> editing = false);
         editor.show();
         editor.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
             try {
@@ -191,7 +214,7 @@ final class DevicesPanel {
     private void request(String method, String route, String waiting, Result accepted) {
         if (busy) return;
         busy = true;
-        notice.setText(waiting);
+        if (waiting != null) notice.setText(waiting);
         worker.execute(() -> {
             try {
                 JSONObject result = StatusClient.request(pairing, method, route);
@@ -206,7 +229,7 @@ final class DevicesPanel {
                         : "Confira a conexão com o PC de controle e pareie novamente se a sessão tiver terminado.";
                 owner.runOnUiThread(() -> {
                     busy = false;
-                    if (isOpen()) notice.setText(message);
+                    if (waiting != null && isOpen()) notice.setText(message);
                 });
             }
         });

@@ -69,6 +69,10 @@ final class StatusClient {
     private static JSONObject request(Pairing pairing, String method, String path, String proposal) throws Exception {
         HttpsURLConnection connection = open(pairing, method, path);
         if (proposal != null) connection.setRequestProperty("X-Artho-Pair-Key", proposal);
+        if ("/v1/status".equals(path) || ("GET".equals(method) && "/v1/devices".equals(path))) {
+            connection.setConnectTimeout(1600);
+            connection.setReadTimeout(2200);
+        }
         try {
             if ("POST".equals(method)) {
                 connection.setDoOutput(true);

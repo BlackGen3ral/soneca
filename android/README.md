@@ -16,6 +16,8 @@ Para ligar, o Android envia Wake-on-LAN pelo Wi-Fi local usando o endereço salv
 
 No Windows, libere o acesso em **Celular → Tela remota**. Abra **Tela remota** no Android. Incline o joystick para mover o cursor. Incline mais para acelerar. Ao lado dele ficam os cliques, a rolagem e o teclado. Você também pode tocar e arrastar na própria imagem. Gire o celular ou toque em **Horizontal** para colocar os controles ao lado da tela. Toque em **Vertical** para voltar.
 
+Com o Windows 1.26.1 ou mais recente, o modo **Fluidez** adapta a resolução durante a transmissão. Toque em **Fluidez** para alternar para **Nitidez** ao ler textos pequenos.
+
 ## Atualizar o app
 
 O Artho AI consulta o GitHub ao abrir. Toque em **Atualizar** no menu inferior para conferir a versão instalada e a disponível. Use **Baixar atualização** para acompanhar o progresso. Depois de verificado o APK, toque em **Instalar atualização**. Se o Android solicitar permissão para instalar a partir do Artho AI, habilite a permissão, volte ao app e confirme a instalação.

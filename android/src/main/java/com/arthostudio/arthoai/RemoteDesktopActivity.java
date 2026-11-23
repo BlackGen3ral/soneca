@@ -50,6 +50,7 @@ public final class RemoteDesktopActivity extends Activity {
     private volatile RemoteDesktopClient client;
     private volatile int generation;
     private volatile int inputEpoch;
+    private volatile boolean detailMode;
     private boolean visible, streamRequested, interactive;
     private PointerMove queuedMove;
     private TextView status;
@@ -109,7 +110,20 @@ public final class RemoteDesktopActivity extends Activity {
         status.setTextSize(13);
         status.setPadding(dp(3), dp(4), dp(3), dp(7));
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        page.addView(status);
+        LinearLayout streamStatus = new LinearLayout(this);
+        streamStatus.setGravity(Gravity.CENTER_VERTICAL);
+        streamStatus.addView(status, new LinearLayout.LayoutParams(0, -2, 1));
+
+        Button quality = button("Fluidez");
+        quality.setContentDescription("Qualidade da tela remota. Fluidez ativada.");
+        quality.setOnClickListener(view -> {
+            detailMode = !detailMode;
+            quality.setText(detailMode ? "Nitidez" : "Fluidez");
+            quality.setContentDescription(detailMode ? "Qualidade da tela remota. Nitidez ativada."
+                    : "Qualidade da tela remota. Fluidez ativada.");
+        });
+        streamStatus.addView(quality);
+        page.addView(streamStatus);
 
         workspace = new LinearLayout(this);
         page.addView(workspace, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -194,8 +208,8 @@ public final class RemoteDesktopActivity extends Activity {
                 StatusClient.Pairing pairing = PairingVault.load(getApplicationContext());
                 if (pairing == null) throw new IllegalStateException("Volte ao início e pareie o celular com o PC.");
                 int failures = 0;
+                RemoteFramePacing pacing = new RemoteFramePacing();
                 while (attempt == generation && !Thread.currentThread().isInterrupted()) {
-                    long started = SystemClock.elapsedRealtime();
                     try {
                         if (session == null) {
                             session = RemoteDesktopClient.connect(pairing);
@@ -204,17 +218,24 @@ public final class RemoteDesktopActivity extends Activity {
                                 client = session;
                             }
                         }
-                        if (painting.compareAndSet(false, true)) {
-                            RemoteDesktopClient.Frame frame;
-                            try { frame = session.frame(); }
-                            catch (Exception error) { painting.set(false); throw error; }
-                            failures = 0;
-                            runOnUiThread(() -> displayFrame(attempt, frame));
+                        if (!painting.compareAndSet(false, true)) {
+                            Thread.sleep(8);
+                            continue;
                         }
-                        Thread.sleep(Math.max(1, 50 - (SystemClock.elapsedRealtime() - started)));
+                        RemoteFramePacing.Quality quality = detailMode ? RemoteFramePacing.Quality.DETAIL : pacing.quality();
+                        long started = SystemClock.elapsedRealtime();
+                        RemoteDesktopClient.Frame frame;
+                        try { frame = session.frame(quality); }
+                        catch (Exception error) { painting.set(false); throw error; }
+                        long duration = SystemClock.elapsedRealtime() - started;
+                        if (quality != RemoteFramePacing.Quality.DETAIL) pacing.received(duration);
+                        failures = 0;
+                        runOnUiThread(() -> displayFrame(attempt, frame));
+                        Thread.sleep(Math.max(1, quality.intervalMs - duration));
                     } catch (SSLHandshakeException error) {
                         throw new SecurityException("Confira o pareamento no Windows.", error);
                     } catch (IOException error) {
+                        if (!detailMode) pacing.reduce();
                         boolean expired = error instanceof RemoteDesktopClient.SessionExpired;
                         boolean first = ++failures == 1;
                         if (first || expired) runOnUiThread(() -> connectionInterrupted(attempt, expired));
