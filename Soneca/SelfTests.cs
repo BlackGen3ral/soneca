@@ -35,6 +35,18 @@ public static class SelfTests
             Assert(StartupRegistration.ResolvePreference(null));
             Assert(!StartupRegistration.ResolvePreference(false));
             try { Updater.ExpectedHash("bad  Soneca-Setup.exe"); throw new Exception("Hash inválido aceito"); } catch (Exception ex) when (ex.Message.StartsWith("Verificação")) { count++; }
+            var today = new DateOnly(2026, 11, 23);
+            var plan = PlanReminder.Create("conta@exemplo.com", today.AddDays(7), 7, null);
+            Assert(plan.Countdown(today) == "Faltam 7 dias" && plan.Due(today));
+            Assert(!plan.Due(today.AddDays(-1)) && !plan.Due(today.AddDays(8)));
+            var noticed = plan.AfterNotice(today);
+            Assert(!noticed.Due(today.AddDays(1)) && noticed.Due(plan.Renewal));
+            Assert(!noticed.AfterNotice(plan.Renewal).Due(plan.Renewal));
+            Assert(PlanReminder.Create(plan.Email, today.AddDays(28), 7, noticed).Due(today.AddDays(21)));
+            Assert(PcDeviceService.PowerStatus(PcResponse.Unreachable, 0) == ("checking", 1));
+            Assert(PcDeviceService.PowerStatus(PcResponse.Unreachable, 1).State == "unreachable");
+            Assert(PcDeviceService.PowerStatus(PcResponse.Authenticated, 2) == ("on", 0));
+            Assert(PcDeviceService.PowerStatus(PcResponse.OutsideNetwork, 2) == ("outside_network", 0));
             Schedule.IntegrationTest(); count++;
             Schedule.IntegrationTest(suspend: true); count++;
             count += PcDeviceTests.Run();

@@ -1,16 +1,21 @@
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Net.NetworkInformation;
 
 namespace Soneca;
 
 internal sealed record PcCard(Guid Id, string Name, string Address, bool Online, DateTimeOffset? LastContact,
-    WeeklyRule? Wake, WeeklyRule? Shutdown, string? LastRoutine);
+    WeeklyRule? Wake, WeeklyRule? Shutdown, string? LastRoutine, string PowerStatus = "checking");
+
+internal enum PcResponse { Authenticated, AddressOnly, Unreachable, OutsideNetwork }
 
 internal static class PcDeviceService
 {
     private static readonly SemaphoreSlim PollGate = new(1, 1);
     private static readonly Dictionary<Guid, DateTimeOffset> Current = [];
+    private sealed record Observation(string Token, string State, int Misses);
+    private static readonly Dictionary<Guid, Observation> Observations = [];
 
     public static async Task<PairStatus> PairAsync(string code)
     {
@@ -56,8 +61,14 @@ internal static class PcDeviceService
                 var results = await Task.WhenAll(pcs.Select(Probe)).ConfigureAwait(false);
                 for (int i = 0; i < pcs.Count; i++)
                 {
-                    if (results[i] is { } replied) Current[pcs[i].Id] = replied;
-                    else Current.Remove(pcs[i].Id);
+                    var pc = pcs[i];
+                    var response = results[i];
+                    if (response == PcResponse.Authenticated) Current[pc.Id] = DateTimeOffset.Now;
+                    else Current.Remove(pc.Id);
+                    var prior = Observations.GetValueOrDefault(pc.Id);
+                    int misses = prior?.Token == pc.Token ? prior.Misses : 0;
+                    var next = PowerStatus(response, misses);
+                    Observations[pc.Id] = new Observation(pc.Token, next.State, next.Misses);
                 }
                 pcs = PcStore.Update(state =>
                 {
@@ -73,16 +84,39 @@ internal static class PcDeviceService
                 });
             }
             foreach (Guid id in Current.Keys.Where(id => pcs.All(pc => pc.Id != id)).ToArray()) Current.Remove(id);
-            return pcs.Select(pc => new PcCard(pc.Id, pc.Name, pc.Address, Current.ContainsKey(pc.Id),
-                pc.LastContact, pc.Wake, pc.Shutdown, pc.LastRoutine)).ToArray();
+            foreach (Guid id in Observations.Keys.Where(id => pcs.All(pc => pc.Id != id)).ToArray()) Observations.Remove(id);
+            return pcs.Select(pc => {
+                var sample = Observations.GetValueOrDefault(pc.Id);
+                string state = sample?.Token == pc.Token ? sample.State : "checking";
+                return new PcCard(pc.Id, pc.Name, pc.Address, state == "on", pc.LastContact, pc.Wake, pc.Shutdown, pc.LastRoutine, state);
+            }).ToArray();
         }
         finally { PollGate.Release(); }
     }
 
-    private static async Task<DateTimeOffset?> Probe(PairedPc pc)
+    internal static (string State, int Misses) PowerStatus(PcResponse response, int misses) => response switch
     {
-        try { await PcAgent.CheckAsync(pc).ConfigureAwait(false); return DateTimeOffset.Now; }
-        catch (Exception) { return null; }
+        PcResponse.Authenticated => ("on", 0),
+        PcResponse.AddressOnly => ("address_only", 0),
+        PcResponse.OutsideNetwork => ("outside_network", 0),
+        _ => (misses >= 1 ? "unreachable" : "checking", Math.Min(2, misses + 1))
+    };
+
+    private static async Task<PcResponse> Probe(PairedPc pc)
+    {
+        var address = IPAddress.Parse(pc.Address);
+        try { PcLan.For(address); }
+        catch (InvalidOperationException) { return PcResponse.OutsideNetwork; }
+        try { await PcAgent.CheckAsync(pc).ConfigureAwait(false); return PcResponse.Authenticated; }
+        catch (Exception) { }
+        try
+        {
+            using var ping = new Ping();
+            if ((await ping.SendPingAsync(address, 700).ConfigureAwait(false)).Status == IPStatus.Success)
+                return PcResponse.AddressOnly;
+        }
+        catch (PingException) { }
+        return PcResponse.Unreachable;
     }
 
     public static Task WakeAsync(Guid id) => PcLan.WakeAsync(PcStore.Read().Computers.FirstOrDefault(pc => pc.Id == id)

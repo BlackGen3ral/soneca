@@ -40,6 +40,7 @@ public partial class MainWindow : Window
         StartupCheckBox.IsChecked = startWithWindows;
         if (!demo) StartupRegistration.SetEnabled(startWithWindows);
         ConfigureDashboard();
+        ConfigureReminders();
         try { target = schedule.Read(); } catch (Exception ex) { ErrorLabel.Text = "Não foi possível consultar o agendamento: " + ex.Message; ScheduleButton.IsEnabled = false; }
         try { suspendTarget = suspendSchedule.Read(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
         timer.Tick += (_, _) => Render(); timer.Start(); Render();
@@ -59,6 +60,7 @@ public partial class MainWindow : Window
             timer.Stop(); devicesTimer.Stop(); FinishIntro();
             EndHouseSession();
             CloseUpdates();
+            CloseReminders();
             await StopPcAgentAsync();
             await StopMobileAsync();
         };
@@ -153,6 +155,7 @@ public partial class MainWindow : Window
         DevicesPanel.Visibility = page == 5 ? Visibility.Visible : Visibility.Collapsed;
         UpdatesPanel.Visibility = page == 6 ? Visibility.Visible : Visibility.Collapsed;
         ShowHouse(page == 7);
+        PlanPanel.Visibility = page == 8 ? Visibility.Visible : Visibility.Collapsed;
         var nav = page switch
         {
             0 => EnergyNav,
@@ -163,10 +166,12 @@ public partial class MainWindow : Window
             5 => DevicesNav,
             6 => UpdatesNav,
             7 => HouseNav,
+            8 => PlanNav,
             _ => HomeNav
         };
         nav.IsChecked = true;
         nav.Focus();
+        nav.BringIntoView();
     }
     private void Home_Click(object sender, RoutedEventArgs e) => Navigate(-1);
     private void Energy_Click(object sender, RoutedEventArgs e) => Navigate(0);

@@ -67,7 +67,13 @@ public partial class MainWindow
         var heading = new DockPanel { Margin = new Thickness(0, 0, 0, 4) };
         var state = new TextBlock
         {
-            Text = pc.Online ? "Online" : "Sem resposta",
+            Text = pc.Online ? "Ligado" : pc.PowerStatus switch
+            {
+                "outside_network" => "Fora da rede local",
+                "address_only" => "Rede responde · Artho AI indisponível",
+                "unreachable" => "Desligado ou sem conexão",
+                _ => "Verificando novamente"
+            },
             Style = (Style)FindResource("BodyCopy"),
             Foreground = (System.Windows.Media.Brush)FindResource(pc.Online ? "Accent" : "Muted"),
             Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center
@@ -90,7 +96,7 @@ public partial class MainWindow
             await DeviceAction(async () =>
             {
                 await PcDeviceService.WakeAsync(pc.Id);
-                ShowDeviceNotice($"Sinal enviado para {pc.Name}. O painel muda para Online quando o PC responder.");
+                ShowDeviceNotice($"Sinal enviado para {pc.Name}. O painel muda para Ligado quando o PC responder.");
             });
         });
         AddButton("Editar horários", async () =>

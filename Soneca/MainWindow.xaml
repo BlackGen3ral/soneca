@@ -16,28 +16,34 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="205"/><ColumnDefinition/></Grid.ColumnDefinitions>
             <Border Background="{StaticResource Sidebar}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0"
                     Padding="16,24,15,16">
+
                 <Grid>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="5,0,0,29">
+                    <StackPanel Margin="5,0,0,15">
+                        <StackPanel Orientation="Horizontal">
                             <Image Source="Assets/ArthoAI.png" Width="33" Height="33"/>
                             <TextBlock Text="Artho AI" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" Margin="9,0,0,0"/>
                         </StackPanel>
-                        <RadioButton x:Name="HomeNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Início" Tag="&#xE80F;" Click="Home_Click" IsChecked="True"/>
-                        <RadioButton x:Name="HouseNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Minha casa" Tag="&#xEC06;" Click="House_Click"/>
-                        <RadioButton x:Name="DevicesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Dispositivos" Tag="&#xE7F4;" Click="Devices_Click"/>
-                        <RadioButton x:Name="MobileNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Celular" Tag="&#xE8EA;" Click="Mobile_Click"/>
-                        <Border Style="{StaticResource Divider}" Margin="8,8,8,8"/>
-                        <RadioButton x:Name="EnergyNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Energia" Tag="&#xE7E8;" Click="Energy_Click"/>
-                        <RadioButton x:Name="CleanupNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Limpeza" Tag="&#xE74D;" Click="Cleanup_Click"/>
-                        <RadioButton x:Name="NamesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Nomes da pasta" Tag="&#xE8B7;" Click="Names_Click"/>
+                        <TextBlock Text="●  Este PC ligado" Foreground="{StaticResource Accent}" FontSize="12" Margin="2,10,0,0"/>
                     </StackPanel>
-                    <StackPanel Grid.Row="2">
-                        <Border Height="1" Background="{StaticResource Line}" Margin="0,0,0,14"/>
-                        <RadioButton x:Name="UpdatesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Atualizações" Tag="&#xE895;" Click="UpdatesNav_Click"/>
-                        <RadioButton x:Name="SettingsNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Preferências" Tag="&#xE713;" Click="Settings_Click"/>
-                        <TextBlock x:Name="VersionLabel" Foreground="{StaticResource Muted}" FontSize="12" Margin="11,9,4,0"/>
-                    </StackPanel>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  AutomationProperties.Name="Abas do Artho AI">
+                        <StackPanel>
+                            <RadioButton x:Name="HomeNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Início" Tag="&#xE80F;" Click="Home_Click" IsChecked="True"/>
+                            <RadioButton x:Name="DevicesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Dispositivos" Tag="&#xE7F4;" Click="Devices_Click"/>
+                            <RadioButton x:Name="MobileNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Celular" Tag="&#xE8EA;" Click="Mobile_Click"/>
+                            <RadioButton x:Name="EnergyNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Energia" Tag="&#xE7E8;" Click="Energy_Click"/>
+                            <Border Style="{StaticResource Divider}" Margin="8,8,8,8"/>
+                            <RadioButton x:Name="PlanNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Assinaturas" Tag="&#xE823;" Click="Plans_Click"/>
+                            <RadioButton x:Name="HouseNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Minha casa" Tag="&#xEC06;" Click="House_Click"/>
+                            <RadioButton x:Name="CleanupNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Limpeza" Tag="&#xE74D;" Click="Cleanup_Click"/>
+                            <RadioButton x:Name="NamesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Nomes da pasta" Tag="&#xE8B7;" Click="Names_Click"/>
+                            <Border Style="{StaticResource Divider}" Margin="8,8,8,8"/>
+                            <RadioButton x:Name="UpdatesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Atualizações" Tag="&#xE895;" Click="UpdatesNav_Click"/>
+                            <RadioButton x:Name="SettingsNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Preferências" Tag="&#xE713;" Click="Settings_Click"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <TextBlock Grid.Row="2" x:Name="VersionLabel" Foreground="{StaticResource Muted}" FontSize="12" Margin="11,12,4,0"/>
                 </Grid>
             </Border>
 
@@ -510,6 +516,43 @@
             </ScrollViewer>
             <local:CleanupView x:Name="CleanupPanel" Grid.Column="1" Visibility="Collapsed"/>
             <local:FolderNamesView x:Name="NamesPanel" Grid.Column="1" Visibility="Collapsed"/>
+
+            <ScrollViewer x:Name="PlanPanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="30,27,30,26" MaxWidth="940">
+                    <TextBlock Text="Assinaturas" Style="{StaticResource PageTitle}"/>
+                    <TextBlock Text="Acompanhe a data de renovação de cada conta do ChatGPT." Style="{StaticResource BodyCopy}" Margin="0,6,0,16"/>
+                    <Border Style="{StaticResource Panel}" Padding="17" Margin="0,0,0,15">
+                        <StackPanel>
+                            <TextBlock x:Name="PlanFormTitle" Text="Adicionar conta" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="E-mail da conta" Style="{StaticResource BodyCopy}" Margin="0,12,0,4"/>
+                            <TextBox x:Name="PlanEmail" MaxLength="254" AutomationProperties.Name="E-mail da conta"/>
+                            <WrapPanel Margin="0,10,0,0">
+                                <StackPanel Width="164" Margin="0,0,13,8">
+                                    <TextBlock Text="Data de renovação" Style="{StaticResource BodyCopy}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="PlanDate" MaxLength="10" AutomationProperties.Name="Data de renovação, dia, mês e ano" ToolTip="dd/MM/aaaa"/>
+                                    <TextBlock Text="Dia/mês/ano" Style="{StaticResource BodyCopy}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                                <StackPanel Width="156" Margin="0,0,0,8">
+                                    <TextBlock Text="Avisar quantos dias antes" Style="{StaticResource BodyCopy}" Margin="0,0,0,4"/>
+                                    <TextBox x:Name="PlanLead" Text="7" MaxLength="2" AutomationProperties.Name="Dias de antecedência"/>
+                                </StackPanel>
+                            </WrapPanel>
+                            <WrapPanel Margin="0,3,0,0">
+                                <Button x:Name="PlanSave" Content="Salvar conta" Style="{StaticResource Primary}" Click="SavePlan_Click" Margin="0,0,8,4"/>
+                                <Button Content="Novo cadastro" Click="NewPlan_Click" Margin="0,0,8,4"/>
+                                <Button Content="Abrir faturamento do ChatGPT" Click="OpenPlanBilling_Click" Margin="0,0,0,4"/>
+                            </WrapPanel>
+                            <TextBlock x:Name="PlanFeedback" Style="{StaticResource BodyCopy}" AutomationProperties.LiveSetting="Polite" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                    <DockPanel Margin="0,0,0,8">
+                        <Button DockPanel.Dock="Right" Content="Testar aviso" Click="TestPlanNotice_Click" Margin="8,0,0,0"/>
+                        <TextBlock Text="Minhas contas" Style="{StaticResource SectionTitle}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <TextBlock x:Name="PlanEmpty" Text="Nenhuma conta cadastrada." Style="{StaticResource BodyCopy}" Margin="0,0,0,8"/>
+                    <StackPanel x:Name="PlanRows"/>
+                </StackPanel>
+            </ScrollViewer>
             <ScrollViewer x:Name="SettingsPanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="30,25,30,25" MaxWidth="1080">
                     <TextBlock Text="Preferências" Style="{StaticResource PageTitle}"/>
@@ -548,6 +591,17 @@
                     <TextBlock x:Name="UpdateCheckedAt" Style="{StaticResource BodyCopy}" Margin="0,12,0,0"/>
                 </StackPanel>
             </ScrollViewer>
+            <Border x:Name="PlanBanner" Grid.Column="1" Visibility="Collapsed" VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                    MaxWidth="490" Margin="20,0,22,18" Padding="13" CornerRadius="11" Background="{StaticResource Field}" BorderBrush="{StaticResource Accent}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="Renovação do ChatGPT" Style="{StaticResource SectionTitle}"/>
+                    <TextBlock x:Name="PlanBannerText" Style="{StaticResource BodyCopy}" Margin="0,4,0,6" AutomationProperties.LiveSetting="Polite"/>
+                    <WrapPanel>
+                        <Button Content="Ver assinaturas" Click="Plans_Click" Margin="0,0,6,0"/>
+                        <Button Content="Dispensar" Click="DismissPlanBanner_Click"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
         </Grid>
         <Grid x:Name="IntroOverlay" Background="#02050D" Visibility="Collapsed">
             <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
