@@ -46,6 +46,11 @@ final class PowerPanel {
     private final Button forgetWake;
     private final Button stopNow;
     private final Button restart;
+    private final Button suspendNow;
+    private final LinearLayout suspendGroup;
+    private final TextView suspendTime;
+    private final Button suspendSchedule;
+    private final Button cancelSuspend;
     private final Button stopSchedule;
     private final Button cancelStop;
     private final Button connect;
@@ -79,8 +84,11 @@ final class PowerPanel {
         LinearLayout immediate = new LinearLayout(owner);
         quick.addView(immediate, owner.spaced(10));
         wakeNow = inlineAction(immediate, "Ligar PC", "Ligar o PC pela rede local", this::wake, 0);
-        stopNow = inlineAction(immediate, "Desligar", "Desligar agora", () -> confirm("Desligar", "shutdown"), 6);
-        restart = inlineAction(immediate, "Reiniciar", "Reiniciar agora", () -> confirm("Reiniciar", "restart"), 6);
+        suspendNow = inlineAction(immediate, "Suspender", "Suspender agora", () -> confirm("Suspender", "suspend"), 6);
+        LinearLayout restartAndStop = new LinearLayout(owner);
+        quick.addView(restartAndStop, owner.spaced(6));
+        stopNow = inlineAction(restartAndStop, "Desligar", "Desligar agora", () -> confirm("Desligar", "shutdown"), 0);
+        restart = inlineAction(restartAndStop, "Reiniciar", "Reiniciar agora", () -> confirm("Reiniciar", "restart"), 6);
         wakeFeedback = label("", 13, MainActivity.MUTED);
         wakeFeedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         quick.addView(wakeFeedback, owner.spaced(9));
@@ -107,6 +115,15 @@ final class PowerPanel {
         stopSchedule = action(schedule, "Programar para desligar", false, this::chooseStopMode);
         cancelStop = action(schedule, "Cancelar desligamento único", false,
                 () -> request("POST", "/v1/energy/shutdown/cancel", "Desligamento único cancelado.", false));
+        suspendGroup = owner.column();
+        schedule.addView(suspendGroup, owner.spaced(13));
+        suspendGroup.addView(owner.divider());
+        suspendGroup.addView(label("Suspender", 15, MainActivity.INK), owner.spaced(10));
+        suspendTime = label("", 14, MainActivity.MUTED);
+        suspendGroup.addView(suspendTime, owner.spaced(4));
+        suspendSchedule = action(suspendGroup, "Programar suspensão", false, this::chooseSuspendMode);
+        cancelSuspend = action(suspendGroup, "Cancelar suspensão", false,
+                () -> request("POST", "/v1/energy/suspend/cancel", "Suspensão cancelada no Windows.", false));
         forgetWake = action(page, "Esquecer este PC", false, () -> new AlertDialog.Builder(owner)
                 .setTitle("Esquecer este PC?")
                 .setMessage("Isso remove o PC do celular e cancela o horário de ligar salvo aqui.")
@@ -222,7 +239,7 @@ final class PowerPanel {
                 .setItems(new String[]{"Daqui a alguns minutos", "Em um horário", "Toda semana", "Cancelar rotina semanal"},
                         (dialog, choice) -> {
                             switch (choice) {
-                                case 0: minutesDialog(); break;
+                                case 0: minutesDialog(false); break;
                                 case 1:
                                     new TimePickerDialog(owner, (picker, hour, minute) ->
                                             request("POST", "/v1/energy/shutdown/at?value=" + clock(hour, minute),
@@ -239,6 +256,17 @@ final class PowerPanel {
                                         "Rotina semanal cancelada.", false); break;
                             }
                         }).setNegativeButton("Voltar", null).show();
+    }
+
+    private void chooseSuspendMode() {
+        if (lastState == null || !lastState.optBoolean("suspendControl")) return;
+        new AlertDialog.Builder(owner).setTitle("Programar suspensão")
+                .setItems(new String[]{"Daqui a alguns minutos", "Em um horário"}, (dialog, choice) -> {
+                    if (choice == 0) minutesDialog(true);
+                    else new TimePickerDialog(owner, (picker, hour, minute) ->
+                            request("POST", "/v1/energy/suspend/at?value=" + clock(hour, minute),
+                                    "Suspensão agendada no Windows.", false), 18, 0, true).show();
+                }).setNegativeButton("Voltar", null).show();
     }
 
     private void chooseWakeMode() {
@@ -263,14 +291,14 @@ final class PowerPanel {
         render();
     }
 
-    private void minutesDialog() {
+    private void minutesDialog(boolean suspend) {
         EditText minutes = new EditText(owner);
         minutes.setInputType(InputType.TYPE_CLASS_NUMBER);
         minutes.setText("30");
-        minutes.setContentDescription("Minutos até desligar");
+        minutes.setContentDescription(suspend ? "Minutos até suspender" : "Minutos até desligar");
         LinearLayout container = form();
         container.addView(minutes);
-        AlertDialog dialog = new AlertDialog.Builder(owner).setTitle("Desligar em minutos").setView(container)
+        AlertDialog dialog = new AlertDialog.Builder(owner).setTitle(suspend ? "Suspender em minutos" : "Desligar em minutos").setView(container)
                 .setNegativeButton("Cancelar", null).setPositiveButton("Salvar", null).create();
         dialog.show();
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
@@ -280,17 +308,20 @@ final class PowerPanel {
                 return;
             }
             dialog.dismiss();
-            request("POST", "/v1/energy/shutdown/after?value=" + text, "Desligamento agendado no Windows.", false);
+            String route = suspend ? "/v1/energy/suspend/after?value=" : "/v1/energy/shutdown/after?value=";
+            request("POST", route + text, suspend ? "Suspensão agendada no Windows." : "Desligamento agendado no Windows.", false);
         });
     }
 
     private void confirm(String verb, String command) {
         if (lastState == null) return;
         String name = lastState.optString("name", "o PC");
+        boolean suspend = command.equals("suspend");
         new AlertDialog.Builder(owner).setTitle(verb + " " + name + "?")
-                .setMessage("Salve seu trabalho no computador antes de continuar.")
+                .setMessage(suspend ? "A conexão é pausada até o PC despertar." : "Salve seu trabalho no computador antes de continuar.")
                 .setNegativeButton("Cancelar", null).setPositiveButton(verb + " agora", (dialog, button) ->
-                        request("POST", "/v1/energy/now/" + command, "Comando aceito pelo Windows.", true)).show();
+                        request("POST", "/v1/energy/now/" + command,
+                                suspend ? "Solicitação de suspensão enviada." : "Comando aceito pelo Windows.", true)).show();
     }
 
     private void weeklyDialog(String title, String oldTime, int oldDays, RuleResult save, boolean wake) {
@@ -416,6 +447,18 @@ final class PowerPanel {
         stopNow.setEnabled(available);
         restart.setEnabled(available);
         stopSchedule.setEnabled(available);
+        boolean canSuspend = lastState != null && lastState.optBoolean("suspendControl");
+        suspendNow.setVisibility(canSuspend ? View.VISIBLE : View.GONE);
+        suspendNow.setEnabled(available);
+        suspendGroup.setVisibility(canSuspend ? View.VISIBLE : View.GONE);
+        suspendSchedule.setEnabled(available);
+        String atSleep = canSuspend ? lastState.optString("suspendAt", "") : "";
+        boolean hasSleep = !atSleep.isEmpty() && !"null".equals(atSleep);
+        suspendTime.setText(hasSleep ? "Suspensão agendada · " +
+                OffsetDateTime.parse(atSleep).format(DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm")) : "Sem suspensão agendada");
+        suspendSchedule.setText(hasSleep ? "Alterar suspensão" : "Programar suspensão");
+        cancelSuspend.setVisibility(hasSleep ? View.VISIBLE : View.GONE);
+        cancelSuspend.setEnabled(available);
         String at = lastState == null ? "" : lastState.optString("shutdownAt", "");
         if (at.isEmpty() || "null".equals(at)) {
             oneTime.setText(lastState == null ? "Conecte ao Windows com a permissão de energia ativada." : "Sem desligamento único");
