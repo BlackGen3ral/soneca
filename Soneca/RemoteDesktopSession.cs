@@ -38,15 +38,13 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
     private DateTimeOffset frameAt;
     private bool held;
     private DesktopFrame? frame;
+    public event Action? ViewerChanged;
 
-    public bool Enable()
+    public void Enable()
     {
         lock (gate)
         {
-            if (!surface.IsAvailable()) return false;
-            ClearViewer();
             enabled = true;
-            return true;
         }
     }
 
@@ -77,6 +75,7 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
             ClearViewer();
             lastSeen = clock.GetUtcNow();
             lease = Guid.NewGuid();
+            ViewerChanged?.Invoke();
             return lease;
         }
     }
@@ -144,9 +143,11 @@ internal sealed class RemoteDesktopSession(IDesktopSurface surface, TimeProvider
 
     private void ClearViewer()
     {
+        bool hadViewer = lease is not null;
         Release();
         lease = null;
         frame = null;
+        if (hadViewer) ViewerChanged?.Invoke();
     }
 
     private void Release()

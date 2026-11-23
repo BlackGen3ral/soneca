@@ -57,5 +57,8 @@ internal static class RemoteDesktopApi
         });
     }
 
-    private static IResult Unavailable() => Results.BadRequest(new { error = "No PC, abra Celular e libere o acesso à tela." });
+    private static IResult Unavailable() => Results.BadRequest(new
+    {
+        error = "Confira se a tela remota está permitida na aba Celular e se o Windows está desbloqueado."
+    });
 }

@@ -15,8 +15,17 @@ internal static class RemoteDesktopTests
         var clock = new FakeClock();
         var desktop = new RemoteDesktopSession(surface, clock);
         Check(desktop.Connect() is null && surface.Captures == 0);
-        Check(desktop.Enable());
+        Check(RemoteDesktopPreference.Resolve(null) && RemoteDesktopPreference.Resolve(1) && !RemoteDesktopPreference.Resolve(0));
+        int viewerChanges = 0;
+        desktop.ViewerChanged += () => viewerChanges++;
+        surface.Available = false;
+        desktop.Enable();
+        clock.Advance(90);
+        Check(desktop.Status() == (true, false) && viewerChanges == 0 && surface.Captures == 0 && surface.AvailabilityChecks == 0);
+        Check(desktop.Connect() is null && viewerChanges == 0);
+        surface.Available = true;
         var lease = desktop.Connect()!.Value;
+        Check(viewerChanges == 1 && surface.Captures == 0);
         Check(desktop.Read(Guid.NewGuid()) is null && surface.Captures == 0);
         Check(desktop.Read(lease) is not null && desktop.Read(lease) is not null && surface.Captures == 1);
         clock.Advance(0.2);
@@ -29,7 +38,7 @@ internal static class RemoteDesktopTests
         Check(surface.Releases == 1 && desktop.Read(lease) is not null);
         Check(desktop.Input(lease, new DesktopInput("down", 6000, 5000)));
         desktop.Disconnect(lease);
-        Check(surface.Releases == 2 && desktop.Read(lease) is null && !desktop.Status().Viewing);
+        Check(surface.Releases == 2 && desktop.Read(lease) is null && !desktop.Status().Viewing && viewerChanges == 2);
         lease = desktop.Connect()!.Value;
         clock.Advance(9);
         Check(desktop.Read(lease) is null);
@@ -62,9 +71,9 @@ internal static class RemoteDesktopTests
     private sealed class FakeSurface : IDesktopSurface
     {
         public bool Available = true;
-        public int Captures, Inputs, Releases;
+        public int Captures, Inputs, Releases, AvailabilityChecks;
         public Action? OnCapture;
-        public bool IsAvailable() => Available;
+        public bool IsAvailable() { AvailabilityChecks++; return Available; }
         public DesktopFrame Capture() { Captures++; OnCapture?.Invoke(); return new DesktopFrame([1], 0, 0); }
         public void Apply(DesktopInput input) => Inputs++;
         public void Release() => Releases++;

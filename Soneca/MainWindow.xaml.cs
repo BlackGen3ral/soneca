@@ -32,6 +32,7 @@ public partial class MainWindow : Window
         AndroidSurface.Content = androidScreen;
         mobileReconnectTimer.Tick += async (_, _) => await RestoreMobileAsync();
         remoteDesktopTimer.Tick += (_, _) => RefreshRemoteDesktop();
+        ConfigureRemoteDesktop();
         CleanupPanel.Demo = demo;
         VersionLabel.Text = "v" + Updater.Current.ToString(3);
         InstalledVersionLabel.Text = "Versão instalada  " + Updater.Current.ToString(3);

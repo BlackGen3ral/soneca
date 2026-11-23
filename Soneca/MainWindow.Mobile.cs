@@ -108,14 +108,25 @@ public partial class MainWindow
     {
         bool allowDevices = MobileAllowDevices.IsChecked == true;
         bool allowPower = MobileAllowPower.IsChecked == true;
-        var session = await Task.Run(() => MobilePairingServer.StartAsync(address,
-            () => Dispatcher.BeginInvoke(new Action(MobilePaired)),
-            allowDevices, allowPower, () => Dispatcher.BeginInvoke(new Action(RefreshSchedule)),
-            restored: profile,
-            revoked: () => Dispatcher.BeginInvoke(new Action(MobileRevoked)),
-            remoteDesktop: remoteDesktop));
+        if (allowRemoteDesktop) remoteDesktop.Enable();
+        MobilePairingServer session;
+        try
+        {
+            session = await Task.Run(() => MobilePairingServer.StartAsync(address,
+                () => Dispatcher.BeginInvoke(new Action(MobilePaired)),
+                allowDevices, allowPower, () => Dispatcher.BeginInvoke(new Action(RefreshSchedule)),
+                restored: profile,
+                revoked: () => Dispatcher.BeginInvoke(new Action(MobileRevoked)),
+                remoteDesktop: remoteDesktop));
+        }
+        catch
+        {
+            remoteDesktop.Disable();
+            throw;
+        }
         if (!IsLoaded) { await session.DisposeAsync(); return; }
         mobileSession = session;
+        ApplyRemoteDesktopPermission();
     }
 
     private void MobilePaired()
@@ -126,6 +137,7 @@ public partial class MainWindow
         mobileTimer.Tick -= MobileExpired;
         HideQr();
         MobileStatus.Text = "Celular pareado. A conexão será retomada quando o Artho AI voltar a abrir nesta rede.";
+        ApplyRemoteDesktopPermission();
         UpdateMobileButtons();
     }
 
@@ -200,13 +212,13 @@ public partial class MainWindow
 
     private async Task StopMobileAsync()
     {
-        EndRemoteDesktop();
         mobileTimer.Stop();
         mobileReconnectTimer.Stop();
         mobileTimer.Tick -= MobileExpired;
         HideQr();
         var session = mobileSession;
         mobileSession = null;
+        EndRemoteDesktop();
         if (session is not null) await session.DisposeAsync();
         UpdateMobileButtons();
     }
