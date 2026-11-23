@@ -33,6 +33,8 @@ final class HousePanel extends FrameLayout {
     private boolean syncing;
     private int viewGeneration;
     private WebView browser;
+    private byte[] unlockedPage;
+    private boolean refreshOnOpen;
 
     HousePanel(MainActivity activity, ExecutorService worker) {
         super(activity);
@@ -71,8 +73,12 @@ final class HousePanel extends FrameLayout {
 
     void show(boolean visible) {
         setVisibility(visible ? VISIBLE : GONE);
-        if (!visible) close();
-        else if (browser == null) showLocked(null);
+        if (!visible) releaseViewer();
+        else if (browser == null) {
+            if (refreshOnOpen) clearUnlockedPage();
+            if (unlockedPage == null) showLocked(null);
+            else open(unlockedPage);
+        }
     }
 
     void updatePairing(StatusClient.Pairing link, boolean online) {
@@ -92,17 +98,22 @@ final class HousePanel extends FrameLayout {
         StatusClient.Pairing connected = link;
         worker.execute(() -> {
             boolean hadCache = target.exists();
-            try { target.sync(connected); }
-            catch (Exception unavailable) { /* The encrypted offline copy remains usable. */ }
+            boolean updated = sync(target, connected);
             activity.show(() -> {
                 if (model != target) return;
                 syncing = false;
+                if (updated && unlockedPage != null) refreshOnOpen = true;
                 if (hadCache != target.exists()) {
                     if (!target.exists()) close();
                     if (browser == null) showLocked(null);
                 }
             });
         });
+    }
+
+    private boolean sync(HousePackage target, StatusClient.Pairing connected) {
+        try { return target.sync(connected); }
+        catch (Exception unavailable) { return false; }
     }
 
     private void showLocked(String message) {
@@ -130,7 +141,11 @@ final class HousePanel extends FrameLayout {
             try {
                 byte[] page = target.unlock(code);
                 activity.show(() -> {
-                    if (generation == viewGeneration) open(page);
+                    if (generation == viewGeneration) {
+                        unlockedPage = page;
+                        refreshOnOpen = false;
+                        open(page);
+                    }
                     else Arrays.fill(page, (byte) 0);
                 });
             } catch (Exception error) {
@@ -145,7 +160,6 @@ final class HousePanel extends FrameLayout {
 
     private void open(byte[] page) {
         if (getVisibility() != VISIBLE) {
-            Arrays.fill(page, (byte) 0);
             return;
         }
 
@@ -198,6 +212,17 @@ final class HousePanel extends FrameLayout {
     }
 
     void close() {
+        releaseViewer();
+        clearUnlockedPage();
+    }
+
+    private void clearUnlockedPage() {
+        if (unlockedPage != null) Arrays.fill(unlockedPage, (byte) 0);
+        unlockedPage = null;
+        refreshOnOpen = false;
+    }
+
+    private void releaseViewer() {
         viewGeneration++;
         password.setText("");
         if (browser == null) return;

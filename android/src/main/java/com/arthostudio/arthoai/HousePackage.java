@@ -35,7 +35,7 @@ final class HousePackage {
         etag = null;
     }
 
-    void sync(StatusClient.Pairing pairing) throws Exception {
+    boolean sync(StatusClient.Pairing pairing) throws Exception {
         HttpsURLConnection connection = StatusClient.open(pairing, "GET", "/v1/house");
         try {
             if (exists()) {
@@ -49,9 +49,9 @@ final class HousePackage {
             int code = connection.getResponseCode();
             if (code == 401) {
                 delete();
-                return;
+                return false;
             }
-            if (code != 200) return;
+            if (code != 200) return false;
             byte[] bytes;
             try (InputStream input = connection.getInputStream()) { bytes = read(input); }
             String receivedTag = "\"" + hash(bytes) + "\"";
@@ -62,6 +62,7 @@ final class HousePackage {
                 output.write(bytes);
                 cache.finishWrite(output);
                 etag = receivedTag;
+                return true;
             } catch (IOException error) {
                 cache.failWrite(output);
                 throw error;
