@@ -42,12 +42,16 @@ final class HousePanel extends FrameLayout {
         this.worker = worker;
         lock = new LinearLayout(activity);
         lock.setOrientation(LinearLayout.VERTICAL);
-        int padding = Math.round(28 * getResources().getDisplayMetrics().density);
+        int padding = activity.dp(20);
         lock.setPadding(padding, padding, padding, padding);
+        lock.setBackground(activity.surface(MainActivity.SURFACE, 18, MainActivity.BORDER));
+        TextView title = activity.label("Minha casa", 23, MainActivity.INK, "sans-serif-medium");
+        title.setAccessibilityHeading(true);
+        lock.addView(title);
         feedback = new TextView(activity);
         feedback.setTextColor(MainActivity.MUTED);
         feedback.setTextSize(15);
-        lock.addView(feedback);
+        lock.addView(feedback, activity.spaced(7));
         password = new EditText(activity);
         password.setTextColor(MainActivity.INK);
         password.setHintTextColor(MainActivity.MUTED);
@@ -63,11 +67,13 @@ final class HousePanel extends FrameLayout {
             unlock(false);
             return true;
         });
-        lock.addView(password);
+        lock.addView(password, activity.spaced(9));
         unlock = activity.button("Abrir maquete", true);
         unlock.setOnClickListener(view -> unlock(false));
-        lock.addView(unlock);
-        addView(lock, new LayoutParams(-1, -2, Gravity.CENTER));
+        lock.addView(unlock, activity.spaced(9));
+        LayoutParams panelSize = new LayoutParams(-1, -2, Gravity.CENTER);
+        panelSize.setMargins(padding, padding, padding, padding);
+        addView(lock, panelSize);
         setVisibility(GONE);
     }
 
@@ -178,7 +184,7 @@ final class HousePanel extends FrameLayout {
         try {
             WebView view = new WebView(getContext());
             browser = view;
-            view.setBackgroundColor(0xff0e1927);
+            view.setBackgroundColor(MainActivity.BACKGROUND);
             WebSettings settings = view.getSettings();
             settings.setJavaScriptEnabled(true);
             settings.setAllowFileAccess(false);

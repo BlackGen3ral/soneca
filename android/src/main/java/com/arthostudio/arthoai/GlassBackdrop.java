@@ -13,26 +13,21 @@ import android.graphics.drawable.Drawable;
 final class GlassBackdrop extends Drawable {
     private final Paint paint = new Paint();
     private Shader base;
-    private Shader blue;
-    private Shader violet;
+    private Shader glow;
 
     @Override protected void onBoundsChange(Rect bounds) {
         float width = Math.max(1, bounds.width());
         float height = Math.max(1, bounds.height());
         base = new LinearGradient(bounds.left, bounds.top, bounds.right, bounds.bottom,
-                new int[]{0xff0b1729, 0xff10192c, 0xff151428}, null, Shader.TileMode.CLAMP);
-        blue = new RadialGradient(bounds.left + width * .82f, bounds.top + height * .13f, height * .62f,
-                new int[]{0x90446b9b, 0x38355883, 0x00355883}, null, Shader.TileMode.CLAMP);
-        violet = new RadialGradient(bounds.left + width * .15f, bounds.top + height * .92f, height * .48f,
-                0x624b3f7a, 0x004b3f7a, Shader.TileMode.CLAMP);
+                new int[]{0xff191d17, 0xff151915, 0xff131713}, null, Shader.TileMode.CLAMP);
+        glow = new RadialGradient(bounds.left + width * .78f, bounds.top + height * .08f, height * .52f,
+                new int[]{0x35405230, 0x12303b25, 0x00303b25}, null, Shader.TileMode.CLAMP);
     }
 
     @Override public void draw(Canvas canvas) {
         paint.setShader(base);
         canvas.drawRect(getBounds(), paint);
-        paint.setShader(blue);
-        canvas.drawRect(getBounds(), paint);
-        paint.setShader(violet);
+        paint.setShader(glow);
         canvas.drawRect(getBounds(), paint);
     }
 

@@ -1,0 +1,11 @@
+<resources>
+    <style name="ArthoTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:colorAccent">#D8EEAC</item>
+        <item name="android:windowBackground">#131713</item>
+        <item name="android:statusBarColor">#131713</item>
+        <item name="android:navigationBarColor">#131713</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

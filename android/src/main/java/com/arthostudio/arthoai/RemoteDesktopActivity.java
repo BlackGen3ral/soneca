@@ -36,9 +36,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class RemoteDesktopActivity extends Activity {
-    private static final int PANEL = 0xff151d2a;
-    private static final int TEXT = 0xffeef4ff;
-    private static final int MUTED = 0xffa7b7cd;
+    private static final int PANEL = MainActivity.SURFACE;
+    private static final int TEXT = MainActivity.INK;
+    private static final int MUTED = MainActivity.MUTED;
     private final ExecutorService stream = Executors.newSingleThreadExecutor();
     private final ExecutorService input = Executors.newSingleThreadExecutor();
     private final AtomicBoolean painting = new AtomicBoolean();
@@ -60,9 +60,9 @@ public final class RemoteDesktopActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         LinearLayout page = column();
-        getWindow().setStatusBarColor(0xff0d131d);
-        getWindow().setNavigationBarColor(0xff0d131d);
-        page.setBackgroundColor(0xff0d131d);
+        getWindow().setStatusBarColor(MainActivity.BACKGROUND);
+        getWindow().setNavigationBarColor(MainActivity.BACKGROUND);
+        page.setBackgroundColor(MainActivity.BACKGROUND);
         page.setOnApplyWindowInsetsListener((view, insets) -> {
             if (Build.VERSION.SDK_INT >= 30) {
                 Insets safe = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
@@ -110,14 +110,14 @@ public final class RemoteDesktopActivity extends Activity {
         workspace = new LinearLayout(this);
         page.addView(workspace, new LinearLayout.LayoutParams(-1, 0, 1));
         screen = new Screen();
-        screen.setBackground(round(0xff050911, 12, 0xff283345));
+        screen.setBackground(round(0xff090d09, 12, MainActivity.BORDER));
         screen.setClipToOutline(true);
         screen.setContentDescription("Tela do Windows. Toque para clicar, segure para clique direito ou arraste.");
         workspace.addView(screen);
         controller = new LinearLayout(this);
         controller.setGravity(Gravity.CENTER_VERTICAL);
         controller.setPadding(dp(6), dp(6), dp(6), dp(6));
-        controller.setBackground(round(PANEL, 15, 0xff283345));
+        controller.setBackground(round(PANEL, 15, MainActivity.BORDER));
         joystick = new Joystick();
         controller.addView(joystick, new LinearLayout.LayoutParams(dp(108), dp(117)));
         LinearLayout actions = column();
@@ -330,12 +330,12 @@ public final class RemoteDesktopActivity extends Activity {
         button.setText(label);
         button.setTextSize(13);
         button.setTextColor(new ColorStateList(new int[][]{new int[]{-android.R.attr.state_enabled}, new int[0]},
-                new int[]{0xff78869a, TEXT}));
+                new int[]{0xff808b7b, TEXT}));
         button.setMinimumWidth(dp(44));
         button.setMinHeight(dp(44));
         button.setPadding(dp(6), 0, dp(6), 0);
-        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x446ca4ff),
-                round(0xff222e40, 9, 0xff35435a), null));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x35d8eeac),
+                round(0xff282f26, 9, 0xff475243), null));
         return button;
     }
 
@@ -377,20 +377,20 @@ public final class RemoteDesktopActivity extends Activity {
         @Override protected void onDraw(Canvas canvas) {
             float x = getWidth() / 2f, y = centerY(), ring = radius();
             if (ring <= 0) return;
-            paint.setColor(0xff263247);
+            paint.setColor(0xff2c352a);
             canvas.drawCircle(x, y, ring, paint);
-            paint.setColor(0xff101824);
+            paint.setColor(0xff161d16);
             canvas.drawCircle(x, y, ring - dp(2), paint);
-            paint.setColor(0xff40506b);
+            paint.setColor(0xff4c5b48);
             for (int dir = 0; dir < 4; dir++) {
                 double angle = dir * Math.PI / 2;
                 canvas.drawCircle(x + (float) Math.cos(angle) * (ring - dp(6)),
                         y + (float) Math.sin(angle) * (ring - dp(6)), dp(1), paint);
             }
             float knobX = x + axisX * ring * .55f, knobY = y + axisY * ring * .55f;
-            paint.setColor(finger != -1 ? 0xff75aaff : 0xff425a7a);
+            paint.setColor(finger != -1 ? MainActivity.ACCENT : 0xff5e7055);
             canvas.drawCircle(knobX, knobY, ring * .39f, paint);
-            paint.setColor(finger != -1 ? 0xffb3d1ff : 0xff829fc6);
+            paint.setColor(finger != -1 ? 0xffe8f3d1 : 0xff98ad8e);
             canvas.drawCircle(knobX, knobY, dp(3), paint);
             paint.setColor(MUTED);
             paint.setTextSize(dp(11));

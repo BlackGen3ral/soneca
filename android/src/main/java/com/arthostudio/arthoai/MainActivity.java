@@ -40,14 +40,14 @@ import javax.net.ssl.SSLHandshakeException;
 import org.json.JSONObject;
 
 public final class MainActivity extends Activity {
-    private static final int BACKGROUND = 0xff0b1424;
-    static final int SURFACE = 0xc41d2c43;
-    static final int BORDER = 0x6688a1bf;
-    static final int INK = 0xfff3f7ff;
-    static final int MUTED = 0xffbccbe0;
-    static final int ACCENT = 0xffacf0db;
+    static final int BACKGROUND = 0xff131713;
+    static final int SURFACE = 0xff222722;
+    static final int BORDER = 0xff3f4a3b;
+    static final int INK = 0xfff4f5eb;
+    static final int MUTED = 0xffb4beaf;
+    static final int ACCENT = 0xffd8eeac;
     private static final int GREEN = ACCENT;
-    private static final int ALERT = 0xffffbcad;
+    private static final int ALERT = 0xffffc4ac;
     private static final Locale BRAZIL = new Locale("pt", "BR");
     private static final int SCAN_PAIRING = 17;
     private static final int HOUSE_TAB = 4;
@@ -108,7 +108,7 @@ public final class MainActivity extends Activity {
         FrameLayout frame = new FrameLayout(this);
         scroll.addView(frame, new ScrollView.LayoutParams(-1, -2));
         LinearLayout content = column();
-        content.setPadding(dp(20), dp(14), dp(20), dp(24));
+        content.setPadding(dp(18), dp(14), dp(18), dp(24));
         frame.addView(content, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
         frame.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
             int width = Math.min(dp(620), right - left);
@@ -129,7 +129,7 @@ public final class MainActivity extends Activity {
         house = new HousePanel(this, worker);
         shell.addView(house, new LinearLayout.LayoutParams(-1, 0, 1));
         LinearLayout.LayoutParams dock = new LinearLayout.LayoutParams(-1, -2);
-        dock.setMargins(dp(12), dp(3), dp(12), dp(8));
+        dock.setMargins(dp(10), dp(4), dp(10), dp(8));
         shell.addView(navigation(), dock);
         setContentView(shell);
         shell.requestApplyInsets();
@@ -184,7 +184,11 @@ public final class MainActivity extends Activity {
 
     private View dashboard() {
         LinearLayout page = column();
-        page.addView(connectionPanel());
+        TextView title = label("Visão geral", 31, INK, "sans-serif-medium");
+        title.setAccessibilityHeading(true);
+        page.addView(title);
+        page.addView(houseCard(), spaced(13));
+        page.addView(connectionPanel(), spaced(12));
 
         metrics = column();
         metrics.setVisibility(View.GONE);
@@ -215,9 +219,43 @@ public final class MainActivity extends Activity {
         return page;
     }
 
+    private View houseCard() {
+        FrameLayout card = new FrameLayout(this);
+        GradientDrawable background = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{0xff39452e, 0xff2a3426, 0xff20291e});
+        background.setCornerRadius(dp(19));
+        background.setStroke(dp(1), 0xff59684c);
+        card.setBackground(background);
+
+        LinearLayout layout = row();
+        layout.setPadding(dp(16), dp(15), dp(10), dp(15));
+        layout.setGravity(Gravity.CENTER_VERTICAL);
+        card.addView(layout, new FrameLayout.LayoutParams(-1, -2));
+        LinearLayout copy = column();
+        layout.addView(copy, new LinearLayout.LayoutParams(0, -2, 1.2f));
+        TextView title = label("Minha casa", 24, INK, "sans-serif-medium");
+        title.setAccessibilityHeading(true);
+        copy.addView(title);
+        copy.addView(label("Explore a maquete em 3D.", 13, MUTED, "sans-serif"), spaced(3));
+        Button open = button("Abrir maquete", true);
+        open.setTextSize(13);
+        open.setMinHeight(dp(41));
+        open.setOnClickListener(view -> showTab(HOUSE_TAB));
+        LinearLayout.LayoutParams action = new LinearLayout.LayoutParams(-2, -2);
+        action.topMargin = dp(11);
+        copy.addView(open, action);
+
+        ImageView art = new ImageView(this);
+        art.setImageResource(R.drawable.house_study);
+        art.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        art.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        layout.addView(art, new LinearLayout.LayoutParams(0, dp(107), .84f));
+        return card;
+    }
+
     private View devicePage() {
         LinearLayout page = column();
-        TextView title = label("Dispositivos", 26, INK, "sans-serif-medium");
+        TextView title = label("Dispositivos", 31, INK, "sans-serif-medium");
         title.setAccessibilityHeading(true);
         page.addView(title);
         deviceContent = column();
@@ -249,16 +287,16 @@ public final class MainActivity extends Activity {
 
     private View navigation() {
         LinearLayout nav = row();
-        nav.setBackground(surface(SURFACE, 18, BORDER));
-        nav.setPadding(dp(5), dp(4), dp(5), dp(4));
+        nav.setBackground(surface(0xff1b201a, 17, BORDER));
+        nav.setPadding(dp(4), dp(4), dp(4), dp(4));
         String[] labels = {"Início", "PCs", "Energia", "Atualizar", "Casa"};
         for (int index = 0; index < tabs.length; index++) {
             final int tab = index;
             Button button = button(labels[index], false);
-            button.setTextSize(12);
-            button.setMinHeight(dp(53));
-            button.setPadding(dp(4), dp(5), dp(4), dp(4));
-            button.setCompoundDrawablePadding(dp(3));
+            button.setTextSize(11);
+            button.setMinHeight(dp(54));
+            button.setPadding(dp(2), dp(5), dp(2), dp(4));
+            button.setCompoundDrawablePadding(dp(4));
             button.setMaxLines(1);
             if (index == 1) button.setContentDescription("Dispositivos");
             if (index == HOUSE_TAB) button.setContentDescription("Minha casa");
@@ -300,20 +338,20 @@ public final class MainActivity extends Activity {
         icon.setTint(tint);
         tab.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
         tab.setTextColor(tint);
-        tab.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33b7d9c3),
-                surface(selected ? 0x92507792 : Color.TRANSPARENT, 13, 0), null));
+        tab.setBackground(new RippleDrawable(ColorStateList.valueOf(0x32d8eeac),
+                surface(selected ? 0xff353f2b : Color.TRANSPARENT, 11, selected ? 0xff526047 : 0), null));
     }
 
     private View header() {
         LinearLayout header = row();
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(16), dp(9), dp(16), dp(9));
+        header.setPadding(dp(18), dp(12), dp(18), dp(8));
         ImageView mark = new ImageView(this);
         mark.setImageResource(R.drawable.artho_mark);
         mark.setScaleType(ImageView.ScaleType.FIT_CENTER);
         mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        header.addView(mark, new LinearLayout.LayoutParams(dp(27), dp(27)));
-        TextView brand = label("Artho AI", 19, INK, "sans-serif-medium");
+        header.addView(mark, new LinearLayout.LayoutParams(dp(28), dp(28)));
+        TextView brand = label("Artho AI", 17, INK, "sans-serif-medium");
         LinearLayout.LayoutParams brandSize = new LinearLayout.LayoutParams(0, -2, 1f);
         brandSize.leftMargin = dp(10);
         header.addView(brand, brandSize);
@@ -323,17 +361,15 @@ public final class MainActivity extends Activity {
     private View connectionPanel() {
         LinearLayout panel = column();
         panel.setPadding(dp(19), dp(19), dp(19), dp(17));
-        GradientDrawable glass = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{0xd2425a78, 0xd21e3049, 0xd9222b4b});
-        glass.setCornerRadius(dp(21));
-        glass.setStroke(dp(1), 0x85a4bdde);
-        panel.setBackground(glass);
+        panel.setBackground(surface(SURFACE, 18, BORDER));
         status = label("Sem conexão", 13, MUTED, "sans-serif");
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        panel.addView(status);
-        computer = label("Conecte seu PC", 28, INK, "sans-serif-medium");
+        status.setPadding(dp(9), dp(3), dp(9), dp(3));
+        status.setBackground(surface(0xff2b3328, 9, BORDER));
+        panel.addView(status, new LinearLayout.LayoutParams(-2, -2));
+        computer = label("Conecte seu PC", 24, INK, "sans-serif-medium");
         computer.setAccessibilityHeading(true);
-        panel.addView(computer, spaced(3));
+        panel.addView(computer, spaced(8));
         detail = label("No Windows, abra Celular e gere um QR Code.", 15, MUTED, "sans-serif");
         panel.addView(detail, spaced(5));
         primary = button("Conectar ao PC", true);
@@ -662,18 +698,15 @@ public final class MainActivity extends Activity {
     private void decorateButton(Button button, boolean prominent) {
         int color = prominent ? BACKGROUND : INK;
         button.setTextColor(new ColorStateList(
-                new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{prominent ? 0xff4b686e : MUTED, color}));
+                new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{prominent ? 0xff687553 : MUTED, color}));
         int fill = prominent ? ACCENT : SURFACE;
-        button.setBackground(new RippleDrawable(ColorStateList.valueOf(prominent ? 0x30141715 : 0x33b6dfc2),
-                surface(fill, 10, prominent ? 0 : BORDER), null));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(prominent ? 0x30141715 : 0x35d8eeac),
+                surface(fill, 11, prominent ? 0 : BORDER), null));
     }
 
     GradientDrawable surface(int color, int radius, int stroke) {
         GradientDrawable result = new GradientDrawable();
-        if (color == SURFACE) {
-            result.setOrientation(GradientDrawable.Orientation.TL_BR);
-            result.setColors(new int[]{0xb9374c67, 0xcf22344e, 0xdc172439});
-        } else result.setColor(color);
+        result.setColor(color);
         result.setCornerRadius(dp(radius));
         if (stroke != 0) result.setStroke(dp(1), stroke);
         return result;

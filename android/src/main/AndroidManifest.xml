@@ -11,7 +11,7 @@
         android:usesCleartextTraffic="false"
         android:icon="@drawable/artho_mark"
         android:label="Artho AI"
-        android:theme="@android:style/Theme.Material.NoActionBar">
+        android:theme="@style/ArthoTheme">
         <provider android:name=".UpdateApkProvider"
             android:authorities="${applicationId}.updates"
             android:exported="false"

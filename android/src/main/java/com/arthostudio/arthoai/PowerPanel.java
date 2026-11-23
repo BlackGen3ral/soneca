@@ -48,7 +48,7 @@ final class PowerPanel {
         this.owner = owner;
         this.worker = worker;
         page = owner.column();
-        TextView title = label("Energia do PC", 26, MainActivity.INK);
+        TextView title = label("Energia do PC", 31, MainActivity.INK);
         title.setAccessibilityHeading(true);
         page.addView(title);
         notice = label("", 14, MainActivity.MUTED);
