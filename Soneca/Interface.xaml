@@ -11,10 +11,6 @@
         <GradientStop Offset=".58" Color="#1C223D5D"/>
         <GradientStop Offset="1" Color="#00223D5D"/>
     </RadialGradientBrush>
-    <RadialGradientBrush x:Key="BackdropTint" Center=".29,1" GradientOrigin=".29,1" RadiusX=".55" RadiusY=".78">
-        <GradientStop Offset="0" Color="#182C3152"/>
-        <GradientStop Offset="1" Color="#002C3152"/>
-    </RadialGradientBrush>
     <LinearGradientBrush x:Key="Sidebar" StartPoint="0,0" EndPoint="1,1">
         <GradientStop Offset="0" Color="#F0101928"/>
         <GradientStop Offset="1" Color="#F00D1522"/>
@@ -110,25 +106,34 @@
             </Setter.Value>
         </Setter>
     </Style>
-    <Style x:Key="ActionRow" TargetType="Button">
-        <Setter Property="MinHeight" Value="57"/>
-        <Setter Property="Cursor" Value="Hand"/>
+    <Style x:Key="ActionTile" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="MinHeight" Value="70"/>
+        <Setter Property="Margin" Value="5,0,5,9"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="RowBackground" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="10" Padding="10,7">
+                    <Border x:Name="TileBackground" Background="{StaticResource Surface}" BorderBrush="{StaticResource GlassEdge}"
+                            BorderThickness="1" CornerRadius="13" Padding="11,8">
                         <DockPanel>
-                            <TextBlock DockPanel.Dock="Left" Width="28" VerticalAlignment="Center" Text="{TemplateBinding Tag}"
-                                       FontFamily="Segoe MDL2 Assets" FontSize="15" Foreground="{StaticResource Accent}"/>
-                            <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Text="&#xE76C;" Margin="10,0,0,0"
+                            <Border DockPanel.Dock="Left" Width="34" Height="34" VerticalAlignment="Center" Margin="0,0,10,0"
+                                    CornerRadius="9" Background="#2A4A56">
+                                <TextBlock Text="{TemplateBinding Tag}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="{StaticResource Accent}"/>
+                            </Border>
+                            <TextBlock x:Name="TileArrow" DockPanel.Dock="Right" VerticalAlignment="Center" Text="&#xE76C;" Margin="8,0,0,0"
                                        FontFamily="Segoe MDL2 Assets" FontSize="12" Foreground="{StaticResource Muted}"/>
-                            <ContentPresenter/>
+                            <ContentPresenter VerticalAlignment="Center"/>
                         </DockPanel>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="RowBackground" Property="Background" Value="#53435770"/></Trigger>
-                        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="RowBackground" Property="BorderBrush" Value="{StaticResource Focus}"/></Trigger>
-                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="RowBackground" Property="Background" Value="#69527394"/></Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="TileBackground" Property="Background" Value="{StaticResource GlassHero}"/>
+                            <Setter TargetName="TileBackground" Property="BorderBrush" Value="#7595AC"/>
+                            <Setter TargetName="TileArrow" Property="Foreground" Value="{StaticResource Accent}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="TileBackground" Property="BorderBrush" Value="{StaticResource Focus}"/></Trigger>
+                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="TileBackground" Property="Opacity" Value=".74"/></Trigger>
+                        <Trigger Property="IsEnabled" Value="False"><Setter TargetName="TileBackground" Property="Opacity" Value=".48"/></Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -147,6 +152,11 @@
             </Setter.Value>
         </Setter>
     </Style>
+    <Style x:Key="NavigationGroup" TargetType="TextBlock" BasedOn="{StaticResource BodyCopy}">
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="11,3,0,6"/>
+    </Style>
     <Style x:Key="Navigation" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{StaticResource Muted}"/>
         <Setter Property="Background" Value="Transparent"/>
@@ -154,18 +164,23 @@
         <Setter Property="FontSize" Value="14"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Cursor" Value="Hand"/>
-        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="MinHeight" Value="38"/>
         <Setter Property="Margin" Value="0,0,0,3"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="RadioButton">
                     <Border x:Name="NavSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="1" CornerRadius="9" Padding="11,6">
+                            BorderThickness="1" CornerRadius="9">
                         <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="27"/><ColumnDefinition/></Grid.ColumnDefinitions>
-                            <TextBlock Text="{TemplateBinding Tag}" FontFamily="Segoe MDL2 Assets" FontSize="15"
-                                       Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"/>
-                            <ContentPresenter Grid.Column="1" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
+                            <Border x:Name="SelectionRail" Background="{StaticResource Accent}" Width="3" Height="18"
+                                    CornerRadius="1.5" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="2,0,0,0"
+                                    Visibility="Collapsed"/>
+                            <Grid Margin="13,6,7,6">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="27"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{TemplateBinding Tag}" FontFamily="Segoe MDL2 Assets" FontSize="15"
+                                           Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"/>
+                                <ContentPresenter Grid.Column="1" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
+                            </Grid>
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -174,8 +189,9 @@
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter Property="Foreground" Value="{StaticResource Accent}"/>
-                            <Setter TargetName="NavSurface" Property="Background" Value="#70506C90"/>
-                            <Setter TargetName="NavSurface" Property="BorderBrush" Value="{StaticResource GlassEdge}"/>
+                            <Setter TargetName="NavSurface" Property="Background" Value="#244451"/>
+                            <Setter TargetName="NavSurface" Property="BorderBrush" Value="#426474"/>
+                            <Setter TargetName="SelectionRail" Property="Visibility" Value="Visible"/>
                         </Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True">
                             <Setter TargetName="NavSurface" Property="BorderBrush" Value="{StaticResource Focus}"/>

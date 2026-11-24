@@ -16,18 +16,14 @@ public partial class MainWindow : Window
     private DateTimeOffset? target;
     private DateTimeOffset? suspendTarget;
     private bool clockMode;
-    private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer energyClock = new(DispatcherPriority.Background);
+    private int selectedPage = -1;
     private static readonly CultureInfo BrazilianPortuguese = CultureInfo.GetCultureInfo("pt-BR");
     public MainWindow(bool demo, bool skipIntro = false)
     {
         this.demo = demo; this.skipIntro = skipIntro; schedule = new Schedule(demo);
         suspendSchedule = Schedule.ForSuspend(demo);
         InitializeComponent();
-        Loaded += (_, _) => UpdateBackdropMotion();
-        Activated += (_, _) => UpdateBackdropMotion();
-        Deactivated += (_, _) => UpdateBackdropMotion();
-        StateChanged += (_, _) => UpdateBackdropMotion();
-        IntroOverlay.IsVisibleChanged += (_, _) => UpdateBackdropMotion();
         AndroidSurface.Content = androidScreen;
         mobileReconnectTimer.Tick += async (_, _) => await RestoreMobileAsync();
         remoteDesktopTimer.Tick += (_, _) => RefreshRemoteDesktop();
@@ -45,13 +41,34 @@ public partial class MainWindow : Window
         ConfigureReminders();
         try { target = schedule.Read(); } catch (Exception ex) { ErrorLabel.Text = "Não foi possível consultar o agendamento: " + ex.Message; ScheduleButton.IsEnabled = false; }
         try { suspendTarget = suspendSchedule.Read(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex.Message); }
-        timer.Tick += (_, _) => Render(); timer.Start(); Render();
+        energyClock.Tick += (_, _) => UpdateEnergyClock();
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible) StopPageMotion();
+            UpdateEnergyClock();
+            UpdateDevicePolling();
+        };
+        StateChanged += (_, _) =>
+        {
+            if (WindowState == WindowState.Minimized) StopPageMotion();
+            UpdateEnergyClock();
+            UpdateDevicePolling();
+        };
+        DashboardContent.IsEnabledChanged += (_, _) =>
+        {
+            UpdateEnergyClock();
+            UpdateDevicePolling();
+        };
+        devicesTimer.Tick += async (_, _) => await RefreshDevicesAsync();
+        Render();
         Loaded += async (_, _) =>
         {
+            UpdateEnergyClock();
+            UpdateDevicePolling();
             if (demo) return;
             _ = RestorePcAgentAsync();
             _ = RestoreMobileAsync();
-            if (!skipIntro) await RunIntro();
+            if (!skipIntro && SystemParameters.ClientAreaAnimation) await RunIntro();
             await Task.Delay(1800);
             if (IsVisible && !updateBusy && availableUpdate is null) await CheckUpdateAsync();
         };
@@ -59,7 +76,7 @@ public partial class MainWindow : Window
         {
             androidOperation?.Cancel();
             EndRemoteDesktop();
-            timer.Stop(); devicesTimer.Stop(); FinishIntro();
+            energyClock.Stop(); devicesTimer.Stop(); FinishIntro();
             EndHouseSession();
             CloseUpdates();
             CloseReminders();
@@ -69,6 +86,40 @@ public partial class MainWindow : Window
         };
         Closing += (_, args) => HandleClose(args);
     }
+
+    private void UpdateEnergyClock()
+    {
+        if (!IsLoaded || !IsVisible || WindowState == WindowState.Minimized || !DashboardContent.IsEnabled)
+        {
+            energyClock.Stop();
+            return;
+        }
+        if (selectedPage == 0)
+        {
+            Render();
+            SetEnergyClockInterval(TimeSpan.FromSeconds(1));
+        }
+        else if (selectedPage == -1)
+        {
+            var remaining = target - DateTimeOffset.Now;
+            RenderHomeEnergy(remaining > TimeSpan.Zero);
+            if (remaining is { Ticks: > 0 } pending)
+                SetEnergyClockInterval(pending > TimeSpan.FromSeconds(15) ? TimeSpan.FromSeconds(15) : pending);
+            else energyClock.Stop();
+        }
+        else energyClock.Stop();
+    }
+
+    private void SetEnergyClockInterval(TimeSpan delay)
+    {
+        if (energyClock.Interval != delay) energyClock.Interval = delay;
+        if (!energyClock.IsEnabled) energyClock.Start();
+    }
+
+    private void RenderHomeEnergy(bool active) =>
+        HomeEnergySubtitle.Text = active && target is { } shutdown
+            ? $"Agendado para {shutdown.LocalDateTime:dd/MM 'às' HH:mm}"
+            : "Definir horário ou contagem regressiva";
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -97,7 +148,7 @@ public partial class MainWindow : Window
         bool active = target.HasValue && target > DateTimeOffset.Now;
         StatusLabel.Text = active ? "Desligamento agendado" : "Nenhum desligamento agendado";
         EnergyTimeCaption.Text = active ? "Tempo restante" : "Prévia da contagem";
-        HomeEnergySubtitle.Text = active ? $"Agendado para {target!.Value.LocalDateTime:dd/MM 'às' HH:mm}" : "Definir horário ou contagem regressiva";
+        RenderHomeEnergy(active);
         if (active)
         {
             CountdownLabel.Text = TimeRules.Countdown(target!.Value, DateTimeOffset.Now);
@@ -144,16 +195,17 @@ public partial class MainWindow : Window
     private void Input_Changed(object sender, TextChangedEventArgs e) { if (IsLoaded) Render(); }
     private void Navigate(int page)
     {
-        HomePanel.Visibility = page == -1 ? Visibility.Visible : Visibility.Collapsed;
-        EnergyPanel.Visibility = page == 0 ? Visibility.Visible : Visibility.Collapsed;
-        CleanupPanel.Visibility = page == 1 ? Visibility.Visible : Visibility.Collapsed;
-        NamesPanel.Visibility = page == 2 ? Visibility.Visible : Visibility.Collapsed;
-        SettingsPanel.Visibility = page == 3 ? Visibility.Visible : Visibility.Collapsed;
-        ShowMobilePage(page == 4);
-        DevicesPanel.Visibility = page == 5 ? Visibility.Visible : Visibility.Collapsed;
-        UpdatesPanel.Visibility = page == 6 ? Visibility.Visible : Visibility.Collapsed;
-        ShowHouse(page == 7);
-        PlanPanel.Visibility = page == 8 ? Visibility.Visible : Visibility.Collapsed;
+        if (selectedPage != page)
+        {
+            StopPageMotion();
+            SetPageVisible(selectedPage, false);
+            selectedPage = page;
+            SetPageVisible(page, true);
+            UpdateEnergyClock();
+            UpdateDevicePolling();
+            // Native phone and WebView surfaces have their own renderers.
+            if (page != 7 && !(page == 4 && AndroidViewerPanel.IsVisible)) ShowPageMotion(PagePanel(page));
+        }
         var nav = page switch
         {
             0 => EnergyNav,
@@ -171,6 +223,27 @@ public partial class MainWindow : Window
         nav.Focus();
         nav.BringIntoView();
     }
+
+    private void SetPageVisible(int page, bool visible)
+    {
+        if (page == 4) ShowMobilePage(visible);
+        else if (page == 7) ShowHouse(visible);
+        else PagePanel(page).Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private FrameworkElement PagePanel(int page) => page switch
+    {
+        0 => EnergyPanel,
+        1 => CleanupPanel,
+        2 => NamesPanel,
+        3 => SettingsPanel,
+        4 => MobilePanel,
+        5 => DevicesPanel,
+        6 => UpdatesPanel,
+        7 => HousePage,
+        8 => PlanPanel,
+        _ => HomePanel
+    };
     private void Home_Click(object sender, RoutedEventArgs e) => Navigate(-1);
     private void Energy_Click(object sender, RoutedEventArgs e) => Navigate(0);
     private void Cleanup_Click(object sender, RoutedEventArgs e) => Navigate(1);

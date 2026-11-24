@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace Soneca;
@@ -92,7 +93,16 @@ public partial class MainWindow
     {
         label.Text = load is { } value ? value.ToString("0", BrazilianPortuguese) + "%" : "—";
         gauge.Opacity = load.HasValue ? 1 : .45;
-        gauge.Value = load ?? 0;
+        var next = Math.Clamp(load ?? 0, 0, gauge.Maximum);
+        double previous = gauge.Value;
+        gauge.Value = next;
+        if (gauge.Template?.FindName("PART_Indicator", gauge) is not Border { RenderTransform: ScaleTransform scale } ||
+            scale.IsFrozen) return;
+        if (gauge.IsVisible && SystemParameters.ClientAreaAnimation && !SystemParameters.HighContrast &&
+            next > 0 && Math.Abs(previous - next) >= 1)
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, PageMotion(previous / next, 1));
+        else
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
     }
 
     private static string Number(double value) => value.ToString("0.#", BrazilianPortuguese);

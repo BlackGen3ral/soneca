@@ -154,7 +154,7 @@ public partial class MainWindow
 
     private void RefreshSchedule()
     {
-        try { target = schedule.Read(); suspendTarget = suspendSchedule.Read(); Render(); }
+        try { target = schedule.Read(); suspendTarget = suspendSchedule.Read(); UpdateEnergyClock(); }
         catch (Exception ex) { ErrorLabel.Text = ex.Message; }
     }
 

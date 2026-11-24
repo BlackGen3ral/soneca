@@ -4,16 +4,9 @@
         Background="{StaticResource Canvas}" Foreground="{StaticResource Ink}"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True">
     <Grid Background="{StaticResource Backdrop}">
-        <Grid ClipToBounds="True" IsHitTestVisible="False">
-            <Rectangle Fill="{StaticResource BackdropLight}" Margin="-125">
-                <Rectangle.RenderTransform><TranslateTransform x:Name="BackdropGlow"/></Rectangle.RenderTransform>
-            </Rectangle>
-            <Rectangle Fill="{StaticResource BackdropTint}" Margin="-110">
-                <Rectangle.RenderTransform><TranslateTransform x:Name="BackdropWash"/></Rectangle.RenderTransform>
-            </Rectangle>
-        </Grid>
+        <Rectangle Fill="{StaticResource BackdropLight}" IsHitTestVisible="False"/>
         <Grid x:Name="DashboardContent">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="205"/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition/></Grid.ColumnDefinitions>
             <Border Background="{StaticResource Sidebar}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0"
                     Padding="16,24,15,16">
 
@@ -24,21 +17,27 @@
                             <Image Source="Assets/ArthoAI.png" Width="33" Height="33"/>
                             <TextBlock Text="Artho AI" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" Margin="9,0,0,0"/>
                         </StackPanel>
-                        <TextBlock Text="●  Este PC ligado" Foreground="{StaticResource Accent}" FontSize="12" Margin="2,10,0,0"/>
+                        <Border Background="#223F43" CornerRadius="8" Padding="8,4" Margin="0,11,0,0" HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="6" Height="6" Fill="{StaticResource Accent}" Margin="0,0,6,0"/>
+                                <TextBlock Text="Este PC ligado" Foreground="{StaticResource Accent}" FontSize="12"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                   AutomationProperties.Name="Abas do Artho AI">
                         <StackPanel>
+                            <TextBlock Text="CONTROLE" Style="{StaticResource NavigationGroup}"/>
                             <RadioButton x:Name="HomeNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Início" Tag="&#xE80F;" Click="Home_Click" IsChecked="True"/>
                             <RadioButton x:Name="DevicesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Dispositivos" Tag="&#xE7F4;" Click="Devices_Click"/>
                             <RadioButton x:Name="MobileNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Celular" Tag="&#xE8EA;" Click="Mobile_Click"/>
                             <RadioButton x:Name="EnergyNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Energia" Tag="&#xE7E8;" Click="Energy_Click"/>
-                            <Border Style="{StaticResource Divider}" Margin="8,8,8,8"/>
+                            <TextBlock Text="FERRAMENTAS" Style="{StaticResource NavigationGroup}" Margin="11,15,0,6"/>
                             <RadioButton x:Name="PlanNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Assinaturas" Tag="&#xE823;" Click="Plans_Click"/>
                             <RadioButton x:Name="HouseNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Minha casa" Tag="&#xEC06;" Click="House_Click"/>
                             <RadioButton x:Name="CleanupNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Limpeza" Tag="&#xE74D;" Click="Cleanup_Click"/>
                             <RadioButton x:Name="NamesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Nomes da pasta" Tag="&#xE8B7;" Click="Names_Click"/>
-                            <Border Style="{StaticResource Divider}" Margin="8,8,8,8"/>
+                            <TextBlock Text="APLICATIVO" Style="{StaticResource NavigationGroup}" Margin="11,15,0,6"/>
                             <RadioButton x:Name="UpdatesNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Atualizações" Tag="&#xE895;" Click="UpdatesNav_Click"/>
                             <RadioButton x:Name="SettingsNav" Style="{StaticResource Navigation}" GroupName="Pages" Content="Preferências" Tag="&#xE713;" Click="Settings_Click"/>
                         </StackPanel>
@@ -48,7 +47,7 @@
             </Border>
 
             <ScrollViewer x:Name="HomePanel" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel MaxWidth="1050" Margin="30,28,30,26">
+                <StackPanel MaxWidth="1050" Margin="30,28,30,16">
                     <DockPanel Margin="0,0,0,19">
                         <Border DockPanel.Dock="Right" CornerRadius="12" Background="{StaticResource Field}"
                                 BorderBrush="{StaticResource Line}" BorderThickness="1" Padding="11,5"
@@ -58,53 +57,33 @@
                                 <TextBlock x:Name="NetworkStatusLabel" Foreground="{StaticResource Muted}" FontSize="12"/>
                             </StackPanel>
                         </Border>
-                        <TextBlock Text="Visão geral" FontSize="35" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock Text="Visão geral" Style="{StaticResource PageTitle}"/>
                     </DockPanel>
-                    <Border Style="{StaticResource Panel}" Background="{StaticResource GlassHero}" Padding="25,18">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <Viewbox Grid.Column="1" HorizontalAlignment="Right" Stretch="Uniform" IsHitTestVisible="False"
-                                     MaxHeight="157" Margin="10,0,1,0">
-                                <Canvas Width="300" Height="164">
-                                    <Path Stroke="#435F74" StrokeThickness="1"
-                                          Data="M9,128 L120,68 289,100 181,158 Z M36,134 L148,74 M66,141 L177,80 M94,146 L208,85 M123,153 L237,90 M154,158 L265,95 M39,112 L209,144 M65,97 L235,131 M91,83 L262,115"/>
-                                    <Path Data="M39,111 L114,65 239,88 164,135 Z" Fill="#1B2C40" Stroke="#6F8DA4" StrokeThickness="1.4"/>
-                                    <Path Data="M61,108 L61,74 160,95 160,127 Z" Fill="#304D66" Stroke="#A3BED2" StrokeThickness="1.6"/>
-                                    <Path Data="M160,95 L212,62 212,96 160,127 Z" Fill="#243B54" Stroke="#789AB1" StrokeThickness="1.6"/>
-                                    <Path Data="M56,75 L112,32 219,58 165,98 Z" Fill="#416581" Stroke="#A6E6D7" StrokeThickness="2"/>
-                                    <Path Stroke="#ADC8D8" StrokeThickness="1.3" Data="M112,32 L141,54 165,98 M88,50 L194,76 M141,54 L187,65 M86,114 L86,88 112,94 112,120 M170,101 L200,82 200,94 170,112 Z"/>
-                                    <Path Stroke="#A6E6D7" StrokeThickness="2" Data="M227,97 L252,101 229,115 204,111 Z M242,105 L242,115 228,123"/>
-                                    <Ellipse Canvas.Left="70" Canvas.Top="74" Width="5" Height="5" Fill="#A6E6D7"/>
-                                </Canvas>
-                            </Viewbox>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="Minha casa" FontSize="30" FontWeight="SemiBold" TextWrapping="Wrap"/>
-                                <TextBlock Text="Explore a maquete e entre na Super Print." Style="{StaticResource BodyCopy}" Margin="0,5,0,13"/>
-                                <Button Content="Abrir maquete" Style="{StaticResource Primary}" Click="House_Click" HorizontalAlignment="Left"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                    <Border x:Name="HomeUpdateBanner" Style="{StaticResource Panel}" Visibility="Collapsed" Margin="0,17,0,0" Padding="12">
+                    <Border x:Name="HomeUpdateBanner" Style="{StaticResource Panel}" Visibility="Collapsed" Margin="0,0,0,14" Padding="12">
                         <DockPanel>
                             <Button Content="Ver atualização" DockPanel.Dock="Right" Click="UpdatesNav_Click" Margin="12,0,0,0"/>
                             <TextBlock x:Name="HomeUpdateText" Foreground="{StaticResource Accent}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                         </DockPanel>
                     </Border>
-                    <Grid Margin="0,23,0,9">
-                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock Text="Estado do PC" Style="{StaticResource SectionTitle}"/>
-                        <TextBlock Grid.Column="1" x:Name="PerformanceStatus" Text="Lendo o estado do PC…"
-                                   Style="{StaticResource BodyCopy}" VerticalAlignment="Center" Margin="12,0,0,0"/>
-                    </Grid>
-                    <Border Style="{StaticResource Panel}" Padding="17,12" Margin="0,0,0,10">
+                    <Border Style="{StaticResource Panel}" Background="{StaticResource GlassHero}" Padding="20,17" Margin="0,0,0,13">
                         <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock x:Name="ComputerNameLabel" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <Border Width="48" Height="48" CornerRadius="13" Background="#305979" BorderBrush="#51758D"
+                                    BorderThickness="1" VerticalAlignment="Center" Margin="0,0,14,0">
+                                <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Accent}"
+                                           FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="ESTADO DO PC" Style="{StaticResource Overline}"/>
+                                <TextBlock x:Name="ComputerNameLabel" Text="Este computador" FontSize="23" FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                                 <TextBlock x:Name="ComputerDetailsLabel" Style="{StaticResource BodyCopy}" Margin="0,2,0,0"/>
                             </StackPanel>
-                            <TextBlock Grid.Column="1" x:Name="UptimeValue" Style="{StaticResource InfoValue}"
-                                       VerticalAlignment="Center" Margin="12,0,0,0"/>
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
+                                <TextBlock x:Name="UptimeValue" Style="{StaticResource InfoValue}" TextAlignment="Right"/>
+                                <TextBlock x:Name="PerformanceStatus" Text="Lendo o estado do PC…" Style="{StaticResource BodyCopy}"
+                                           FontSize="12" TextAlignment="Right" Margin="0,4,0,0"/>
+                            </StackPanel>
                         </Grid>
                     </Border>
                     <UniformGrid Columns="2" Margin="-5,0,-5,0">
@@ -118,6 +97,12 @@
                                 <Setter Property="Foreground" Value="{StaticResource Accent}"/>
                                 <Setter Property="Margin" Value="0,3,0,6"/>
                             </Style>
+                            <Style x:Key="MetricIcon" TargetType="TextBlock">
+                                <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+                                <Setter Property="FontSize" Value="15"/>
+                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                <Setter Property="Margin" Value="0,0,7,0"/>
+                            </Style>
                             <Style x:Key="PerformanceGauge" TargetType="ProgressBar">
                                 <Setter Property="Maximum" Value="100"/>
                                 <Setter Property="Height" Value="4"/>
@@ -129,7 +114,9 @@
                                         <ControlTemplate TargetType="ProgressBar">
                                             <Grid>
                                                 <Border x:Name="PART_Track" Background="{TemplateBinding Background}" CornerRadius="2"/>
-                                                <Border x:Name="PART_Indicator" HorizontalAlignment="Left" Background="{TemplateBinding Foreground}" CornerRadius="2"/>
+                                                <Border x:Name="PART_Indicator" HorizontalAlignment="Left" Background="{TemplateBinding Foreground}" CornerRadius="2">
+                                                    <Border.RenderTransform><ScaleTransform/></Border.RenderTransform>
+                                                </Border>
                                             </Grid>
                                         </ControlTemplate>
                                     </Setter.Value>
@@ -138,16 +125,22 @@
                         </UniformGrid.Resources>
                         <Border Style="{StaticResource PerformanceCard}">
                             <StackPanel>
-                                <TextBlock Text="Processador" Style="{StaticResource InfoValue}"/>
+                                <DockPanel>
+                                    <TextBlock Text="&#xE950;" Style="{StaticResource MetricIcon}" Foreground="#AADEFF"/>
+                                    <TextBlock Text="Processador" Style="{StaticResource InfoValue}"/>
+                                </DockPanel>
                                 <TextBlock x:Name="ProcessorValue" Text="—" Style="{StaticResource PerformanceValue}"/>
-                                <ProgressBar x:Name="ProcessorGauge" Style="{StaticResource PerformanceGauge}" AutomationProperties.Name="Uso do processador"/>
+                                <ProgressBar x:Name="ProcessorGauge" Foreground="#AADEFF" Style="{StaticResource PerformanceGauge}" AutomationProperties.Name="Uso do processador"/>
                                 <TextBlock x:Name="ProcessorDetails" Style="{StaticResource BodyCopy}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
                                 <TextBlock x:Name="ProcessorScope" Style="{StaticResource BodyCopy}" Margin="0,2,0,0"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource PerformanceCard}">
                             <StackPanel>
-                                <TextBlock Text="Memória RAM" Style="{StaticResource InfoValue}"/>
+                                <DockPanel>
+                                    <TextBlock Text="&#xE964;" Style="{StaticResource MetricIcon}" Foreground="{StaticResource Accent}"/>
+                                    <TextBlock Text="Memória RAM" Style="{StaticResource InfoValue}"/>
+                                </DockPanel>
                                 <TextBlock x:Name="MemoryValue" Text="—" Style="{StaticResource PerformanceValue}"/>
                                 <ProgressBar x:Name="MemoryGauge" Style="{StaticResource PerformanceGauge}" AutomationProperties.Name="Memória RAM em uso"/>
                                 <TextBlock x:Name="MemoryDetails" Style="{StaticResource BodyCopy}"/>
@@ -155,15 +148,21 @@
                         </Border>
                         <Border Style="{StaticResource PerformanceCard}">
                             <StackPanel>
-                                <TextBlock x:Name="DiskLabel" Text="Disco do Windows" Style="{StaticResource InfoValue}"/>
+                                <DockPanel>
+                                    <TextBlock Text="&#xEDA2;" Style="{StaticResource MetricIcon}" Foreground="#D8C7FF"/>
+                                    <TextBlock x:Name="DiskLabel" Text="Disco do Windows" Style="{StaticResource InfoValue}"/>
+                                </DockPanel>
                                 <TextBlock x:Name="DiskValue" Text="—" Style="{StaticResource PerformanceValue}"/>
-                                <ProgressBar x:Name="DiskGauge" Style="{StaticResource PerformanceGauge}" AutomationProperties.Name="Espaço ocupado no disco"/>
+                                <ProgressBar x:Name="DiskGauge" Foreground="#D8C7FF" Style="{StaticResource PerformanceGauge}" AutomationProperties.Name="Espaço ocupado no disco"/>
                                 <TextBlock x:Name="DiskDetails" Style="{StaticResource BodyCopy}"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource PerformanceCard}">
                             <StackPanel>
-                                <TextBlock Text="Tráfego de rede" Style="{StaticResource InfoValue}"/>
+                                <DockPanel>
+                                    <TextBlock Text="&#xE968;" Style="{StaticResource MetricIcon}" Foreground="#F2D5A1"/>
+                                    <TextBlock Text="Tráfego de rede" Style="{StaticResource InfoValue}"/>
+                                </DockPanel>
                                 <UniformGrid Columns="2" Margin="0,7,0,6">
                                     <StackPanel Margin="0,0,5,0">
                                         <TextBlock Text="Download" Style="{StaticResource BodyCopy}"/>
@@ -180,30 +179,32 @@
                     </UniformGrid>
                     <StackPanel Margin="0,6,0,0">
                         <TextBlock Text="Acesso rápido" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
-                        <Border Style="{StaticResource Panel}" Padding="5,4">
-                            <StackPanel>
-                                <Button Style="{StaticResource ActionRow}" Tag="&#xE7E8;" Click="Energy_Click" AutomationProperties.Name="Programar desligamento">
+                        <UniformGrid Columns="2" Margin="-5,0,-5,0">
+                                <Button Style="{StaticResource ActionTile}" Tag="&#xE7E8;" Click="Energy_Click" AutomationProperties.Name="Programar desligamento">
                                     <StackPanel>
                                         <TextBlock Text="Programar desligamento" Style="{StaticResource InfoValue}"/>
                                         <TextBlock x:Name="HomeEnergySubtitle" Style="{StaticResource BodyCopy}"/>
                                     </StackPanel>
                                 </Button>
-                                <Border Style="{StaticResource Divider}" Margin="12,0"/>
-                                <Button Style="{StaticResource ActionRow}" Tag="&#xE7F4;" Click="Devices_Click" AutomationProperties.Name="Computadores pareados">
+                                <Button Style="{StaticResource ActionTile}" Tag="&#xE7F4;" Click="Devices_Click" AutomationProperties.Name="Computadores pareados">
                                     <StackPanel>
                                         <TextBlock Text="Computadores pareados" Style="{StaticResource InfoValue}"/>
                                         <TextBlock Text="Ver estado e editar horários" Style="{StaticResource BodyCopy}"/>
                                     </StackPanel>
                                 </Button>
-                                <Border Style="{StaticResource Divider}" Margin="12,0"/>
-                                <Button Style="{StaticResource ActionRow}" Tag="&#xE8EA;" Click="Mobile_Click" AutomationProperties.Name="Conectar celular">
+                                <Button Style="{StaticResource ActionTile}" Tag="&#xE8EA;" Click="Mobile_Click" AutomationProperties.Name="Conectar celular">
                                     <StackPanel>
                                         <TextBlock Text="Conectar celular" Style="{StaticResource InfoValue}"/>
                                         <TextBlock Text="Parear por QR Code" Style="{StaticResource BodyCopy}"/>
                                     </StackPanel>
                                 </Button>
-                            </StackPanel>
-                        </Border>
+                                <Button Style="{StaticResource ActionTile}" Tag="&#xEC06;" Click="House_Click" AutomationProperties.Name="Abrir maquete">
+                                    <StackPanel>
+                                        <TextBlock Text="Minha casa" Style="{StaticResource InfoValue}"/>
+                                        <TextBlock Text="Abrir a maquete e o editor 3D" Style="{StaticResource BodyCopy}"/>
+                                    </StackPanel>
+                                </Button>
+                        </UniformGrid>
                     </StackPanel>
 
                 </StackPanel>

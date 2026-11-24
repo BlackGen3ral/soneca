@@ -14,14 +14,6 @@ public partial class MainWindow
     private async void Devices_Click(object sender, RoutedEventArgs e)
     {
         Navigate(5);
-        if (!devicesTimer.IsEnabled)
-        {
-            devicesTimer.Tick += async (_, _) =>
-            {
-                if (DevicesPanel.IsVisible && WindowState != WindowState.Minimized) await RefreshDevicesAsync();
-            };
-            devicesTimer.Start();
-        }
         var addresses = PcLan.Adapters();
         var oldAddress = (PcAgentNetwork.SelectedItem as LanAdapter)?.Address.ToString();
         PcAgentNetwork.ItemsSource = addresses;
@@ -29,6 +21,12 @@ public partial class MainWindow
         DevicePair.IsEnabled = !demo;
         UpdateAgentButtons();
         await RefreshDevicesAsync();
+    }
+
+    private void UpdateDevicePolling()
+    {
+        devicesTimer.IsEnabled = IsLoaded && IsVisible && selectedPage == 5 &&
+            DashboardContent.IsEnabled && WindowState != WindowState.Minimized;
     }
 
     private async void DevicesRefresh_Click(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();
