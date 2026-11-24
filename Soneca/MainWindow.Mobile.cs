@@ -138,12 +138,14 @@ public partial class MainWindow
         HideQr();
         MobileStatus.Text = "Celular pareado. A conexão será retomada quando o Artho AI voltar a abrir nesta rede.";
         ApplyRemoteDesktopPermission();
+        RestoreInternetPower();
         UpdateMobileButtons();
     }
 
     private async void MobileRevoked()
     {
         mobileRemembered = false;
+        RestoreInternetPower();
         try { await StopMobileAsync(); }
         finally
         {
@@ -199,6 +201,7 @@ public partial class MainWindow
             if (mobileSession is { } active) await Task.Run(active.Forget);
             else if (mobileRemembered && !demo) await Task.Run(() => PcStore.Update(state => state.Mobile = null));
             mobileRemembered = false;
+            RestoreInternetPower();
             await StopMobileAsync();
             MobileStatus.Text = "Celular desvinculado.";
         }

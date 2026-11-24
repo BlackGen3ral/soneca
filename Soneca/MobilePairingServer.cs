@@ -11,7 +11,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Soneca;
 
-internal sealed record MobileProfile(string Address, byte[] Certificate, string TokenHash, bool AllowDevices, bool AllowPower);
+internal sealed record MobileProfile(string Address, byte[] Certificate, string TokenHash, bool AllowDevices, bool AllowPower,
+    bool InternetPower = false, long LastInternetShutdown = 0);
 
 internal sealed class MobilePairingServer(WebApplication app, X509Certificate2 certificate, string? payload, DateTimeOffset expires,
     Action forget, Func<bool> hasLink)

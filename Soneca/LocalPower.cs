@@ -11,6 +11,11 @@ internal static class LocalPower
 {
     private static readonly object Gate = new();
 
+    internal static bool RunInternetShutdown()
+    {
+        lock (Gate) return Run(PowerCommand.Shutdown);
+    }
+
     internal static string Arguments(PowerCommand command) => command switch
     {
         PowerCommand.Shutdown => "/s /t 0",

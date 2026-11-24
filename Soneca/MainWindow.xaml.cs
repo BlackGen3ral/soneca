@@ -60,12 +60,14 @@ public partial class MainWindow : Window
             UpdateDevicePolling();
         };
         devicesTimer.Tick += async (_, _) => await RefreshDevicesAsync();
+        internetPowerTimer.Tick += async (_, _) => await PollInternetPowerAsync();
         Render();
         Loaded += async (_, _) =>
         {
             UpdateEnergyClock();
             UpdateDevicePolling();
             if (demo) return;
+            RestoreInternetPower();
             _ = RestorePcAgentAsync();
             _ = RestoreMobileAsync();
             if (!skipIntro && SystemParameters.ClientAreaAnimation) await RunIntro();
@@ -75,6 +77,7 @@ public partial class MainWindow : Window
         Closed += async (_, _) =>
         {
             androidOperation?.Cancel();
+            StopInternetPower();
             EndRemoteDesktop();
             energyClock.Stop(); devicesTimer.Stop(); FinishIntro();
             EndHouseSession();

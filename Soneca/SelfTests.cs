@@ -60,6 +60,13 @@ public static class SelfTests
             Assert(PcDeviceService.PowerStatus(PcResponse.Unreachable, 1).State == "unreachable");
             Assert(PcDeviceService.PowerStatus(PcResponse.Authenticated, 2) == ("on", 0));
             Assert(PcDeviceService.PowerStatus(PcResponse.OutsideNetwork, 2) == ("outside_network", 0));
+            const long issued = 1800000000000;
+            var internet = new InternetShutdown(string.Concat(Enumerable.Repeat("01", 32)));
+            var shutdown = new InternetShutdownCommand(issued, "5994f372a1ea1f30d8ca11a3dcfb9d253823583776361fe7c5edb212032f0a29");
+            Assert(internet.CanExecute(shutdown, issued, issued - 1));
+            Assert(!internet.CanExecute(shutdown, issued + 30001, 0) && !internet.CanExecute(shutdown, issued - 5001, 0));
+            Assert(!internet.CanExecute(shutdown, issued, issued) &&
+                !internet.CanExecute(shutdown with { Signature = new string('0', 64) }, issued, 0));
             Schedule.IntegrationTest(); count++;
             Schedule.IntegrationTest(suspend: true); count++;
             count += PcDeviceTests.Run();
