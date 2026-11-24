@@ -12,6 +12,8 @@ No Windows 1.8.0 ou mais recente, marque **Permitir que o celular desligue, rein
 
 Para ligar, o Android envia Wake-on-LAN pelo Wi-Fi local usando o endereço salvo do PC. **Programar para ligar** oferece um horário único ou dias da semana e depende da autorização de alarmes exatos. Mantenha o celular ligado no mesmo Wi-Fi no horário desejado. Use **Esquecer este PC** para remover o endereço e cancelar o alarme de ligar no celular.
 
+Para desligar pelo 4G ou outro Wi-Fi, no Windows 1.28.0 ou mais recente abra **Celular → Controlar PC pelo Android → Ativar desligamento pela internet**. No Android 0.18.0 ou mais recente, abra **Energia → Fora de casa → Desligar pela internet** e confirme. O Windows precisa estar ligado, com internet e com o Artho AI aberto ou na bandeja. O pedido expira em 30 segundos. Para desfazer a permissão, desative a opção no Windows ou desvincule o celular pela aba **Celular** do Windows.
+
 ## Tela remota
 
 No Windows, libere o acesso em **Celular → Tela remota**. Abra **Tela remota** no Android. Incline o joystick para mover o cursor. Incline mais para acelerar. Ao lado dele ficam os cliques, a rolagem e o teclado. Você também pode tocar e arrastar na própria imagem. Gire o celular ou toque em **Horizontal** para colocar os controles ao lado da tela. Toque em **Vertical** para voltar.

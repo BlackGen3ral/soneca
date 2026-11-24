@@ -45,6 +45,8 @@ final class PowerPanel {
     private final Button cancelWake;
     private final Button forgetWake;
     private final Button stopNow;
+    private final Button internetShutdown;
+    private final TextView internetFeedback;
     private final Button restart;
     private final Button suspendNow;
     private final LinearLayout suspendGroup;
@@ -58,6 +60,7 @@ final class PowerPanel {
     private JSONObject lastState;
     private boolean busy;
     private boolean sendingWake;
+    private boolean sendingInternetShutdown;
     private WakeTarget waitingForWake;
     private int wakeAttempt;
 
@@ -92,6 +95,12 @@ final class PowerPanel {
         wakeFeedback = label("", 13, MainActivity.MUTED);
         wakeFeedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         quick.addView(wakeFeedback, owner.spaced(9));
+
+        LinearLayout internet = section("Fora de casa");
+        internetShutdown = action(internet, "Desligar pela internet", false, this::confirmInternetShutdown);
+        internetFeedback = label("Ative essa opção na aba Celular do Artho AI para Windows.", 13, MainActivity.MUTED);
+        internetFeedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        internet.addView(internetFeedback, owner.spaced(7));
 
         LinearLayout schedule = section("Agendamentos");
         wakeRule = label("", 14, MainActivity.MUTED);
@@ -324,6 +333,39 @@ final class PowerPanel {
                                 suspend ? "Solicitação de suspensão enviada." : "Comando aceito pelo Windows.", true)).show();
     }
 
+    private void confirmInternetShutdown() {
+        StatusClient.Pairing target = owner.internetPowerPairing();
+        if (target == null || sendingInternetShutdown) return;
+        WakeTarget saved = WakeSchedules.target(owner);
+        String name = saved != null && saved.address.equals(target.host) ? saved.name : "o PC pareado";
+        new AlertDialog.Builder(owner).setTitle("Desligar " + name + " pela internet?")
+                .setMessage("Salve seu trabalho no computador antes de continuar.")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Desligar", (dialog, button) -> sendInternetShutdown(target)).show();
+    }
+
+    private void sendInternetShutdown(StatusClient.Pairing target) {
+        if (owner.internetPowerPairing() != target || sendingInternetShutdown) return;
+        sendingInternetShutdown = true;
+        internetShutdown.setEnabled(false);
+        internetFeedback.setText("Enviando pedido pela internet…");
+        wakeWorker.execute(() -> {
+            String message;
+            try {
+                message = owner.internetPowerPairing() == target ? InternetPowerClient.requestShutdown(target)
+                        : "O pareamento mudou.";
+            } catch (Exception error) {
+                message = "A confirmação do envio falhou. Confira o PC antes de tentar novamente.";
+            }
+            String result = message;
+            owner.show(() -> {
+                sendingInternetShutdown = false;
+                if (owner.internetPowerPairing() == target) internetFeedback.setText(result);
+                render();
+            });
+        });
+    }
+
     private void weeklyDialog(String title, String oldTime, int oldDays, RuleResult save, boolean wake) {
         LinearLayout fields = form();
         TextView correction = label("", 14, MainActivity.MUTED);
@@ -445,6 +487,7 @@ final class PowerPanel {
         boolean available = !busy && lastState != null;
         connect.setVisibility(!busy && lastState == null ? View.VISIBLE : View.GONE);
         stopNow.setEnabled(available);
+        internetShutdown.setEnabled(!sendingInternetShutdown && owner.internetPowerPairing() != null);
         restart.setEnabled(available);
         stopSchedule.setEnabled(available);
         boolean canSuspend = lastState != null && lastState.optBoolean("suspendControl");

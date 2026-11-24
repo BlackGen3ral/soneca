@@ -150,12 +150,14 @@ public final class MainActivity extends Activity {
                 show(() -> {
                     if (stored == null || pairing != null) return;
                     pairing = stored;
+                    power.refreshLocal();
                     house.updatePairing(pairing, false);
                     if (visible) requestStatus(true);
                 });
             });
         }
         showTab(saved == null ? 0 : saved.getInt("tab", 0));
+        power.refreshLocal();
         house.updatePairing(pairing, false);
         WakeSchedules.restore(this);
         updates.check();
@@ -616,6 +618,7 @@ public final class MainActivity extends Activity {
                 show(() -> {
                     if (pairing != target) return;
                     pairing = fallback;
+                    power.refreshLocal();
                     legacyLink = false;
                     online = false;
                     lastPcReply = 0;
@@ -727,6 +730,11 @@ public final class MainActivity extends Activity {
                 }
             }
         });
+    }
+
+    StatusClient.Pairing internetPowerPairing() {
+        StatusClient.Pairing current = pairing;
+        return current != null && current.durable ? current : null;
     }
 
     private void showEmpty(String title, int color, String message) {
