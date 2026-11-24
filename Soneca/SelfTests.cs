@@ -49,8 +49,13 @@ public static class SelfTests
             Assert(withoutDate.Countdown(today) == "Sem data de renovação" && !withoutDate.Due(today));
             Assert(withoutDate.AfterNotice(today) == withoutDate);
             Assert(PlanReminder.Create(plan.Email, renewal, 7, withoutDate).Due(today));
-            var savedPlans = System.Text.Json.JsonSerializer.Serialize(new[] { plan, withoutDate });
-            Assert(System.Text.Json.JsonSerializer.Deserialize<PlanReminder[]>(savedPlans)!.SequenceEqual([plan, withoutDate]));
+            var namedPlan = PlanReminder.Create(plan.Email, renewal, 7, noticed, "  Conta pessoal  ");
+            Assert(namedPlan.Name == "Conta pessoal" && namedPlan.Id == plan.Id && namedPlan.WarnedBefore);
+            Assert(PlanReminder.Create(plan.Email, renewal, 7, namedPlan, " ").Name is null);
+            var savedPlans = System.Text.Json.JsonSerializer.Serialize(new[] { namedPlan, withoutDate });
+            Assert(System.Text.Json.JsonSerializer.Deserialize<PlanReminder[]>(savedPlans)!.SequenceEqual([namedPlan, withoutDate]));
+            var legacy = System.Text.Json.JsonSerializer.Deserialize<PlanReminder>("""{"Email":"antiga@exemplo.com","LeadDays":7}""");
+            Assert(legacy is { Email: "antiga@exemplo.com", Name: null, Renewal: null, LeadDays: 7 });
             Assert(PcDeviceService.PowerStatus(PcResponse.Unreachable, 0) == ("checking", 1));
             Assert(PcDeviceService.PowerStatus(PcResponse.Unreachable, 1).State == "unreachable");
             Assert(PcDeviceService.PowerStatus(PcResponse.Authenticated, 2) == ("on", 0));

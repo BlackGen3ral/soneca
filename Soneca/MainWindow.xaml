@@ -524,6 +524,8 @@
                     <Border Style="{StaticResource Panel}" Padding="17" Margin="0,0,0,15">
                         <StackPanel>
                             <TextBlock x:Name="PlanFormTitle" Text="Adicionar conta" Style="{StaticResource SectionTitle}"/>
+                            <TextBlock Text="Nome da conta (opcional)" Style="{StaticResource BodyCopy}" Margin="0,12,0,4"/>
+                            <TextBox x:Name="PlanName" MaxLength="80" AutomationProperties.Name="Nome opcional da conta"/>
                             <TextBlock Text="E-mail da conta" Style="{StaticResource BodyCopy}" Margin="0,12,0,4"/>
                             <TextBox x:Name="PlanEmail" MaxLength="254" AutomationProperties.Name="E-mail da conta"/>
                             <WrapPanel Margin="0,10,0,0">

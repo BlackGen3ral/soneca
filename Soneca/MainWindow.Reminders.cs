@@ -57,9 +57,9 @@ public partial class MainWindow
             int lead = existing?.LeadDays ?? 7;
             if (!string.IsNullOrWhiteSpace(PlanLead.Text) && !int.TryParse(PlanLead.Text, out lead))
                 throw new ArgumentException("Digite a antecedência em dias.");
-            var row = PlanReminder.Create(PlanEmail.Text, renewal, lead, existing);
+            var row = PlanReminder.Create(PlanEmail.Text, renewal, lead, existing, PlanName.Text);
             if (reminders.Any(item => item.Id != row.Id && string.Equals(item.Email, row.Email, StringComparison.OrdinalIgnoreCase)))
-                throw new ArgumentException("Esse e-mail já está na lista. Use Editar para mudar a data.");
+                throw new ArgumentException("Esse e-mail já está na lista. Use Editar para atualizar a conta.");
             SaveReminders(reminders.Where(item => item.Id != row.Id).Append(row).ToList());
             ClearPlanForm();
             RenderReminders();
@@ -74,6 +74,7 @@ public partial class MainWindow
     private void ClearPlanForm()
     {
         editingReminder = null;
+        PlanName.Clear();
         PlanEmail.Clear();
         PlanDate.Clear();
         PlanLead.Text = "7";
@@ -100,7 +101,11 @@ public partial class MainWindow
             var body = new StackPanel();
             PlanRows.Children.Add(new Border { Style = (Style)FindResource("Panel"), Child = body,
                 Padding = new Thickness(16, 12, 16, 10), Margin = new Thickness(0, 0, 0, 8) });
-            body.Children.Add(new TextBlock { Text = item.Email, Style = (Style)FindResource("SectionTitle"), TextWrapping = TextWrapping.Wrap });
+            body.Children.Add(new TextBlock { Text = item.Name ?? item.Email,
+                Style = (Style)FindResource("SectionTitle"), TextWrapping = TextWrapping.Wrap });
+            if (item.Name is not null)
+                body.Children.Add(new TextBlock { Text = item.Email, Style = (Style)FindResource("BodyCopy"),
+                    Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
             body.Children.Add(new TextBlock { Text = item.Countdown(today), FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(0, 4, 0, 2),
                 Foreground = (System.Windows.Media.Brush)FindResource(item.DaysLeft(today) <= item.LeadDays ? "Accent" : "Ink") });
@@ -112,11 +117,12 @@ public partial class MainWindow
             edit.Click += (_, _) =>
             {
                 editingReminder = item.Id;
+                PlanName.Text = item.Name ?? "";
                 PlanEmail.Text = item.Email;
                 PlanDate.Text = item.Renewal?.ToString("dd/MM/yyyy", BrazilianPortuguese) ?? "";
                 PlanLead.Text = item.LeadDays.ToString(BrazilianPortuguese);
                 PlanFormTitle.Text = "Editar conta";
-                PlanDate.Focus();
+                PlanName.Focus();
             };
             actions.Children.Add(edit);
             var remove = new Button { Content = "Remover" };

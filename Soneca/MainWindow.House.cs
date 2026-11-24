@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Web.WebView2.Core;
@@ -10,6 +11,8 @@ namespace Soneca;
 
 public partial class MainWindow
 {
+    // The editor's localStorage needs a stable origin across WebView instances and app updates.
+    private const string HousePageAddress = "https://maquete.artho.invalid/MinhaCasa.html";
     private WebView2? houseView;
     private string? unlockedHouse;
     private DateTime houseRevision;
@@ -137,8 +140,7 @@ public partial class MainWindow
             bool openingPage = true;
             browser.NavigationStarting += (_, args) =>
             {
-                bool allowed = openingPage &&
-                    args.Uri.StartsWith("data:text/html;charset=utf-8;base64,", StringComparison.Ordinal);
+                bool allowed = openingPage && args.Uri == HousePageAddress;
                 if (allowed) openingPage = false;
                 args.Cancel = !allowed;
             };
@@ -147,8 +149,16 @@ public partial class MainWindow
             foreach (string pattern in new[] { "http://*", "https://*" })
                 browser.AddWebResourceRequestedFilter(pattern, CoreWebView2WebResourceContext.All,
                     CoreWebView2WebResourceRequestSourceKinds.All);
+            byte[] html = Encoding.UTF8.GetBytes(page);
             browser.WebResourceRequested += (_, args) =>
-                args.Response = environment.CreateWebResourceResponse(null, 403, "Forbidden", "");
+            {
+                bool houseDocument = args.Request.Uri == HousePageAddress && args.Request.Method == "GET" &&
+                    args.ResourceContext == CoreWebView2WebResourceContext.Document;
+                args.Response = houseDocument
+                    ? environment.CreateWebResourceResponse(new MemoryStream(html, writable: false), 200, "OK",
+                        "Content-Type: text/html; charset=utf-8\r\nCache-Control: no-store")
+                    : environment.CreateWebResourceResponse(null, 403, "Forbidden", "");
+            };
             browser.NavigationCompleted += (_, args) =>
             {
                 if (houseView != view) return;
@@ -156,7 +166,7 @@ public partial class MainWindow
                 else HouseLock.Visibility = Visibility.Collapsed;
             };
             browser.ProcessFailed += (_, _) => QueueHouseFailure(view);
-            if (houseView == view) browser.NavigateToString(page);
+            if (houseView == view) browser.Navigate(HousePageAddress);
         }
         catch (Exception ex)
         {

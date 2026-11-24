@@ -5,12 +5,13 @@ using Microsoft.Win32;
 namespace Soneca;
 
 internal sealed record PlanReminder(Guid Id, string Email, DateOnly? Renewal, int LeadDays,
-    bool WarnedBefore = false, bool WarnedOnDay = false)
+    bool WarnedBefore = false, bool WarnedOnDay = false, string? Name = null)
 {
     public int? DaysLeft(DateOnly today) => Renewal?.DayNumber - today.DayNumber;
 
-    public static PlanReminder Create(string email, DateOnly? renewal, int leadDays, PlanReminder? existing)
+    public static PlanReminder Create(string email, DateOnly? renewal, int leadDays, PlanReminder? existing, string? name = null)
     {
+        name = name?.Trim();
         email = email.Trim();
         if (email.Length > 254 || !MailAddress.TryCreate(email, out var address) ||
             !string.Equals(address.Address, email, StringComparison.OrdinalIgnoreCase))
@@ -18,7 +19,8 @@ internal sealed record PlanReminder(Guid Id, string Email, DateOnly? Renewal, in
         if (leadDays is < 1 or > 60) throw new ArgumentException("Escolha uma antecedência de 1 a 60 dias.");
         bool sameDate = renewal.HasValue && existing?.Renewal == renewal;
         return new PlanReminder(existing?.Id ?? Guid.NewGuid(), email, renewal, leadDays,
-            sameDate && existing!.WarnedBefore, sameDate && existing!.WarnedOnDay);
+            sameDate && existing!.WarnedBefore, sameDate && existing!.WarnedOnDay,
+            string.IsNullOrEmpty(name) ? null : name);
     }
 
     public string Countdown(DateOnly today) => DaysLeft(today) switch
