@@ -187,6 +187,7 @@ final class HousePanel extends FrameLayout {
             view.setBackgroundColor(MainActivity.BACKGROUND);
             WebSettings settings = view.getSettings();
             settings.setJavaScriptEnabled(true);
+            settings.setDomStorageEnabled(true);
             settings.setAllowFileAccess(false);
             settings.setAllowContentAccess(false);
             settings.setSupportZoom(false);
