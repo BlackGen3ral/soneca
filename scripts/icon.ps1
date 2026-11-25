@@ -8,8 +8,11 @@ foreach ($size in @(16,20,24,32,40,48,64,128,256)) {
  $g = [Drawing.Graphics]::FromImage($bmp)
  $g.SmoothingMode = 'AntiAlias'
  $g.ScaleTransform(($size/256.0),($size/256.0))
- $bg = [Drawing.SolidBrush]::new([Drawing.ColorTranslator]::FromHtml('#20382B'))
- $ink = [Drawing.SolidBrush]::new([Drawing.ColorTranslator]::FromHtml('#D7F8E1'))
+ $bounds = [Drawing.RectangleF]::new(12,12,232,232)
+ $bg = [Drawing.Drawing2D.LinearGradientBrush]::new($bounds,
+  [Drawing.ColorTranslator]::FromHtml('#263D56'), [Drawing.ColorTranslator]::FromHtml('#090F1A'), 58)
+ $ink = [Drawing.SolidBrush]::new([Drawing.ColorTranslator]::FromHtml('#A6E6D7'))
+ $edge = [Drawing.Pen]::new([Drawing.ColorTranslator]::FromHtml('#526F86'), 7)
  $tile = [Drawing.Drawing2D.GraphicsPath]::new()
  $tile.AddArc(12,12,94,94,180,90)
  $tile.AddArc(150,12,94,94,270,90)
@@ -17,22 +20,24 @@ foreach ($size in @(16,20,24,32,40,48,64,128,256)) {
  $tile.AddArc(12,150,94,94,90,90)
  $tile.CloseFigure()
  $g.FillPath($bg,$tile)
- $mark = [Drawing.PointF[]]@(
-  [Drawing.PointF]::new(49,190), [Drawing.PointF]::new(112,62),
-  [Drawing.PointF]::new(144,62), [Drawing.PointF]::new(207,190),
-  [Drawing.PointF]::new(173,190), [Drawing.PointF]::new(158,158),
-  [Drawing.PointF]::new(98,158), [Drawing.PointF]::new(83,190)
- )
- $g.FillPolygon($ink,$mark)
+ $g.DrawPath($edge,$tile)
+ $mark = [Drawing.Drawing2D.GraphicsPath]::new([Drawing.Drawing2D.FillMode]::Alternate)
+ $mark.AddPolygon([Drawing.PointF[]]@(
+  [Drawing.PointF]::new(48,193), [Drawing.PointF]::new(111,62),
+  [Drawing.PointF]::new(144,62), [Drawing.PointF]::new(208,193),
+  [Drawing.PointF]::new(174,193), [Drawing.PointF]::new(159,161),
+  [Drawing.PointF]::new(97,161), [Drawing.PointF]::new(82,193)
+ ))
  $counter = [Drawing.PointF[]]@(
-  [Drawing.PointF]::new(111,130), [Drawing.PointF]::new(128,92), [Drawing.PointF]::new(145,130)
+  [Drawing.PointF]::new(107,135), [Drawing.PointF]::new(127.5,92), [Drawing.PointF]::new(149,135)
  )
- $g.FillPolygon($bg,$counter)
+ $mark.AddPolygon($counter)
+ $g.FillPath($ink,$mark)
  $stream = [IO.MemoryStream]::new()
  $bmp.Save($stream,[Drawing.Imaging.ImageFormat]::Png)
  $images += ,@{ Size=$size; Bytes=$stream.ToArray() }
  if ($size -eq 256) { $bmp.Save((Join-Path $assets 'ArthoAI.png'),[Drawing.Imaging.ImageFormat]::Png) }
- $stream.Dispose(); $g.Dispose(); $bmp.Dispose(); $tile.Dispose(); $bg.Dispose(); $ink.Dispose()
+ $stream.Dispose(); $g.Dispose(); $bmp.Dispose(); $tile.Dispose(); $mark.Dispose(); $edge.Dispose(); $bg.Dispose(); $ink.Dispose()
 }
 $writer = [IO.BinaryWriter]::new([IO.File]::Create((Join-Path $assets 'ArthoAI.ico')))
 $writer.Write([uint16]0); $writer.Write([uint16]1); $writer.Write([uint16]$images.Count)
