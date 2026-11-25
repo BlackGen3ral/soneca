@@ -166,6 +166,7 @@ public final class MainActivity extends Activity {
     @Override protected void onStart() {
         super.onStart();
         visible = true;
+        power.setForeground(true);
         backdrop.setRunning(selectedTab != HOUSE_TAB);
         if (pairing != null) {
             requestStatus(!online || lastPcReply == 0 ||
@@ -175,6 +176,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onStop() {
         visible = false;
+        power.setForeground(false);
         backdrop.setRunning(false);
         connectionTimer.removeCallbacks(reconnect);
         super.onStop();

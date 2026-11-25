@@ -61,6 +61,12 @@ final class PowerPanel {
     private boolean busy;
     private boolean sendingWake;
     private boolean sendingInternetShutdown;
+    private final ExecutorService internetWorker = Executors.newSingleThreadExecutor();
+    private final Runnable receiptCheck = this::checkReceipt;
+    private StatusClient.Pairing receiptTarget;
+    private long receiptIssued;
+    private boolean checkingReceipt;
+    private boolean foreground;
     private WakeTarget waitingForWake;
     private int wakeAttempt;
 
@@ -83,19 +89,18 @@ final class PowerPanel {
         connect = action(status, "Parear com Windows", true, owner::showPairing);
         action(status, "Atualizar estado", false, this::refresh);
 
-        LinearLayout quick = section("Ações imediatas");
+        LinearLayout quick = section("Na rede de casa");
+        wakeNow = action(quick, "Ligar pelo Wi-Fi de casa", true, this::wake);
+        wakeFeedback = label("", 13, MainActivity.MUTED);
+        wakeFeedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        quick.addView(wakeFeedback, owner.spaced(9));
         LinearLayout immediate = new LinearLayout(owner);
         quick.addView(immediate, owner.spaced(10));
-        wakeNow = inlineAction(immediate, "Ligar PC", "Ligar o PC pela rede local", this::wake, 0);
         suspendNow = inlineAction(immediate, "Suspender", "Suspender agora", () -> confirm("Suspender", "suspend"), 6);
         LinearLayout restartAndStop = new LinearLayout(owner);
         quick.addView(restartAndStop, owner.spaced(6));
         stopNow = inlineAction(restartAndStop, "Desligar", "Desligar agora", () -> confirm("Desligar", "shutdown"), 0);
         restart = inlineAction(restartAndStop, "Reiniciar", "Reiniciar agora", () -> confirm("Reiniciar", "restart"), 6);
-        wakeFeedback = label("", 13, MainActivity.MUTED);
-        wakeFeedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        quick.addView(wakeFeedback, owner.spaced(9));
-
         LinearLayout internet = section("Fora de casa");
         internetShutdown = action(internet, "Desligar pela internet", false, this::confirmInternetShutdown);
         internetFeedback = label("Ative essa opção na aba Celular do Artho AI para Windows.", 13, MainActivity.MUTED);
@@ -156,6 +161,8 @@ final class PowerPanel {
     void forget() {
         WakeSchedules.forget(owner);
         clearWakeAttempt();
+        clearReceipt();
+        internetFeedback.setText("Ative essa opção na aba Celular do Artho AI para Windows.");
         pairingChanged(null);
         render();
     }
@@ -182,6 +189,14 @@ final class PowerPanel {
     void close() {
         wakeTimer.removeCallbacks(wakeTimeout);
         wakeWorker.shutdownNow();
+        setForeground(false);
+        internetWorker.shutdownNow();
+    }
+
+    void setForeground(boolean visible) {
+        foreground = visible;
+        wakeTimer.removeCallbacks(receiptCheck);
+        if (visible && receiptTarget != null) wakeTimer.post(receiptCheck);
     }
 
     void refreshLocal() { render(); }
@@ -345,25 +360,81 @@ final class PowerPanel {
     }
 
     private void sendInternetShutdown(StatusClient.Pairing target) {
-        if (owner.internetPowerPairing() != target || sendingInternetShutdown) return;
+        if (owner.internetPowerPairing() != target || sendingInternetShutdown || receiptTarget != null) return;
         sendingInternetShutdown = true;
+        long issued = System.currentTimeMillis();
         internetShutdown.setEnabled(false);
         internetFeedback.setText("Enviando pedido pela internet…");
-        wakeWorker.execute(() -> {
-            String message;
+        internetWorker.execute(() -> {
+            String message = null;
+            boolean uncertain = false;
             try {
-                message = owner.internetPowerPairing() == target ? InternetPowerClient.requestShutdown(target)
+                message = owner.internetPowerPairing() == target ? InternetPowerClient.requestShutdown(target, issued)
                         : "O pareamento mudou.";
             } catch (Exception error) {
-                message = "A confirmação do envio falhou. Confira o PC antes de tentar novamente.";
+                uncertain = true;
             }
             String result = message;
+            boolean sendUncertain = uncertain;
             owner.show(() -> {
                 sendingInternetShutdown = false;
-                if (owner.internetPowerPairing() == target) internetFeedback.setText(result);
+                if (owner.internetPowerPairing() == target) {
+                    if (result != null) internetFeedback.setText(result);
+                    else {
+                        receiptTarget = target;
+                        receiptIssued = issued;
+                        internetFeedback.setText(sendUncertain ? "Aguardando confirmação do envio…"
+                                : "Pedido enviado. Aguardando o Windows receber…");
+                        if (foreground) wakeTimer.post(receiptCheck);
+                    }
+                }
                 render();
             });
         });
+    }
+
+    private void checkReceipt() {
+        if (!foreground || checkingReceipt || receiptTarget == null) return;
+        StatusClient.Pairing target = receiptTarget;
+        long issued = receiptIssued;
+        if (owner.internetPowerPairing() != target) {
+            clearReceipt();
+            render();
+            return;
+        }
+        checkingReceipt = true;
+        internetWorker.execute(() -> {
+            InternetPowerClient.Receipt receipt = null;
+            try { receipt = InternetPowerClient.readReceipt(target, issued); }
+            catch (Exception ignored) { }
+            InternetPowerClient.Receipt result = receipt;
+            owner.show(() -> {
+                checkingReceipt = false;
+                if (target != receiptTarget || issued != receiptIssued) {
+                    if (foreground && receiptTarget != null) wakeTimer.post(receiptCheck);
+                    return;
+                }
+                if (owner.internetPowerPairing() != target) clearReceipt();
+                else if (result == InternetPowerClient.Receipt.RECEIVED) {
+                    clearReceipt();
+                    internetFeedback.setText("O Windows recebeu o pedido.");
+                } else if (result == InternetPowerClient.Receipt.EXPIRED
+                        || System.currentTimeMillis() - issued > 35_000) {
+                    clearReceipt();
+                    internetFeedback.setText("Prazo expirado sem confirmação do Windows.");
+                } else {
+                    if (result == InternetPowerClient.Receipt.WAITING)
+                        internetFeedback.setText("Pedido enviado. Aguardando o Windows receber…");
+                    if (foreground) wakeTimer.postDelayed(receiptCheck, 2500);
+                }
+                render();
+            });
+        });
+    }
+
+    private void clearReceipt() {
+        receiptTarget = null;
+        wakeTimer.removeCallbacks(receiptCheck);
     }
 
     private void weeklyDialog(String title, String oldTime, int oldDays, RuleResult save, boolean wake) {
@@ -487,7 +558,7 @@ final class PowerPanel {
         boolean available = !busy && lastState != null;
         connect.setVisibility(!busy && lastState == null ? View.VISIBLE : View.GONE);
         stopNow.setEnabled(available);
-        internetShutdown.setEnabled(!sendingInternetShutdown && owner.internetPowerPairing() != null);
+        internetShutdown.setEnabled(!sendingInternetShutdown && receiptTarget == null && owner.internetPowerPairing() != null);
         restart.setEnabled(available);
         stopSchedule.setEnabled(available);
         boolean canSuspend = lastState != null && lastState.optBoolean("suspendControl");
