@@ -12,6 +12,7 @@ public partial class MainWindow
     private List<PlanReminder> reminders = [];
     private Guid? editingReminder;
     private DateOnly renderedOn;
+    private bool remindersUnavailable;
 
     private void ConfigureReminders()
     {
@@ -24,6 +25,8 @@ public partial class MainWindow
         catch (Exception error)
         {
             PlanFeedback.Text = "Não foi possível carregar os lembretes. " + error.Message;
+            remindersUnavailable = true;
+            RenderDayPlans(DateOnly.FromDateTime(DateTime.Today));
             PlanSave.IsEnabled = false;
             return;
         }
@@ -92,6 +95,7 @@ public partial class MainWindow
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
         renderedOn = today;
+        RenderDayPlans(today);
         PlanRows.Children.Clear();
         PlanEmpty.Visibility = reminders.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         int upcoming = reminders.Count(item => item.DaysLeft(today) is int days && days >= 0 && days <= item.LeadDays);

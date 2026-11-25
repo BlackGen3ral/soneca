@@ -110,9 +110,8 @@ public partial class MainWindow : Window
         {
             var remaining = target - DateTimeOffset.Now;
             RenderHomeEnergy(remaining > TimeSpan.Zero);
-            if (remaining is { Ticks: > 0 } pending)
-                SetEnergyClockInterval(pending > TimeSpan.FromSeconds(15) ? TimeSpan.FromSeconds(15) : pending);
-            else energyClock.Stop();
+            RenderDayRoutines();
+            SetEnergyClockInterval(TimeSpan.FromSeconds(15));
         }
         else energyClock.Stop();
     }

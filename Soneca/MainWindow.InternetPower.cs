@@ -82,8 +82,16 @@ public partial class MainWindow
                 return true;
             });
             if (accepted)
+            {
+                try { await client.AcknowledgeAsync(command.Issued, session.Token); }
+                catch (Exception error) when (error is System.Net.Http.HttpRequestException or OperationCanceledException)
+                {
+                    System.Diagnostics.Debug.WriteLine(error.Message);
+                }
+                if (internetPowerSession != session) return;
                 InternetPowerStatus.Text = LocalPower.RunInternetShutdown()
                     ? "Pedido recebido pelo Windows." : "O Windows recusou o desligamento.";
+            }
         }
         catch (Exception)
         {

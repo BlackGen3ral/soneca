@@ -57,6 +57,8 @@
                                 <TextBlock x:Name="NetworkStatusLabel" Foreground="{StaticResource Muted}" FontSize="12"/>
                             </StackPanel>
                         </Border>
+                        <Button DockPanel.Dock="Right" Content="Buscar atalhos · Ctrl+K" Click="ShortcutSearch_Click"
+                                VerticalAlignment="Center" Margin="10,0,0,0"/>
                         <TextBlock Text="Visão geral" Style="{StaticResource PageTitle}"/>
                     </DockPanel>
                     <Border x:Name="HomeUpdateBanner" Style="{StaticResource Panel}" Visibility="Collapsed" Margin="0,0,0,14" Padding="12">
@@ -64,6 +66,27 @@
                             <Button Content="Ver atualização" DockPanel.Dock="Right" Click="UpdatesNav_Click" Margin="12,0,0,0"/>
                             <TextBlock x:Name="HomeUpdateText" Foreground="{StaticResource Accent}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                         </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Panel}" Padding="20,16" Margin="0,0,0,13">
+                        <StackPanel>
+                            <TextBlock Text="Meu dia" Style="{StaticResource SectionTitle}"/>
+                            <Grid Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="18"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="Assinaturas" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="DayPlans" Style="{StaticResource BodyCopy}" TextWrapping="Wrap" Margin="0,4,0,8"/>
+                                    <Button Content="Ver assinaturas" Click="Plans_Click" HorizontalAlignment="Left"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Rotinas" FontWeight="SemiBold"/>
+                                    <TextBlock x:Name="DayRoutines" Style="{StaticResource BodyCopy}" TextWrapping="Wrap" Margin="0,4,0,8"/>
+                                    <WrapPanel>
+                                        <Button Content="Ver energia" Click="Energy_Click" Margin="0,0,6,0"/>
+                                        <Button x:Name="DayDevices" Content="Ver computadores" Click="DayDevices_Click" Visibility="Collapsed"/>
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
                     </Border>
                     <Border Style="{StaticResource Panel}" Background="{StaticResource GlassHero}" Padding="20,17" Margin="0,0,0,13">
                         <Grid>

@@ -218,6 +218,13 @@ public partial class MainWindow
             _ = Dispatcher.BeginInvoke(new Action(FinishIntro));
             return;
         }
+        if (e.Key == Key.K && Keyboard.Modifiers == ModifierKeys.Control &&
+            !e.IsRepeat && DashboardContent.IsEnabled)
+        {
+            e.Handled = true;
+            ShowShortcutSearch();
+            return;
+        }
         base.OnPreviewKeyDown(e);
     }
 }

@@ -30,6 +30,17 @@ internal sealed class InternetShutdown(string tokenHash)
         return (await reply.Content.ReadFromJsonAsync<PollReply>(cancellation))?.Command;
     }
 
+    internal async Task AcknowledgeAsync(long issued, CancellationToken cancellation)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+        timeout.CancelAfter(TimeSpan.FromSeconds(2));
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/pc/receipt");
+        request.Headers.Add("Authorization", "Bearer " + Derive("pc"));
+        request.Headers.Add("X-Artho-Issued", issued.ToString(CultureInfo.InvariantCulture));
+        using var reply = await Client.SendAsync(request, timeout.Token);
+        reply.EnsureSuccessStatusCode();
+    }
+
     internal bool CanExecute(InternetShutdownCommand command, long now, long lastIssued)
     {
         if (command.Issued <= lastIssued || command.Issued < now - 30_000 ||
