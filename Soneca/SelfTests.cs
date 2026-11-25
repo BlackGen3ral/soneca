@@ -34,6 +34,9 @@ public static class SelfTests
             try { new RemoteComputerConfiguration(remote.Computers.Append(new ComputerNode("PC 4", "pc4", null, 4))); throw new Exception("Limite de PCs ignorado"); } catch (ArgumentOutOfRangeException) { count++; }
             Assert(StartupRegistration.ResolvePreference(null));
             Assert(!StartupRegistration.ResolvePreference(false));
+            Assert(StartupRegistration.IsBlocked([3, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8]));
+            Assert(StartupRegistration.IsBlocked([7, 0, 0, 0]));
+            Assert(!StartupRegistration.IsBlocked([2, 0, 0, 0]) && !StartupRegistration.IsBlocked(null));
             try { Updater.ExpectedHash("bad  Soneca-Setup.exe"); throw new Exception("Hash inválido aceito"); } catch (Exception ex) when (ex.Message.StartsWith("Verificação")) { count++; }
             var today = new DateOnly(2026, 11, 23);
             var plan = PlanReminder.Create("conta@exemplo.com", today.AddDays(7), 7, null);

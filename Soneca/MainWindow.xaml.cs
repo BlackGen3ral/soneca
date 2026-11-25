@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private DateTimeOffset? target;
     private DateTimeOffset? suspendTarget;
     private bool clockMode;
+    private bool updatingStartupOption;
     private readonly DispatcherTimer energyClock = new(DispatcherPriority.Background);
     private int selectedPage = -1;
     private static readonly CultureInfo BrazilianPortuguese = CultureInfo.GetCultureInfo("pt-BR");
@@ -32,9 +33,12 @@ public partial class MainWindow : Window
         VersionLabel.Text = "v" + Updater.Current.ToString(3);
         InstalledVersionLabel.Text = "Versão instalada  " + Updater.Current.ToString(3);
         if (demo) { Title = "Artho AI · demonstração"; UpdateLabel.Text = "Demonstração · operações simuladas"; }
-        bool startWithWindows = !demo && StartupRegistration.ResolvePreference(StartupRegistration.Preference);
-        StartupCheckBox.IsChecked = startWithWindows;
-        if (!demo) StartupRegistration.SetEnabled(startWithWindows);
+        if (!demo)
+        {
+            try { StartupRegistration.ApplyPreference(); }
+            catch (Exception ex) { StartupFeedback.Text = "Não foi possível registrar a inicialização: " + ex.Message; }
+            RefreshStartupOption();
+        }
         ConfigureDashboard();
         if (!demo) ConfigureTray();
         StateChanged += (_, _) => TrayWindowStateChanged();
@@ -142,9 +146,34 @@ public partial class MainWindow : Window
     private static extern int DwmSetWindowAttribute(nint handle, int attribute, in int value, int size);
     private void Startup_Changed(object sender, RoutedEventArgs e)
     {
-        if (!IsLoaded || demo) return;
-        try { StartupRegistration.SetEnabled(StartupCheckBox.IsChecked == true); StartupFeedback.Text = StartupCheckBox.IsChecked == true ? "Inicialização com Windows ativada." : "Inicialização com Windows desativada."; }
-        catch (Exception ex) { StartupFeedback.Text = "Não foi possível alterar a inicialização: " + ex.Message; StartupCheckBox.IsChecked = StartupRegistration.IsEnabled(); }
+        if (!IsLoaded || demo || updatingStartupOption) return;
+        try
+        {
+            bool enabled = StartupCheckBox.IsChecked == true;
+            StartupRegistration.SetEnabled(enabled);
+            StartupFeedback.Text = enabled ? "Inicialização com Windows ativada." : "Inicialização com Windows desativada.";
+        }
+        catch (Exception ex)
+        {
+            StartupFeedback.Text = "Não foi possível alterar a inicialização: " + ex.Message;
+            RefreshStartupOption();
+        }
+    }
+
+    private void RefreshStartupOption()
+    {
+        if (demo) return;
+        const string blocked = "O Windows desativou a inicialização do Artho AI. Marque a opção para reativar.";
+        updatingStartupOption = true;
+        try
+        {
+            StartupCheckBox.IsChecked = StartupRegistration.IsEnabled();
+            if (StartupRegistration.ResolvePreference(StartupRegistration.Preference) && StartupRegistration.IsBlockedByWindows())
+                StartupFeedback.Text = blocked;
+            else if (StartupFeedback.Text == blocked) StartupFeedback.Text = "";
+        }
+        catch (Exception ex) { StartupFeedback.Text = "Não foi possível consultar a inicialização: " + ex.Message; }
+        finally { updatingStartupOption = false; }
     }
     private void Render()
     {
@@ -251,27 +280,62 @@ public partial class MainWindow : Window
     private void Energy_Click(object sender, RoutedEventArgs e) => Navigate(0);
     private void Cleanup_Click(object sender, RoutedEventArgs e) => Navigate(1);
     private void Names_Click(object sender, RoutedEventArgs e) => Navigate(2);
-    private void Settings_Click(object sender, RoutedEventArgs e) => Navigate(3);
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        RefreshStartupOption();
+        Navigate(3);
+    }
 }
 internal static class StartupRegistration
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    private const string ApprovalKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run";
     private const string PreferenceKey = @"Software\Artho\Soneca";
     private const string ValueName = "ArthoAI";
     internal static bool ResolvePreference(bool? preference) => preference ?? true;
     public static bool? Preference { get { using var key = Registry.CurrentUser.OpenSubKey(PreferenceKey); return key?.GetValue("StartupEnabled") is int value ? value != 0 : null; } }
-    public static bool IsEnabled() { using var key = Registry.CurrentUser.OpenSubKey(RunKey); return key?.GetValue(ValueName) is string; }
-    public static void SetEnabled(bool enabled)
+    internal static bool IsBlocked(byte[]? approval) => approval is [3 or 7, 0, 0, 0, ..];
+    internal static bool IsBlockedByWindows()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(ApprovalKey);
+        return IsBlocked(key?.GetValue(ValueName) as byte[]);
+    }
+
+    public static bool IsEnabled()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(RunKey);
+        return key?.GetValue(ValueName) is string && !IsBlockedByWindows();
+    }
+
+    public static void ApplyPreference() => WriteRunEntry(ResolvePreference(Preference));
+
+    private static void WriteRunEntry(bool enabled)
     {
         using var key = Registry.CurrentUser.CreateSubKey(RunKey, true);
-        if (enabled) key.SetValue(ValueName, "\"" + Environment.ProcessPath + "\"");
+        if (enabled)
+        {
+            string command = "\"" + Environment.ProcessPath + "\"";
+            if (!Equals(key.GetValue(ValueName), command)) key.SetValue(ValueName, command);
+        }
         else key.DeleteValue(ValueName, false);
+    }
+
+    public static void SetEnabled(bool enabled)
+    {
+        WriteRunEntry(enabled);
+        if (enabled)
+        {
+            using var approval = Registry.CurrentUser.OpenSubKey(ApprovalKey, true);
+            // Take the Windows override into account only when the user explicitly enables startup.
+            if (IsBlocked(approval?.GetValue(ValueName) as byte[])) approval!.DeleteValue(ValueName, false);
+        }
         using var preference = Registry.CurrentUser.CreateSubKey(PreferenceKey, true);
         preference.SetValue("StartupEnabled", enabled ? 1 : 0, RegistryValueKind.DWord);
     }
     public static void RemoveAll()
     {
         using (var key = Registry.CurrentUser.OpenSubKey(RunKey, true)) key?.DeleteValue(ValueName, false);
+        using (var approval = Registry.CurrentUser.OpenSubKey(ApprovalKey, true)) approval?.DeleteValue(ValueName, false);
         using (var preference = Registry.CurrentUser.OpenSubKey(PreferenceKey, true)) preference?.DeleteValue("StartupEnabled", false);
     }
 }
