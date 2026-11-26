@@ -9,7 +9,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.text.InputType;
-import android.graphics.drawable.GradientDrawable;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -74,15 +73,9 @@ final class PowerPanel {
         this.owner = owner;
         this.worker = worker;
         page = owner.column();
-        TextView title = label("Energia", 31, MainActivity.INK);
-        title.setAccessibilityHeading(true);
-        page.addView(title);
+        page.addView(owner.pageTitle("Energia"));
         LinearLayout status = section("PC de controle");
-        GradientDrawable statusBackground = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{0xff233c57, 0xff142235});
-        statusBackground.setCornerRadius(owner.dp(17));
-        statusBackground.setStroke(owner.dp(1), MainActivity.BORDER);
-        status.setBackground(statusBackground);
+        status.setBackground(owner.highlightSurface());
         notice = label("Conecte-se ao Windows para consultar o estado da energia.", 14, MainActivity.MUTED);
         notice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         status.addView(notice, owner.spaced(6));
@@ -600,9 +593,7 @@ final class PowerPanel {
     private static String clock(int hour, int minute) { return String.format(Locale.ROOT, "%02d:%02d", hour, minute); }
 
     private LinearLayout section(String title) {
-        LinearLayout group = owner.column();
-        group.setPadding(owner.dp(15), owner.dp(13), owner.dp(15), owner.dp(13));
-        group.setBackground(owner.surface(MainActivity.SURFACE, 17, MainActivity.BORDER));
+        LinearLayout group = owner.card();
         TextView heading = label(title, 18, MainActivity.INK);
         heading.setAccessibilityHeading(true);
         group.addView(heading);

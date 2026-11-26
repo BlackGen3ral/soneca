@@ -407,8 +407,8 @@ public final class RemoteDesktopActivity extends Activity {
         button.setMinimumWidth(dp(44));
         button.setMinHeight(dp(44));
         button.setPadding(dp(6), 0, dp(6), 0);
-        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x35a6e6d7),
-                round(0xff172438, 9, 0xff3d546f), null));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x3590e9cf),
+                round(0xff15232d, 9, 0xff3b5161), null));
         return button;
     }
 
@@ -450,11 +450,11 @@ public final class RemoteDesktopActivity extends Activity {
         @Override protected void onDraw(Canvas canvas) {
             float x = getWidth() / 2f, y = centerY(), ring = radius();
             if (ring <= 0) return;
-            paint.setColor(0xff1c2c42);
+            paint.setColor(0xff1c323b);
             canvas.drawCircle(x, y, ring, paint);
-            paint.setColor(0xff101a2a);
+            paint.setColor(0xff101a23);
             canvas.drawCircle(x, y, ring - dp(2), paint);
-            paint.setColor(0xff435d78);
+            paint.setColor(0xff426774);
             for (int dir = 0; dir < 4; dir++) {
                 double angle = dir * Math.PI / 2;
                 canvas.drawCircle(x + (float) Math.cos(angle) * (ring - dp(6)),

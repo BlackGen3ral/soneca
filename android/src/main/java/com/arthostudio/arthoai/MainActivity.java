@@ -1,5 +1,6 @@
 package com.arthostudio.arthoai;
 
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.ClipData;
@@ -41,14 +42,14 @@ import javax.net.ssl.SSLHandshakeException;
 import org.json.JSONObject;
 
 public final class MainActivity extends Activity {
-    static final int BACKGROUND = 0xff090f1a;
-    static final int SURFACE = 0xff111d2e;
-    static final int BORDER = 0xff354b64;
-    static final int INK = 0xffeff5fc;
-    static final int MUTED = 0xffaabbd0;
-    static final int ACCENT = 0xffa6e6d7;
+    static final int BACKGROUND = 0xff0b131b;
+    static final int SURFACE = 0xff141f28;
+    static final int BORDER = 0xff3b5161;
+    static final int INK = 0xfff1f6fa;
+    static final int MUTED = 0xffb0c2cf;
+    static final int ACCENT = 0xff90e9cf;
     private static final int GREEN = ACCENT;
-    private static final int ALERT = 0xffffc2b6;
+    private static final int ALERT = 0xffffc0aa;
     private static final Locale BRAZIL = new Locale("pt", "BR");
     private static final int SCAN_PAIRING = 17;
     private static final int HOUSE_TAB = 4;
@@ -59,7 +60,6 @@ public final class MainActivity extends Activity {
     private final ExecutorService statusWorker = Executors.newSingleThreadExecutor();
     private final Handler connectionTimer = new Handler(Looper.getMainLooper());
     private final Runnable reconnect = () -> requestStatus(false);
-    private final GlassBackdrop backdrop = new GlassBackdrop();
     private ScrollView scroll;
     private final View[] pages = new View[4];
     private final Button[] tabs = new Button[NAV_ICONS.length];
@@ -78,6 +78,7 @@ public final class MainActivity extends Activity {
     private boolean visible;
     private boolean legacyLink;
     private boolean online;
+    private boolean primaryProminent = true;
     private int missedStatus;
     private long lastPcReply;
     private TextView presenceLabel, presenceBadge, lastContact;
@@ -101,7 +102,7 @@ public final class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
 
         LinearLayout shell = column();
-        shell.setBackground(backdrop);
+        shell.setBackground(new GlassBackdrop());
         if (Build.VERSION.SDK_INT >= 30) {
             shell.setOnApplyWindowInsetsListener((view, insets) -> {
                 Insets safe = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
@@ -110,13 +111,15 @@ public final class MainActivity extends Activity {
             });
         }
         shell.addView(header());
+        shell.addView(divider());
         scroll = new ScrollView(this);
         scroll.setFillViewport(true);
+        scroll.setVerticalScrollBarEnabled(false);
         shell.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         FrameLayout frame = new FrameLayout(this);
         scroll.addView(frame, new ScrollView.LayoutParams(-1, -2));
         LinearLayout content = column();
-        content.setPadding(dp(18), dp(14), dp(18), dp(24));
+        content.setPadding(dp(18), dp(15), dp(18), dp(26));
         frame.addView(content, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
         frame.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
             int width = Math.min(dp(620), right - left);
@@ -167,7 +170,6 @@ public final class MainActivity extends Activity {
         super.onStart();
         visible = true;
         power.setForeground(true);
-        backdrop.setRunning(selectedTab != HOUSE_TAB);
         if (pairing != null) {
             requestStatus(!online || lastPcReply == 0 ||
                     System.currentTimeMillis() - lastPcReply > 6000);
@@ -177,7 +179,6 @@ public final class MainActivity extends Activity {
     @Override protected void onStop() {
         visible = false;
         power.setForeground(false);
-        backdrop.setRunning(false);
         connectionTimer.removeCallbacks(reconnect);
         super.onStop();
     }
@@ -201,12 +202,8 @@ public final class MainActivity extends Activity {
 
     private View dashboard() {
         LinearLayout page = column();
-        TextView title = label("Visão geral", 31, INK, "sans-serif-medium");
-        title.setAccessibilityHeading(true);
-        page.addView(title);
-        page.addView(presenceCard(), spaced(13));
-        page.addView(houseCard(), spaced(13));
-        page.addView(connectionPanel(), spaced(12));
+        page.addView(pageTitle("Visão geral"));
+        page.addView(connectionPanel(), spaced(14));
 
         metrics = column();
         metrics.setVisibility(View.GONE);
@@ -215,7 +212,7 @@ public final class MainActivity extends Activity {
         metrics.addView(section);
         LinearLayout readings = column();
         readings.setPadding(dp(13), 0, dp(13), 0);
-        readings.setBackground(surface(SURFACE, 16, BORDER));
+        readings.setBackground(surface(SURFACE, 18, BORDER));
         metrics.addView(readings, spaced(8));
         memory = information(readings, "Memória em uso");
         memoryBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
@@ -233,17 +230,14 @@ public final class MainActivity extends Activity {
         uptime = information(readings, "Tempo ligado");
         readings.addView(divider());
         network = information(readings, "Rede do PC");
-        page.addView(metrics, spaced(19));
+        page.addView(metrics, spaced(17));
+        page.addView(houseCard(), spaced(16));
         return page;
     }
 
     private View houseCard() {
         FrameLayout card = new FrameLayout(this);
-        GradientDrawable background = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{0xff233c57, 0xff192d43, 0xff142235});
-        background.setCornerRadius(dp(19));
-        background.setStroke(dp(1), 0xff425d79);
-        card.setBackground(background);
+        card.setBackground(surface(SURFACE, 18, BORDER));
 
         LinearLayout layout = row();
         layout.setPadding(dp(16), dp(15), dp(10), dp(15));
@@ -257,7 +251,6 @@ public final class MainActivity extends Activity {
         copy.addView(label("Explore a maquete em 3D.", 13, MUTED, "sans-serif"), spaced(3));
         Button open = button("Abrir maquete", true);
         open.setTextSize(13);
-        open.setMinHeight(dp(41));
         open.setOnClickListener(view -> showTab(HOUSE_TAB));
         LinearLayout.LayoutParams action = new LinearLayout.LayoutParams(-2, -2);
         action.topMargin = dp(11);
@@ -273,9 +266,7 @@ public final class MainActivity extends Activity {
 
     private View devicePage() {
         LinearLayout page = column();
-        TextView title = label("Dispositivos", 31, INK, "sans-serif-medium");
-        title.setAccessibilityHeading(true);
-        page.addView(title);
+        page.addView(pageTitle("Dispositivos"));
         deviceContent = column();
         page.addView(deviceContent, spaced(17));
         return page;
@@ -289,14 +280,18 @@ public final class MainActivity extends Activity {
         devices = null;
         deviceContent.removeAllViews();
         if (pairing == null) {
-            deviceContent.addView(label("Conecte o celular ao PC de controle para ver os dispositivos.", 15, MUTED, "sans-serif"));
+            LinearLayout card = card();
+            deviceContent.addView(card);
+            card.addView(label("Conecte o celular ao PC de controle para ver os dispositivos.", 15, MUTED, "sans-serif"));
             Button connect = button("Conectar ao PC", true);
             connect.setOnClickListener(view -> showPairing());
-            deviceContent.addView(connect, spaced(12));
+            card.addView(connect, spaced(12));
             return;
         }
         if (!online) {
-            deviceContent.addView(label("Aguardando o PC de controle voltar à rede.", 15, MUTED, "sans-serif"));
+            LinearLayout card = card();
+            deviceContent.addView(card);
+            card.addView(label("Aguardando o PC de controle voltar à rede.", 15, MUTED, "sans-serif"));
             return;
         }
         devices = new DevicesPanel(this, pairing, worker);
@@ -306,7 +301,7 @@ public final class MainActivity extends Activity {
 
     private View navigation() {
         LinearLayout nav = row();
-        nav.setBackground(surface(0xff101927, 17, BORDER));
+        nav.setBackground(surface(0xff101a23, 20, BORDER));
         nav.setPadding(dp(4), dp(4), dp(4), dp(4));
         String[] labels = {"Início", "PCs", "Energia", "Atualizar", "Casa"};
         for (int index = 0; index < tabs.length; index++) {
@@ -330,21 +325,33 @@ public final class MainActivity extends Activity {
     }
 
     private void showTab(int requested) {
+        int previous = selectedTab;
         selectedTab = requested >= 0 && requested < tabs.length ? requested : 0;
         for (int index = 0; index < tabs.length; index++) {
             boolean selected = index == selectedTab;
-            if (index < pages.length) pages[index].setVisibility(selected ? View.VISIBLE : View.GONE);
+            if (index < pages.length) {
+                View page = pages[index];
+                page.animate().cancel();
+                page.setAlpha(1f);
+                page.setTranslationY(0f);
+                page.setVisibility(selected ? View.VISIBLE : View.GONE);
+            }
             tabs[index].setSelected(selected);
             styleTab(tabs[index], index, selected);
         }
         if (selectedTab == 1) updateDevices();
         if (selectedTab == 2) power.refreshLocal();
         boolean showingHouse = selectedTab == HOUSE_TAB;
-        backdrop.setRunning(visible && !showingHouse);
         scroll.setVisibility(showingHouse ? View.GONE : View.VISIBLE);
         house.show(showingHouse);
         if (showingHouse) house.updatePairing(pairing, online);
         scroll.scrollTo(0, 0);
+        if (!showingHouse && visible && previous != selectedTab && ValueAnimator.areAnimatorsEnabled()) {
+            View page = pages[selectedTab];
+            page.setAlpha(.75f);
+            page.setTranslationY(dp(6));
+            page.animate().alpha(1f).translationY(0f).setDuration(160).start();
+        }
     }
 
     void indicateUpdate(boolean available) {
@@ -358,19 +365,20 @@ public final class MainActivity extends Activity {
         icon.setTint(tint);
         tab.setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
         tab.setTextColor(tint);
-        tab.setBackground(new RippleDrawable(ColorStateList.valueOf(0x32a6e6d7),
-                surface(selected ? 0xff21364a : Color.TRANSPARENT, 11, selected ? 0xff415b76 : 0), null));
+        tab.setBackground(new RippleDrawable(ColorStateList.valueOf(0x3290e9cf),
+                surface(selected ? 0xff1b393d : Color.TRANSPARENT, 11, selected ? 0xff356361 : 0), surface(Color.WHITE, 12, 0)));
     }
 
     private View header() {
         LinearLayout header = row();
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(18), dp(12), dp(18), dp(8));
+        header.setPadding(dp(18), dp(11), dp(18), dp(10));
+        header.setBackgroundColor(0xff101a23);
         ImageView mark = new ImageView(this);
         mark.setImageResource(R.drawable.artho_mark);
         mark.setScaleType(ImageView.ScaleType.FIT_CENTER);
         mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        header.addView(mark, new LinearLayout.LayoutParams(dp(28), dp(28)));
+        header.addView(mark, new LinearLayout.LayoutParams(dp(32), dp(32)));
         TextView brand = label("Artho AI", 17, INK, "sans-serif-medium");
         LinearLayout.LayoutParams brandSize = new LinearLayout.LayoutParams(0, -2, 1f);
         brandSize.leftMargin = dp(10);
@@ -383,16 +391,14 @@ public final class MainActivity extends Activity {
         return header;
     }
 
-    private View presenceCard() {
+    private View presenceRow() {
         LinearLayout panel = row();
         panel.setGravity(Gravity.CENTER_VERTICAL);
-        panel.setPadding(dp(16), dp(13), dp(16), dp(13));
-        panel.setBackground(surface(0xff14233a, 18, BORDER));
         ImageView icon = new ImageView(this);
         icon.setImageResource(R.drawable.nav_devices);
         icon.setColorFilter(ACCENT);
         icon.setPadding(dp(9), dp(9), dp(9), dp(9));
-        icon.setBackground(surface(0xff203650, 12, 0xff314e6d));
+        icon.setBackground(surface(0xff203b42, 12, 0xff356361));
         icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         panel.addView(icon, new LinearLayout.LayoutParams(dp(41), dp(41)));
         LinearLayout readings = column();
@@ -401,7 +407,7 @@ public final class MainActivity extends Activity {
         panel.addView(readings, readingSize);
         presenceLabel = label("PC não conectado", 17, INK, "sans-serif-medium");
         readings.addView(presenceLabel);
-        lastContact = label("Último contato —", 13, MUTED, "sans-serif");
+        lastContact = label("Aguardando a primeira conexão", 13, MUTED, "sans-serif");
         readings.addView(lastContact, spaced(3));
         return panel;
     }
@@ -411,20 +417,25 @@ public final class MainActivity extends Activity {
             presenceBadge.setText(badge);
             presenceBadge.setTextColor(color);
         }
-        presenceLabel.setText(title);
-        lastContact.setText(lastPcReply == 0 ? "Último contato —"
+        if (!title.contentEquals(presenceLabel.getText())) presenceLabel.setText(title);
+        lastContact.setText(lastPcReply == 0 ? "Aguardando a primeira conexão"
                 : "Último contato · " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM, BRAZIL)
                         .format(new Date(lastPcReply)));
     }
 
     private View connectionPanel() {
-        LinearLayout panel = column();
-        panel.setPadding(dp(19), dp(19), dp(19), dp(17));
-        panel.setBackground(surface(SURFACE, 18, BORDER));
+        LinearLayout panel = card();
+        panel.setPadding(dp(17), dp(16), dp(17), dp(16));
+        panel.setBackground(highlightSurface());
+        panel.addView(presenceRow());
+        LinearLayout.LayoutParams separator = new LinearLayout.LayoutParams(-1, dp(1));
+        separator.topMargin = dp(14);
+        separator.bottomMargin = dp(12);
+        panel.addView(divider(), separator);
         status = label("Sem conexão", 13, MUTED, "sans-serif");
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         status.setPadding(dp(9), dp(3), dp(9), dp(3));
-        status.setBackground(surface(0xff1b2b3e, 9, BORDER));
+        status.setBackground(surface(0xff1c323b, 9, BORDER));
         panel.addView(status, new LinearLayout.LayoutParams(-2, -2));
         computer = label("Conecte seu PC", 24, INK, "sans-serif-medium");
         computer.setAccessibilityHeading(true);
@@ -436,18 +447,18 @@ public final class MainActivity extends Activity {
             if (pairing == null) showPairing();
             else requestStatus();
         });
-        panel.addView(primary, spaced(12));
-        homeWake = button("Ligar PC pela rede", true);
+        homeWake = button("Ligar pelo Wi-Fi de casa", true);
         homeWake.setVisibility(WakeSchedules.target(this) == null ? View.GONE : View.VISIBLE);
         homeWake.setOnClickListener(view -> {
             showTab(2);
             power.wake();
         });
         panel.addView(homeWake, spaced(6));
-        remoteDesktop = button("Tela remota", false);
+        remoteDesktop = button("Abrir tela remota", true);
         remoteDesktop.setVisibility(View.GONE);
         remoteDesktop.setOnClickListener(view -> startActivity(new Intent(this, RemoteDesktopActivity.class)));
-        panel.addView(remoteDesktop, spaced(6));
+        panel.addView(remoteDesktop, spaced(12));
+        panel.addView(primary, spaced(8));
         connectionOptions = button("Trocar conexão", false);
         connectionOptions.setOnClickListener(view -> showPairing());
         connectionOptions.setVisibility(View.GONE);
@@ -703,8 +714,7 @@ public final class MainActivity extends Activity {
                 : result.optBoolean("networkAvailable") ? "Interface ativa" : "Sem interface ativa");
         computer.setText(result.optString("name", "Computador Windows"));
         String version = result.optString("windowsVersion", "").replace("Microsoft Windows NT ", "");
-        detail.setText("Windows " + version + "\nÚltima leitura às "
-                + DateFormat.getTimeInstance(DateFormat.SHORT, BRAZIL).format(new Date()));
+        detail.setText("Windows " + version);
         setStatus(pairing.durable ? "Conectado · pareamento salvo" : "Conectado · sessão temporária", GREEN);
         power.pairingChanged(pairing);
         power.peerResponded(pairing, result);
@@ -758,10 +768,17 @@ public final class MainActivity extends Activity {
         pendingStatus = null;
         primary.setText(pairing == null ? "Conectar ao PC" : "Atualizar dados");
         primary.setEnabled(true);
+        boolean showRemote = online && pairing != null && pairing.durable;
+        boolean showWake = !online && WakeSchedules.target(this) != null;
+        boolean prominent = !showRemote && !showWake;
+        if (prominent != primaryProminent) {
+            decorateButton(primary, prominent);
+            primaryProminent = prominent;
+        }
         connectionOptions.setEnabled(true);
         connectionOptions.setVisibility(pairing == null ? View.GONE : View.VISIBLE);
-        remoteDesktop.setVisibility(online && pairing != null && pairing.durable ? View.VISIBLE : View.GONE);
-        homeWake.setVisibility(!online && WakeSchedules.target(this) != null ? View.VISIBLE : View.GONE);
+        remoteDesktop.setVisibility(showRemote ? View.VISIBLE : View.GONE);
+        homeWake.setVisibility(showWake ? View.VISIBLE : View.GONE);
         house.updatePairing(pairing, online);
         if (selectedTab == 1) updateDevices();
     }
@@ -796,7 +813,7 @@ public final class MainActivity extends Activity {
         button.setText(title);
         button.setTextSize(15);
         button.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        button.setMinHeight(dp(44));
+        button.setMinHeight(dp(48));
         button.setPadding(dp(14), dp(9), dp(14), dp(9));
         button.setStateListAnimator(null);
         button.setBackgroundTintList(null);
@@ -807,10 +824,32 @@ public final class MainActivity extends Activity {
     private void decorateButton(Button button, boolean prominent) {
         int color = prominent ? BACKGROUND : INK;
         button.setTextColor(new ColorStateList(
-                new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{prominent ? 0xff567380 : MUTED, color}));
+                new int[][]{{-android.R.attr.state_enabled}, {}}, new int[]{prominent ? 0xff45645e : MUTED, color}));
         int fill = prominent ? ACCENT : SURFACE;
-        button.setBackground(new RippleDrawable(ColorStateList.valueOf(prominent ? 0x30141715 : 0x35a6e6d7),
-                surface(fill, 11, prominent ? 0 : BORDER), null));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(prominent ? 0x30141715 : 0x3590e9cf),
+                surface(fill, 12, prominent ? 0 : BORDER), surface(Color.WHITE, 12, 0)));
+    }
+
+    TextView pageTitle(String text) {
+        TextView title = label(text, 33, INK, "sans-serif-medium");
+        title.setLetterSpacing(-.022f);
+        title.setAccessibilityHeading(true);
+        return title;
+    }
+
+    LinearLayout card() {
+        LinearLayout panel = column();
+        panel.setPadding(dp(16), dp(15), dp(16), dp(15));
+        panel.setBackground(surface(SURFACE, 18, BORDER));
+        return panel;
+    }
+
+    GradientDrawable highlightSurface() {
+        GradientDrawable fill = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{0xff203d45, 0xff192d39, SURFACE});
+        fill.setCornerRadius(dp(18));
+        fill.setStroke(dp(1), BORDER);
+        return fill;
     }
 
     GradientDrawable surface(int color, int radius, int stroke) {
@@ -834,6 +873,7 @@ public final class MainActivity extends Activity {
         view.setText(text);
         view.setTextSize(size);
         view.setTextColor(color);
+        view.setLineSpacing(dp(2), 1f);
         view.setTypeface(Typeface.create(font, Typeface.NORMAL));
         return view;
     }

@@ -44,10 +44,8 @@ final class HousePanel extends FrameLayout {
         lock.setOrientation(LinearLayout.VERTICAL);
         int padding = activity.dp(20);
         lock.setPadding(padding, padding, padding, padding);
-        lock.setBackground(activity.surface(MainActivity.SURFACE, 18, MainActivity.BORDER));
-        TextView title = activity.label("Minha casa", 23, MainActivity.INK, "sans-serif-medium");
-        title.setAccessibilityHeading(true);
-        lock.addView(title);
+        lock.setBackground(activity.highlightSurface());
+        lock.addView(activity.pageTitle("Minha casa"));
         feedback = new TextView(activity);
         feedback.setTextColor(MainActivity.MUTED);
         feedback.setTextSize(15);
