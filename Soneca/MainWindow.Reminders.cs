@@ -112,7 +112,12 @@ public partial class MainWindow
                     Margin = new Thickness(0, 3, 0, 0), TextWrapping = TextWrapping.Wrap });
             body.Children.Add(new TextBlock { Text = item.Countdown(today), FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(0, 4, 0, 2),
-                Foreground = (System.Windows.Media.Brush)FindResource(item.DaysLeft(today) <= item.LeadDays ? "Accent" : "Ink") });
+                Foreground = (System.Windows.Media.Brush)FindResource(item.DaysLeft(today) switch
+                {
+                    < 0 => "Warning",
+                    int days when days <= item.LeadDays => "Accent",
+                    _ => "Muted"
+                }) });
             if (item.Renewal is DateOnly renewal)
                 body.Children.Add(new TextBlock { Text = $"{renewal:dd/MM/yyyy}  ·  Antecedência de {item.LeadDays} dia(s)", Style = (Style)FindResource("BodyCopy") });
             var actions = new WrapPanel { Margin = new Thickness(0, 6, 0, 0) };

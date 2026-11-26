@@ -2,14 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <Style x:Key="CategoryCard" TargetType="Border" BasedOn="{StaticResource Panel}">
-            <Setter Property="Background" Value="#D1111D2E"/>
-            <Setter Property="BorderBrush" Value="#41526B82"/>
+            <Setter Property="Background" Value="#F3141F28"/>
+            <Setter Property="BorderBrush" Value="#69416270"/>
             <Setter Property="CornerRadius" Value="14"/>
             <Setter Property="Padding" Value="15,12"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
-                    <Setter Property="Background" Value="#DF142941"/>
-                    <Setter Property="BorderBrush" Value="#B65E8EAD"/>
+                    <Setter Property="Background" Value="#F31B383D"/>
+                    <Setter Property="BorderBrush" Value="#B6577E89"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -180,7 +180,7 @@
                 </Expander>
             </StackPanel>
         </ScrollViewer>
-        <Border Grid.Row="1" Style="{StaticResource Panel}" Background="#F0101C2C" Padding="14,9" CornerRadius="13"
+        <Border Grid.Row="1" Style="{StaticResource Panel}" Background="#F3111C25" Padding="14,9" CornerRadius="13"
                 MaxWidth="990" Margin="30,3,30,12">
             <WrapPanel HorizontalAlignment="Right">
                 <Button x:Name="CancelButton" Content="Interromper" Click="Cancel_Click" Visibility="Collapsed" Margin="0,0,8,0"/>

@@ -77,10 +77,10 @@ public partial class MainWindow
             DisplayMemberPath = nameof(PersonalShortcut.Label)
         };
         var empty = new TextBlock { Text = "Nenhum atalho encontrado.", Style = (Style)FindResource("BodyCopy") };
-        var open = new Button { Content = "Abrir", IsDefault = true, HorizontalAlignment = HorizontalAlignment.Right,
+        var open = new Button { Content = "Abrir", Style = (Style)FindResource("Primary"), IsDefault = true, HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 12, 0, 0) };
-        var panel = new StackPanel { Margin = new Thickness(18) };
-        panel.Children.Add(new TextBlock { Text = "Digite o que quer abrir", Style = (Style)FindResource("SectionTitle") });
+        var panel = new StackPanel { Margin = new Thickness(22) };
+        panel.Children.Add(new TextBlock { Text = "Buscar atalhos", Style = (Style)FindResource("SectionTitle") });
         panel.Children.Add(search);
         panel.Children.Add(results);
         panel.Children.Add(empty);
@@ -88,7 +88,7 @@ public partial class MainWindow
 
         var dialog = new Window
         {
-            Owner = this, Title = "Atalhos pessoais", Width = 400, SizeToContent = SizeToContent.Height,
+            Owner = this, Title = "Atalhos pessoais", Width = 440, SizeToContent = SizeToContent.Height,
             ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterOwner,
             ShowInTaskbar = false, Content = panel, Background = (System.Windows.Media.Brush)FindResource("Field"),
             Foreground = (System.Windows.Media.Brush)FindResource("Ink")

@@ -134,7 +134,7 @@ public partial class MainWindow : Window
         var handle = new WindowInteropHelper(this).Handle;
         const int DarkCaption = 20, CaptionColor = 35, CaptionTextColor = 36;
         var dark = 1;
-        var background = 0x1e110a;
+        var background = 0x1b130b;
         var text = 0xfcf5ef;
         DwmSetWindowAttribute(handle, DarkCaption, in dark, sizeof(int));
         DwmSetWindowAttribute(handle, CaptionColor, in background, sizeof(int));

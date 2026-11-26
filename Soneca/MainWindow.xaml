@@ -17,12 +17,15 @@
                             <Image Source="Assets/ArthoAI.png" Width="33" Height="33"/>
                             <TextBlock Text="Artho AI" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" Margin="9,0,0,0"/>
                         </StackPanel>
-                        <Border Background="#223F43" CornerRadius="8" Padding="8,4" Margin="0,11,0,0" HorizontalAlignment="Left">
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="6" Height="6" Fill="{StaticResource Accent}" Margin="0,0,6,0"/>
-                                <TextBlock Text="Este PC ligado" Foreground="{StaticResource Accent}" FontSize="12"/>
-                            </StackPanel>
-                        </Border>
+                        <Button Click="ShortcutSearch_Click" AutomationProperties.Name="Buscar atalhos, Ctrl+K"
+                                Margin="-2,16,0,0" HorizontalContentAlignment="Stretch" Padding="10,6">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Text="Ctrl+K" FontSize="10" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                <TextBlock DockPanel.Dock="Left" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                                           Foreground="{StaticResource Accent}" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Buscar atalhos" FontSize="12" VerticalAlignment="Center"/>
+                            </DockPanel>
+                        </Button>
                     </StackPanel>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                   AutomationProperties.Name="Abas do Artho AI">
@@ -57,8 +60,6 @@
                                 <TextBlock x:Name="NetworkStatusLabel" Foreground="{StaticResource Muted}" FontSize="12"/>
                             </StackPanel>
                         </Border>
-                        <Button DockPanel.Dock="Right" Content="Buscar atalhos · Ctrl+K" Click="ShortcutSearch_Click"
-                                VerticalAlignment="Center" Margin="10,0,0,0"/>
                         <TextBlock Text="Visão geral" Style="{StaticResource PageTitle}"/>
                     </DockPanel>
                     <Border x:Name="HomeUpdateBanner" Style="{StaticResource Panel}" Visibility="Collapsed" Margin="0,0,0,14" Padding="12">
@@ -67,48 +68,64 @@
                             <TextBlock x:Name="HomeUpdateText" Foreground="{StaticResource Accent}" VerticalAlignment="Center" TextWrapping="Wrap"/>
                         </DockPanel>
                     </Border>
-                    <Border Style="{StaticResource Panel}" Padding="20,16" Margin="0,0,0,13">
-                        <StackPanel>
-                            <TextBlock Text="Meu dia" Style="{StaticResource SectionTitle}"/>
-                            <Grid Margin="0,12,0,0">
-                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="18"/><ColumnDefinition/></Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="Assinaturas" FontWeight="SemiBold"/>
-                                    <TextBlock x:Name="DayPlans" Style="{StaticResource BodyCopy}" TextWrapping="Wrap" Margin="0,4,0,8"/>
-                                    <Button Content="Ver assinaturas" Click="Plans_Click" HorizontalAlignment="Left"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Rotinas" FontWeight="SemiBold"/>
-                                    <TextBlock x:Name="DayRoutines" Style="{StaticResource BodyCopy}" TextWrapping="Wrap" Margin="0,4,0,8"/>
-                                    <WrapPanel>
-                                        <Button Content="Ver energia" Click="Energy_Click" Margin="0,0,6,0"/>
-                                        <Button x:Name="DayDevices" Content="Ver computadores" Click="DayDevices_Click" Visibility="Collapsed"/>
-                                    </WrapPanel>
-                                </StackPanel>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Panel}" Background="{StaticResource GlassHero}" Padding="20,17" Margin="0,0,0,13">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <Border Width="48" Height="48" CornerRadius="13" Background="#305979" BorderBrush="#51758D"
-                                    BorderThickness="1" VerticalAlignment="Center" Margin="0,0,14,0">
-                                <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Accent}"
-                                           FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="ESTADO DO PC" Style="{StaticResource Overline}"/>
-                                <TextBlock x:Name="ComputerNameLabel" Text="Este computador" FontSize="23" FontWeight="SemiBold"
-                                           TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
-                                <TextBlock x:Name="ComputerDetailsLabel" Style="{StaticResource BodyCopy}" Margin="0,2,0,0"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
-                                <TextBlock x:Name="UptimeValue" Style="{StaticResource InfoValue}" TextAlignment="Right"/>
-                                <TextBlock x:Name="PerformanceStatus" Text="Lendo o estado do PC…" Style="{StaticResource BodyCopy}"
-                                           FontSize="12" TextAlignment="Right" Margin="0,4,0,0"/>
+                    <Border Style="{StaticResource Panel}" Background="{StaticResource GlassHero}" Padding="0" Margin="0,0,0,16">
+                        <Grid ClipToBounds="True">
+                            <Path Data="M0,80 L38,80 52,59 71,108 89,49 104,80 167,80"
+                                  Stroke="{StaticResource Accent}" StrokeThickness="2" Opacity=".15" Height="65" Width="168"
+                                  Stretch="Uniform" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,16,12,0"
+                                  IsHitTestVisible="False"/>
+                            <StackPanel Margin="22,17,22,14">
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                    <Border Width="51" Height="51" CornerRadius="13" Background="{StaticResource Field}"
+                                            BorderBrush="{StaticResource GlassEdge}" BorderThickness="1" VerticalAlignment="Center" Margin="0,0,13,0">
+                                        <TextBlock Text="&#xE7F4;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Accent}"
+                                                   FontSize="23" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                        <TextBlock Text="ESTE COMPUTADOR" Style="{StaticResource Overline}"/>
+                                        <TextBlock x:Name="ComputerNameLabel" Text="Este computador" FontSize="28" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock x:Name="ComputerDetailsLabel" Style="{StaticResource BodyCopy}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Border Style="{StaticResource Divider}" Margin="0,13,0,9"/>
+                                <DockPanel>
+                                    <TextBlock x:Name="PerformanceStatus" DockPanel.Dock="Right" Text="Lendo o estado do PC…"
+                                               Style="{StaticResource BodyCopy}" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="UptimeValue" Style="{StaticResource InfoValue}"/>
+                                </DockPanel>
                             </StackPanel>
                         </Grid>
                     </Border>
+                    <TextBlock Text="Meu dia" Style="{StaticResource SectionTitle}" Margin="0,0,0,9"/>
+                    <Grid Margin="0,0,0,17">
+                        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <Border Style="{StaticResource InsetPanel}">
+                            <StackPanel>
+                                <DockPanel LastChildFill="True">
+                                    <TextBlock Text="&#xE823;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Accent}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Assinaturas" Style="{StaticResource InfoValue}"/>
+                                </DockPanel>
+                                <TextBlock x:Name="DayPlans" Style="{StaticResource BodyCopy}" Margin="0,7,0,5"/>
+                                <Button Content="Ver assinaturas →" Click="Plans_Click" Style="{StaticResource QuietAction}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Style="{StaticResource InsetPanel}">
+                            <StackPanel>
+                                <DockPanel LastChildFill="True">
+                                    <TextBlock Text="&#xE916;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Accent}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Rotinas" Style="{StaticResource InfoValue}"/>
+                                </DockPanel>
+                                <TextBlock x:Name="DayRoutines" Style="{StaticResource BodyCopy}" Margin="0,7,0,5"/>
+                                <WrapPanel>
+                                    <Button Content="Ver energia →" Click="Energy_Click" Style="{StaticResource QuietAction}" Margin="0,0,10,0"/>
+                                    <Button x:Name="DayDevices" Content="Ver computadores →" Click="DayDevices_Click" Style="{StaticResource QuietAction}" Visibility="Collapsed"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                    <TextBlock Text="Desempenho" Style="{StaticResource SectionTitle}" Margin="0,0,0,9"/>
                     <UniformGrid Columns="2" Margin="-5,0,-5,0">
                         <UniformGrid.Resources>
                             <Style x:Key="PerformanceCard" TargetType="Border" BasedOn="{StaticResource Panel}">
@@ -149,11 +166,11 @@
                         <Border Style="{StaticResource PerformanceCard}">
                             <StackPanel>
                                 <DockPanel>
-                                    <TextBlock Text="&#xE950;" Style="{StaticResource MetricIcon}" Foreground="#AADEFF"/>
+                                    <TextBlock Text="&#xE950;" Style="{StaticResource MetricIcon}" Foreground="#A5D6FF"/>
                                     <TextBlock Text="Processador" Style="{StaticResource InfoValue}"/>
                                 </DockPanel>
                                 <TextBlock x:Name="ProcessorValue" Text="—" Style="{StaticResource PerformanceValue}"/>
-                                <ProgressBar x:Name="ProcessorGauge" Foreground="#AADEFF" Style="{StaticResource PerformanceGauge}" AutomationProperties.Name="Uso do processador"/>
+                                <ProgressBar x:Name="ProcessorGauge" Foreground="#A5D6FF" Style="{StaticResource PerformanceGauge}" AutomationProperties.Name="Uso do processador"/>
                                 <TextBlock x:Name="ProcessorDetails" Style="{StaticResource BodyCopy}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
                                 <TextBlock x:Name="ProcessorScope" Style="{StaticResource BodyCopy}" Margin="0,2,0,0"/>
                             </StackPanel>
@@ -237,14 +254,17 @@
             <Border x:Name="HousePage" Grid.Column="1" Margin="16,12,12,12" Visibility="Collapsed"
                     Style="{StaticResource Panel}" Padding="0">
                 <Grid>
-                    <StackPanel x:Name="HouseLock" Width="325" Margin="20" VerticalAlignment="Center">
-                        <TextBlock Text="Minha casa" Style="{StaticResource SectionTitle}" FontSize="24" Margin="0,0,0,12"/>
+                    <StackPanel x:Name="HouseLock" Width="320" Margin="22" VerticalAlignment="Center">
+                        <Border Style="{StaticResource InsetPanel}" Padding="12" HorizontalAlignment="Left" Margin="0,0,0,13">
+                            <TextBlock Text="&#xEC06;" FontFamily="Segoe MDL2 Assets" Foreground="{StaticResource Accent}" FontSize="24"/>
+                        </Border>
+                        <TextBlock Text="Minha casa" Style="{StaticResource SectionTitle}" FontSize="28" Margin="0,0,0,12"/>
                         <TextBlock x:Name="HouseFeedback" Style="{StaticResource BodyCopy}" TextWrapping="Wrap"
                                    Margin="0,0,0,10" AutomationProperties.LiveSetting="Polite"/>
                         <PasswordBox x:Name="HousePassword" MaxLength="128" MinHeight="36" Padding="8"
                                      AutomationProperties.Name="Senha da maquete" KeyDown="HousePassword_KeyDown"/>
                         <Button x:Name="HouseUnlock" HorizontalAlignment="Left" Margin="0,10,0,0"
-                                Content="Abrir maquete" Click="HouseUnlock_Click"/>
+                                Style="{StaticResource Primary}" Content="Abrir maquete" Click="HouseUnlock_Click"/>
                     </StackPanel>
                     <ContentControl x:Name="HouseSurface" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
                 </Grid>
@@ -304,7 +324,7 @@
                             <StackPanel>
                                 <Grid>
                                     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
-                                    <Border Width="48" Height="48" CornerRadius="12" Background="#65314D64" BorderBrush="{StaticResource GlassEdge}"
+                                    <Border Width="48" Height="48" CornerRadius="12" Background="{StaticResource Field}" BorderBrush="{StaticResource GlassEdge}"
                                             BorderThickness="1" VerticalAlignment="Top">
                                         <TextBlock Text="&#xE8EA;" FontFamily="Segoe MDL2 Assets" FontSize="20" Foreground="{StaticResource Accent}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -471,14 +491,14 @@
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
-                                <Border Width="36" Height="36" HorizontalAlignment="Left" Background="#69264563"
+                                <Border Width="36" Height="36" HorizontalAlignment="Left" Background="{StaticResource Field}"
                                         BorderBrush="{StaticResource GlassEdge}" BorderThickness="1" CornerRadius="10">
                                     <TextBlock Text="&#xE7E8;" FontFamily="Segoe MDL2 Assets" FontSize="16"
                                                Foreground="{StaticResource Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <TextBlock x:Name="StatusLabel" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             </StackPanel>
-                            <Border Grid.Column="1" CornerRadius="12" Background="#A10C192B" BorderBrush="{StaticResource GlassEdge}"
+                            <Border Grid.Column="1" CornerRadius="12" Background="{StaticResource Field}" BorderBrush="{StaticResource GlassEdge}"
                                     BorderThickness="1" Padding="12,9">
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock x:Name="EnergyTimeCaption" Text="Prévia da contagem" Style="{StaticResource Overline}" HorizontalAlignment="Right" TextWrapping="Wrap"/>
@@ -570,7 +590,7 @@
                                     <TextBlock Text="Dia/mês/ano" Style="{StaticResource BodyCopy}" Margin="0,3,0,0"/>
                                 </StackPanel>
                                 <StackPanel Width="156" Margin="0,0,0,8">
-                                    <TextBlock Text="Avisar quantos dias antes" Style="{StaticResource BodyCopy}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="Aviso em dias" Style="{StaticResource BodyCopy}" Margin="0,0,0,4"/>
                                     <TextBox x:Name="PlanLead" Text="7" MaxLength="2" AutomationProperties.Name="Dias de antecedência"/>
                                 </StackPanel>
                             </WrapPanel>
@@ -597,18 +617,32 @@
                         <StackPanel>
                             <TextBlock Text="Inicialização" Style="{StaticResource SectionTitle}"/>
                             <CheckBox x:Name="StartupCheckBox" Content="Iniciar o Artho AI com o Windows" Checked="Startup_Changed" Unchecked="Startup_Changed" Margin="0,11,0,0"/>
+                            <TextBlock x:Name="StartupFeedback" AutomationProperties.LiveSetting="Polite">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource BodyCopy}">
+                                        <Setter Property="Margin" Value="0,7,0,0"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed"/></Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Panel}" Margin="0,12,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Animação de abertura" Style="{StaticResource SectionTitle}"/>
                             <TextBlock Text="Use Esc para pular a abertura a qualquer momento." Style="{StaticResource BodyCopy}" Margin="0,6,0,0"/>
                             <Button x:Name="ReplayIntroButton" Content="Rever abertura" Click="ReplayIntro_Click" HorizontalAlignment="Left" Margin="0,12,0,0"/>
-                            <TextBlock x:Name="StartupFeedback" Style="{StaticResource BodyCopy}" Margin="0,7,0,0" AutomationProperties.LiveSetting="Polite"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
             </ScrollViewer>
             <ScrollViewer x:Name="UpdatesPanel" Grid.Column="1" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
-                <StackPanel Margin="34,32,34,26" MaxWidth="1080">
+                <StackPanel Margin="30,26,30,26" MaxWidth="1080">
                     <TextBlock Text="Atualizações" Style="{StaticResource PageTitle}"/>
                     <TextBlock Text="O Artho AI consulta o GitHub ao abrir. Você escolhe quando baixar e instalar." Style="{StaticResource BodyCopy}" Margin="0,6,0,19"/>
-                    <Border Style="{StaticResource Panel}" Padding="22">
+                    <Border Style="{StaticResource Panel}" Background="{StaticResource GlassHero}" Padding="22">
                         <StackPanel>
                             <Border CornerRadius="8" Background="{StaticResource Field}" BorderBrush="{StaticResource Line}"
                                     BorderThickness="1" Padding="9,5" HorizontalAlignment="Left" Margin="0,0,0,5">
